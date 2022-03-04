@@ -5,9 +5,10 @@ body {
   -webkit-box-sizing:border-box;
      -moz-box-sizing:border-box;
           box-sizing:border-box;
-  font-family:'Roboto', 'Arial', sans-serif;
+  font-family:'avenir', sans-serif;
   font-size:16px;
   padding-top:176px;
+  color: #797979;
   background-color:#fff;
 }
 
@@ -25,13 +26,15 @@ header {
 }
   header h1 {
     margin:0;
-    line-height:24px;
-    font-weight:bold;
-    font-size:18px;
+    color: rgb(26, 26, 26);
+    line-height:96px;
+    font-weight:lighter;
+    font-size:76px;
   }
   header h2 {
     margin:0;
     line-height:24px;
+    font-weight: bold;
     font-size:18px;
   }
 
@@ -50,9 +53,9 @@ section {
   section h3 {
     padding:0 0 8px;
     line-height:40px;
-    font-weight:bold;
+    font-weight:lighter;
     font-size:32px;
-    color:#ff5722;
+    color:#2c2c2c;
   }
   section .lead {
     font-size:24px;
@@ -65,7 +68,7 @@ section {
   }
   section a,
   section a:hover {
-    color:#44a9eb;
+    color:#473535;
   }
 
 /*******************
@@ -73,7 +76,7 @@ section {
  *******************/
 .intro-screen,
 .intro-screen header {
-  background-color:#44a9eb;
+  background-color:#797979;
   color:#fff;
 }
   .intro-screen h1,

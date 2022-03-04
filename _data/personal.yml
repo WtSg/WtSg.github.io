@@ -1,44 +1,49 @@
-name: Ian Li
+name: Wentao Shangguan
 
-label: UI Designer
+label: Research Assistant
 
 picture: /img/profile-picture.jpg
 
-email: ianli@ianli.com
+email: wentao.shangguan@wustl.edu
 
 phone: 
 
-department: Android UX
+department: Computational Imaging Group
 
-institution: Google
+institution: Washington University in St Louis
 
 mailing_address: >
-  1600 Amphitheatre Parkway
-  Mountain View, CA 94043
+
 
 profiles:
   - 
-    network: Google Scholar
+    network: Github
     username:
-    url: http://scholar.google.com/citations?user=JS7sVyQAAAAJ&hl=en
+    url: https://github.com/WtSg
   -
     network: LinkedIn
     username:
-    url: https://www.linkedin.com/pub/ian-li/1/681/8b0
+    url: https://www.linkedin.com/in/wentao-shangguan-ba5197173
   -
     network: Twitter
-    username: ianli
-    url: https://twitter.com/ianli/
+    username: wentaoshangguan
+    url: https://twitter.com/wentaoshangguan/
 
 intro:
-  title: Hello!
+  title: About me
   body: >
-    I'm a UI designer at Google.
-    Before Google, I was a Ph.D. student in the 
-    [Human-Computer Interaction Institute](http://hcii.cs.cmu.edu/) at Carnegie Mellon University.
-    My advisors were 
-    [Anind Dey](http://www.cs.cmu.edu/~anind/) and 
-    [Jodi Forlizzi](http://goodgestreet.com/). 
-    I worked on designed and developed 
-    [personal informatics tools](http://www.personalinformatics.org/) that help people better understand their own behavior.
-    [My dissertation](http://ianli.com/thesis/) explored how contextual information can improve self-knowledge in personal informatics systems.
+    I am a research assistant in ECE at Washington University in St. Louis with 
+    [Professor Matthew Lew](https://engineering.wustl.edu/faculty/Matthew-Lew.html). 
+    Before that, I was a master student in the 
+    [Computational Imaging Group](https://cigroup.wustl.edu/) with Prof. Ulugbek Kamilov.
+    In 2019, I worked as a visiting research assistant at 
+    [Center for Optoelectronic Technology, SIAT](https://www.siat-sz.edu.cn/institut/center-for-optoelectronic-technology/). 
+    SIAT is a cool place where engineers and researchers made many brillient products. 
+    I received BS from Nanchang University in 2019. 
+
+    <br><br>
+    My current research interests include computational imaging, inverse problems, 
+    compressed sensing, Implicit neural representations, neural video representations, 
+    video processing, video interpolation, computer vision, and so on.
+
+    
