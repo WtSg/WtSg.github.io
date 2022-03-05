@@ -44,17 +44,18 @@
             Research Assistant
           </h2>
         </div>
-        <div class="col-xs-3 col-lg-3">
-          <img src="/img/profile-picture.jpg" 
+        <div class="col-3 col-xs-3 col-sm-3">
+          <img id="profile_img"
+               src="/img/profile-picture.jpg" 
                class="img-circle"
-               style="margin-top:10px;width:90px;border:2px solid rgba(255,255,255,0.75)">
+               style="margin-top:10px;width:200px;border:2px solid rgba(255,255,255,0.75)">
         </div>
       </div>
     </div>
   </header>
-  <br><br>
+  
   <!-- ==================== -->
-  <!-- SECTION -->
+  <!-- SECTION About Me-->
   <!-- ==================== -->
   <div class="container"
            id="section-about">
@@ -73,6 +74,7 @@
         </div>
         
       </section>
+      
       <section class="col-md-offset-1 col-md-3">
         <h3>Contact</h3>
         
@@ -132,7 +134,7 @@
       </section>
     </div>
   </div>
-
+  <!-- Publications -->
   
   <div class="container">
     <div class="row">
@@ -256,13 +258,36 @@
       </div>
       <div class="row">
         <div class="col-xs-12">          
-          Wentao Shangguan @ 2022-03-04 23:09:13 -0600 <br>
+          Wentao Shangguan @ 2022-03-05 00:29:54 -0600 <br>
           Acknoledgement: Web template comes from <a href="http://ianli.github.io/elbowpatched-boilerplate/">ianli</a>
         </div>
       </div>
     </div>
   </footer>
+  <script>
+    function set_prof_wid(){
 
+      let doc_width = $(document).width()
+      console.log(doc_width)
+      if(doc_width < 699){
+        $('#profile_img').attr('style', 'width: 80px;margin-top:10px;border:0px solid rgba(255,255,255,0.75)')
+      }
+      else if(doc_width < 799){
+        $('#profile_img').attr('style', 'width: 140px;margin-top:10px;border:2px solid rgba(255,255,255,0.75)')
+      }
+      else{
+        $('#profile_img').attr('style', 'width: 200px;margin-top:10px;border:2px solid rgba(255,255,255,0.75)')
+      }
+    }
+
+    $(document).ready(function () {
+      set_prof_wid()
+    });
+    $(window).resize(function(){
+      set_prof_wid()
+    })
+
+  </script>
   <!-- ==================== -->
   <!-- JAVASCRIPTS -->
   <!-- ==================== -->

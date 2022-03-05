@@ -7,9 +7,10 @@ body {
           box-sizing:border-box;
   font-family:'avenir', sans-serif;
   font-size:16px;
-  padding-top:176px;
+  /* padding-top:200px; */
   color: #797979;
   background-color:#fff;
+  /* margin-top:50px */
 }
 
 /*******************
@@ -17,12 +18,13 @@ body {
  *******************/
 header {
   position:fixed;
-  z-index:100;
+  z-index:10;
   top:0;
   left:0;
   right:0;
-  padding:32px 0;
+  padding-top: 16px;
   background-color:#fff;
+  position:sticky;
 }
 
 header h1 {
@@ -30,17 +32,13 @@ header h1 {
   color: rgb(80, 80, 80);
   line-height:80px;
   font-weight:100;
-  font-size:76px;
+  font-size:74px;
   display: inline;
 }
 
 header .fmname {
-  margin:0;
   color: rgb(15, 15, 15);
-  line-height:80px;
   font-weight:500;
-  font-size:76px;
-  display: inline;
 }
 
 header h2 {
