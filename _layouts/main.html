@@ -77,15 +77,15 @@
       </section>
       <section class="col-md-offset-1 col-md-3">
         <h3>Contact</h3>
-        <p>
-          {{ site.data.personal.email | replace:'@',' <small>[at]</small> ' | replace:'.',' <small>[dot]</small> ' }}
-        </p>
+        
         <p>
           {{ site.data.personal.department }}<br>
           {{ site.data.personal.institution }}<br>
           {{ site.data.personal.mailing_address | replace:'\n','<br>' }}
         </p>
-
+        <p>
+          {{ site.data.personal.email | replace:'@',' <small>[at]</small> ' | replace:'.',' <small>[dot]</small> ' }}
+        </p>
         <p>
           {% for profile in site.data.personal.profiles %}
             
@@ -248,7 +248,8 @@
       </div>
       <div class="row">
         <div class="col-xs-12">          
-          {{ site.data.personal.name }} @ {{site.time}}
+          {{ site.data.personal.name }} @ {{site.time}} <br>
+          Acknoledgement: Web template comes from <a href="http://ianli.github.io/elbowpatched-boilerplate/">ianli</a>
         </div>
       </div>
     </div>

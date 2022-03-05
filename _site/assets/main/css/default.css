@@ -55,7 +55,10 @@ footer {
   line-height:20px;
   font-size:14px;
 }
-
+footer a,
+footer a:hover {
+  color:#797979;
+}
 /*******************
  * SECTION
  *******************/

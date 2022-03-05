@@ -6,13 +6,13 @@ picture: /img/profile-picture.jpg
 
 email: wentao.shangguan@wustl.edu
 
-phone: 
+phone:
 
 department: Computational Imaging Group
 
 institution: Washington University in St Louis
 
-mailing_address: >
+mailing_address:
 
 
 profiles:
@@ -30,7 +30,7 @@ profiles:
     url: https://twitter.com/wentaoshangguan/
   -
     network: CV
-    username: ws
+    username: wentaoshangguan
     url: /file/cv.pdf
 
 intro:
