@@ -7,7 +7,7 @@ body {
           box-sizing:border-box;
   font-family:'avenir', sans-serif;
   font-size:16px;
-  /* padding-top:200px; */
+  padding-top:20px;
   color: #797979;
   background-color:#fff;
   /* margin-top:50px */
@@ -22,7 +22,8 @@ header {
   top:0;
   left:0;
   right:0;
-  padding-top: 16px;
+  padding: 16px 0;
+
   background-color:#fff;
   position:sticky;
 }
