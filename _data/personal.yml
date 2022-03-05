@@ -28,6 +28,10 @@ profiles:
     network: Twitter
     username: wentaoshangguan
     url: https://twitter.com/wentaoshangguan/
+  -
+    network: CV
+    username: wentaoshangguan
+    url: /file/cv.pdf
 
 intro:
   title: About me
