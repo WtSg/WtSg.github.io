@@ -30,7 +30,7 @@ profiles:
     url: https://twitter.com/wentaoshangguan/
   -
     network: CV
-    username: wentaoshangguan
+    username: ws
     url: /file/cv.pdf
 
 intro:
