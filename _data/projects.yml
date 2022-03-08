@@ -8,7 +8,18 @@
    interpolation on several benchmark datasets.
   image: /img/cure.jpg
   url: http://cure.wshangguan.com
+
 -
+  name: 'Underwater spectrophotometer for in-situ seawater COD monitoring'
+  description: >
+    We designed an in-situ chemical oxygen demand (COD) sensor for long-term seawater 
+    monitoring, and interrated it to a buoy for coastal trials. It makes COD monitoring 
+    becomes possible and simple. The sensors had been contiously working underwater for 
+    more than 6 months and provides thousands of valuable UV-Vis absorption spectrum.  
+  image: /img/cod.jpg
+  url: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11752/2588022/Underwater-spectrophotometer-for-in-situ-seawater-COD-monitoring/10.1117/12.2588022.full?SSO=1
+
+  -
   name: 'Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix'
   description: >
     Single photon imaging system is a photon counting based singel pixel camera, which 
@@ -17,4 +28,4 @@
     experiement shows our smart matrix could work for many algorithms and could be used
     for modify any kind of measurement matrix. 
   image: /img/compressedSPC.jpg
-  url: http://cure.wshangguan.com
+  url: https://www.mdpi.com/1424-8220/18/10/3449
