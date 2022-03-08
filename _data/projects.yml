@@ -19,7 +19,7 @@
   image: /img/cod.jpg
   url: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11752/2588022/Underwater-spectrophotometer-for-in-situ-seawater-COD-monitoring/10.1117/12.2588022.full?SSO=1
 
-  -
+-
   name: 'Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix'
   description: >
     Single photon imaging system is a photon counting based singel pixel camera, which 
