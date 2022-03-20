@@ -12,7 +12,7 @@ department: Computational Imaging Group
 
 institution: Washington University in St Louis
 
-mailing_address:
+mailing_address: St. Louis, Missouri
 
 
 profiles:
@@ -29,6 +29,10 @@ profiles:
     username: wentaoshangguan
     url: https://twitter.com/wentaoshangguan/
   -
+    network: Instagram
+    username: 
+    url: https://www.instagram.com/wentaoshangguan/
+  -
     network: CV
     username: wentaoshangguan
     url: /file/cv.pdf
@@ -43,7 +47,6 @@ intro:
     In 2019, I worked as a visiting research assistant at 
     [Center for Optoelectronic Technology, SIAT](http://coet.siat.ac.cn/mobile/web/page/show/136.shtml?type=100&category_id=0). 
     SIAT is a cool place where engineers and researchers made many brilliant products. 
-    I received BS from Nanchang University in 2019. 
 
     <br><br>
     My current research interests include computational imaging, inverse problems, 

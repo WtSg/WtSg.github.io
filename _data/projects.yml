@@ -6,7 +6,7 @@
    neighbors. It is the first video interpolation method based on neural fields (NF) 
    and achieves the state-of-the-art performance on video 
    interpolation on several benchmark datasets.
-  image: /img/cure.jpg
+  image: /img/cure.mov
   url: http://cure.wshangguan.com
 
 -

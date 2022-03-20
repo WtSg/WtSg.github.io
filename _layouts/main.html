@@ -108,6 +108,8 @@
               <i class="fa fa-twitter-square"></i>
             {% elsif profile.network == 'Github' %}
               <i class="fa-brands fa-github-square"></i>
+              {% elsif profile.network == 'Instagram' %}
+              <i class="fa-brands fa-instagram-square"></i>
             {% elsif profile.network == 'CV' %}
               <i class="fa-solid fa-file-lines"></i>
             {% endif %}
@@ -183,9 +185,17 @@
                     col-md-3
                     col-lg-2">
           <p>
-            <img src="{{ site.baseurl }}{{ project.image }}" 
-                 class="img-responsive img-thumbnail"
-                 style="width:100%">
+            <!-- {{ project.image }} -->
+            {% assign ext = project.image | split: "." | last %}
+            {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff'%}
+              <img src="{{ site.baseurl }}{{ project.image }}" 
+                  class="img-responsive img-thumbnail"
+                  style="width:100%">
+            {% elsif ext == 'mov' of ext == 'mp4' %}
+              <video width="100%" playsinline="" autoplay="" loop="" preload="" muted="">
+                <source src="{{ site.baseurl }}{{ project.image }}" type="video/mp4">
+              </video>
+            {% endif %}
           </p>
         </div>
         <div class="col-xs-12
@@ -259,7 +269,7 @@
       </div>
       <div class="row">
         <div class="col-xs-12">          
-          {{ site.data.personal.name }} @ {{site.time}} <br>
+          {{ site.data.personal.name }} @ {{ site.time | date_to_long_string: "ordinal" }} <br>
           Acknoledgement: Web template comes from <a href="http://ianli.github.io/elbowpatched-boilerplate/">ianli</a>
         </div>
       </div>
