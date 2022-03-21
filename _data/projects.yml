@@ -10,6 +10,14 @@
   url: http://cure.wshangguan.com
 
 -
+  name: 'Full-Stack Development - Commercial site: eBuy'
+  description: >
+   eBuy is a commercial site developed with Django with mySQL. It supports
+   lots of userful functionals and is very secure. 
+  image: /img/ebuy.png
+  url: https://github.com/cse330-fall-2020/creativeproject-module7-485511-485623
+
+-
   name: 'Underwater spectrophotometer for in-situ seawater COD monitoring'
   description: >
     We designed an in-situ chemical oxygen demand (COD) sensor for long-term seawater 
