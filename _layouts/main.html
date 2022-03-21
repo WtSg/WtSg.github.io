@@ -130,8 +130,8 @@
     <div class="row">
       <section class="col-md-9">
         <h3>Publications</h3>
-
-        {% for publication in site.data.publications %}
+        {% assign pubs = site.data.publications | sort: 'year' | reverse %}
+        {% for publication in pubs %}
           <p>
             <b>
               <a href="{{ publication.url }}">
@@ -148,7 +148,8 @@
               {% when 'conference' %}
                 {{ publication.conference }}
               {% when 'dissertation' %}
-                {{ publication.publisher }}
+                {{ publication.publisher }} -
+                {{ publication.type }}
               {% when 'journal' %}
                 {{ publication.journal }},
                 {{ publication.volume }},
@@ -177,8 +178,8 @@
         <h3>Projects</h3>
       </div>
     </div>
-
-    {% for project in site.data.projects %}
+    {% assign projs = site.data.projects | sort: 'time' | reverse %}
+    {% for project in projs %}
       <div class="row">
         <div class="col-xs-8
                     col-sm-4
@@ -214,8 +215,9 @@
               {% endif %}
             </b>
           </p>
-
-          {{ project.description | markdownify }}
+          
+          {{ project.description | markdownify }} 
+          
         </div>
       </div>
     {% endfor %}

@@ -1,22 +1,4 @@
 -
-  type: Arxiv
-  title: "Learning Cross-Video Neural Representations for High-Quality Frame Interpolation"
-  authors: Wentao Shangguan, Yu Sun, Weijie Gan, Ulugbek S. Kamilov
-  journal: Arxiv
-  year: 2022
-  pdf: https://arxiv.org/pdf/2203.00137.pdf
-  url: https://arxiv.org/abs/2203.00137
-
--
-  type: dissertation
-  title: "NeVR: Learning Continuous Neural Video Representation with Local Feature Codes for Video Interpolation"
-  authors: Wentao Shangguan
-  year: 2021
-  publisher: Washington University in St. Louis
-  pdf: 
-  url: https://happenings.wustl.edu/event/ese_seminar_thesis_defense_wentao_shangguan#.YiKRVC-B2X0
-
--
   type: journal
   title: Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix
   authors:  Wentao Shangguan, Qiurong Yan, Hui Wang, Chenglong Yuan, Bing Li andYuhao Wang
@@ -28,3 +10,19 @@
   month: March
   pdf: https://www.mdpi.com/1424-8220/18/10/3449/pdf
   url: https://doi.org/10.3390/s18103449
+-
+  type: dissertation
+  title: "NeVR: Learning Continuous Neural Video Representation with Local Feature Codes for Video Interpolation"
+  authors: Wentao Shangguan
+  year: 2021
+  publisher: Washington University in St. Louis
+  pdf: 
+  url: https://happenings.wustl.edu/event/ese_seminar_thesis_defense_wentao_shangguan#.YiKRVC-B2X0
+-
+  type: Arxiv
+  title: "Learning Cross-Video Neural Representations for High-Quality Frame Interpolation"
+  authors: Wentao Shangguan, Yu Sun, Weijie Gan, Ulugbek S. Kamilov
+  journal: Arxiv
+  year: 2022
+  pdf: https://arxiv.org/pdf/2203.00137.pdf
+  url: https://arxiv.org/abs/2203.00137

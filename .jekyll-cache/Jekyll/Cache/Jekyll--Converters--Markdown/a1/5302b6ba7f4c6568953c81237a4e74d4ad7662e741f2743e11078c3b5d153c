@@ -1,0 +1,2 @@
+I"§<p>This three phase DC-AC converter aims for converting 12V DC power to  three phase 24V AC power. This system is controlled by a STM32F103 Microcontrol Unit,  which provides features like voltage regulation, phase regulation, over-current protection. The efficiency is higher than 90%. Phase regulation enables two converter grid-connected.  The output voltage is regulated with PID algorithm in 100 times per second.</p>
+:ET
