@@ -69,6 +69,29 @@
   <div class="container"
            id="section-about">
     <div class="row">
+      <div id="ns">
+        {% if site.data.personal.news %}
+          <section class="col-md-8">
+            <div class="alert alert-dark">
+              <a href="#" class="close" id="news_close"> 
+                <!-- data-dismiss="alert"> -->
+                &times;
+              </a>
+              <strong>News: </strong> 
+              {% for news in site.data.personal.news %}
+              {{news.description | markdownify | replace: "</p>", ""}}  - {{news.date| markdownify| replace: "<p>", ""}}
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+      </div>
+      <script>
+        $( "#news_close" ).click(function() {
+          $("#ns").hide();
+        });
+        
+      </script>
+
       <section class="col-md-8">
         {% if site.data.personal.intro.title %}
           <h3 style="font-size:48px">
@@ -76,7 +99,7 @@
           </h3>
         {% else %}
           <h3>
-            About
+            About me
           </h3>
         {% endif %}
 

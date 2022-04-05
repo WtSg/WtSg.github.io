@@ -14,6 +14,16 @@ institution: Washington University in St Louis
 
 mailing_address: St. Louis, Missouri
 
+news: 
+  - 
+    description: >
+      I am going to start Ph.D. at [Boston University](https://www.bu.edu/eng/departments/ece/phd/)
+      dvised by [Prof. Goyal](https://www.vivekgoyal.org/default.htm) in this fall! 
+    date: Apr 4 2022
+  -
+    description: Successfully defended my MS thesis! 
+    date: Dec 11 2021
+
 
 profiles:
   - 
