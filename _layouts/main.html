@@ -79,7 +79,7 @@
               </a>
               <strong>News: </strong> 
               {% for news in site.data.personal.news %}
-              {{news.description | markdownify | replace: "</p>", ""}}  - {{news.date| markdownify| replace: "<p>", ""}}
+              <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date| markdownify| replace: "<p>", ""}}
               {% endfor %}
             </div>
           </section>
