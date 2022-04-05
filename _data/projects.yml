@@ -53,7 +53,7 @@
    powered by two XL6009 that transfer 12V DC to ~70V DC. Two capacitances are used 
    to store the power. The steel ball could be ejected for ~30 feets.
   image: /img/emg.jpg
-  url: /
+  url: #
   time: 2017
   org: CRSN Lab, NCU
 -
@@ -65,6 +65,6 @@
    The efficiency is higher than 90%. Phase regulation enables two converter grid-connected. 
    The output voltage is regulated with PID algorithm for 100 times per second.
   image: /img/dcac.jpg
-  url: /
+  url: #
   time: 2017
   org: CRSN Lab, NCU
