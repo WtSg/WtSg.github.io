@@ -22,15 +22,6 @@
   time: 2019
   org: SIAT
 -
-  name: 'Full-Stack Development - Commercial site: eBuy'
-  description: >
-   eBuy is a commercial site developed with Django with mySQL. It supports
-   lots of userful functionals and is very secure. 
-  image: /img/ebuy.png
-  url: https://github.com/cse330-fall-2020/creativeproject-module7-485511-485623
-  time: 2020
-  org: WUSTL
--
   name: 'Learning Cross-Video Neural Representations for High-Quality Frame Interpolation'
   description: >
    Cross-Video Neural Representation (CURE) is a Deep-learning-based model for temporal 
