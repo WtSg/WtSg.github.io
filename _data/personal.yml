@@ -23,6 +23,10 @@ news:
   -
     description: Successfully defended my MS thesis! 
     date: Dec 11 2021
+  - 
+    description: >
+      Cross-video neural representations (CURE) for video interpolation was accepted to the [ECCV2022](https://eccv2022.ecva.net)!
+    date: July 3 2022
 
 
 profiles:
