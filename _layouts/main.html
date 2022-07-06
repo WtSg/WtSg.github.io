@@ -69,7 +69,7 @@
   <div class="container"
            id="section-about">
     <div class="row">
-      <div id="ns">
+      <div id="ns"> 
         {% if site.data.personal.news %}
           <section class="col-md-8">
             <div class="alert alert-dark">
@@ -78,9 +78,11 @@
                 &times;
               </a>
               <strong>News: </strong> 
-              {% for news in site.data.personal.news %}
+              {%assign news_data = site.data.personal.news | sort: 'time' | reverse%}
+              {% for news in news_data %}
               <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date| markdownify| replace: "<p>", ""}}
               {% endfor %}
+
             </div>
           </section>
         {% endif %}
