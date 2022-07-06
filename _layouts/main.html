@@ -214,11 +214,11 @@
             <p>
               <!-- {{ project.image }} -->
               {% assign ext = project.image | split: "." | last %}
-              {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff'%}
+              {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff' %}
                 <img src="{{ site.baseurl }}{{ project.image }}" 
                     class="img-responsive img-thumbnail"
                     style="width:100%">
-              {% elsif ext == 'mov' of ext == 'mp4' %}
+              {% elsif ext == 'mov' or ext == 'mp4' %}
                 <video width="100%" playsinline="" autoplay="" loop="" preload="" muted="" class="img-responsive img-thumbnail">
                   <source src="{{ site.baseurl }}{{ project.image }}" type="video/mp4" >
                 </video>
