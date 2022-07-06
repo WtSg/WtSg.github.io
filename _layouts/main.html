@@ -78,9 +78,9 @@
                 &times;
               </a>
               <strong>News: </strong> 
-              {%assign news_data = site.data.personal.news | sort: 'date' | reverse%}
+              {% assign news_data = site.data.personal.news | sort: 'date' | reverse %}
               {% for news in news_data %}
-              <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date | date: "%b %-d %Y" | markdownify| replace: "<p>", ""}}
+                <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date | date: "%b %-d %Y" | markdownify| replace: "<p>", ""}}
               {% endfor %}
 
             </div>
@@ -193,60 +193,60 @@
   </div>
   {% endif %}
 
-  {% if site.data.projects.size > 0 %}
-  <!-- ==================== -->
-  <!-- PROJECTS -->
-  <!-- ==================== -->
-  <section class="container">
-    <div class="row">
-      <div class="col-md-9">
-        <h3>Projects</h3>
-      </div>
-    </div>
-    {% assign projs = site.data.projects | sort: 'time' | reverse %}
-    {% for project in projs %}
+  {% if site.data.projects.size > 0 %} 
+    <!-- ==================== -->
+    <!-- PROJECTS -->
+    <!-- ==================== -->
+    <section class="container">
       <div class="row">
-        <div class="col-xs-8
-                    col-sm-4
-                    col-md-3
-                    col-lg-2">
-                    
-          <p>
-            <!-- {{ project.image }} -->
-            {% assign ext = project.image | split: "." | last %}
-            {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff'%}
-              <img src="{{ site.baseurl }}{{ project.image }}" 
-                  class="img-responsive img-thumbnail"
-                  style="width:100%">
-            {% elsif ext == 'mov' of ext == 'mp4' %}
-              <video width="100%" playsinline="" autoplay="" loop="" preload="" muted="" class="img-responsive img-thumbnail">
-                <source src="{{ site.baseurl }}{{ project.image }}" type="video/mp4" >
-              </video>
-            {% endif %}
-          </p>
-        </div>
-        <div class="col-xs-12
-                    col-sm-8
-                    col-md-6
-                    col-lg-7">
-          <p>
-            <b>
-              {% if project.url %}
-                <a href="{{ project.url }}">
-                  {{ project.name }} <small>{{project.time}}</small>
-                </a>
-              {% else %}
-                {{ project.name }} <small>{{project.time}}</small>
-              {% endif %}
-            </b>
-          </p>
-          
-          {{ project.description | markdownify }} 
-          
+        <div class="col-md-9">
+          <h3>Projects</h3>
         </div>
       </div>
-    {% endfor %}
-  </section>
+      {% assign projs = site.data.projects | sort: 'time' | reverse %}
+      {% for project in projs %}
+        <div class="row">
+          <div class="col-xs-8
+                      col-sm-4
+                      col-md-3
+                      col-lg-2">
+                      
+            <p>
+              <!-- {{ project.image }} -->
+              {% assign ext = project.image | split: "." | last %}
+              {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff'%}
+                <img src="{{ site.baseurl }}{{ project.image }}" 
+                    class="img-responsive img-thumbnail"
+                    style="width:100%">
+              {% elsif ext == 'mov' of ext == 'mp4' %}
+                <video width="100%" playsinline="" autoplay="" loop="" preload="" muted="" class="img-responsive img-thumbnail">
+                  <source src="{{ site.baseurl }}{{ project.image }}" type="video/mp4" >
+                </video>
+              {% endif %}
+            </p>
+          </div>
+          <div class="col-xs-12
+                      col-sm-8
+                      col-md-6
+                      col-lg-7">
+            <p>
+              <b>
+                {% if project.url %}
+                  <a href="{{ project.url }}">
+                    {{ project.name }} <small>{{project.time}}</small>
+                  </a>
+                {% else %}
+                  {{ project.name }} <small>{{project.time}}</small>
+                {% endif %}
+              </b>
+            </p>
+            
+            {{ project.description | markdownify }} 
+            
+          </div>
+        </div>
+      {% endfor %}
+    </section>
   {% endif %}
 
   {% if site.data.presentations.size > 0 %}
