@@ -21,14 +21,15 @@ news:
     description: >
       I am going to start Ph.D. at [Boston University](https://www.bu.edu/eng/departments/ece/phd/)
       dvised by [Prof. Goyal](https://www.vivekgoyal.org/default.htm) in this fall! 
-    date: Apr 4 2022
+    date: 2022-04-04
   -
     description: Successfully defended my MS thesis! 
-    date: Dec 11 2021
+    date: 2021-12-01
   - 
     description: >
       Cross-video neural representations (CURE) for video interpolation was accepted to the [ECCV2022](https://eccv2022.ecva.net)!
-    date: July 3 2022
+    date: 2022-07-03
+  
 
 
 profiles:

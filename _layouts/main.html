@@ -78,9 +78,9 @@
                 &times;
               </a>
               <strong>News: </strong> 
-              {%assign news_data = site.data.personal.news | sort: 'time' | reverse%}
+              {%assign news_data = site.data.personal.news | sort: 'date' | reverse%}
               {% for news in news_data %}
-              <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date| markdownify| replace: "<p>", ""}}
+              <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date | date: "%b %-d %Y" | markdownify| replace: "<p>", ""}}
               {% endfor %}
 
             </div>
@@ -233,10 +233,10 @@
             <b>
               {% if project.url %}
                 <a href="{{ project.url }}">
-                  {{ project.name }}
+                  {{ project.name }} <small>{{project.time}}</small>
                 </a>
               {% else %}
-                {{ project.name }}
+                {{ project.name }} <small>{{project.time}}</small>
               {% endif %}
             </b>
           </p>
