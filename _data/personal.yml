@@ -1,6 +1,6 @@
 name: Wentao Shangguan
 
-label: Research Assistant at WUSTL & Incoming Ph.D. Student at BU
+label: Ph.D. Student at [BU](https://www.bu.edu/eng/departments/ece/phd/)
 
 picture: /img/profile-picture.jpg
 
@@ -8,13 +8,13 @@ email: wentaos@bu.edu
 
 phone:
 
-department: Computational Imaging Group
+department: [STIR](https://www.vivekgoyal.org)
 
-institution: Washington University in St Louis
+institution: Boston University
 
-mailing_address: St. Louis, Missouri
+mailing_address: Boston, Massachusetts
 
-revised_date: 2022-07-06
+revised_date: 2022-9-10
 
 news: 
   - 
@@ -29,6 +29,10 @@ news:
     description: >
       Cross-video neural representations (CURE) for video interpolation was accepted to the [ECCV2022](https://eccv2022.ecva.net)!
     date: 2022-07-03
+  -
+    description: >
+      I am struggling with many difficult problems :(
+    date: 2022-09-10
   
 
 
