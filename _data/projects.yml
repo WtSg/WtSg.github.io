@@ -1,4 +1,48 @@
 -
+  name: 'Time-Resolved Particle Beam Microscopy with Deep Learning-Based Jitter Mitigation'
+  description: >
+    This project significantly enhances the fidelity of particle beam microscopy images by 
+    segmenting the exposure duration into small time bins to acquire numerous time-resolved 
+    samples. This technique effectively mitigates spatial sampling jitter and addresses 
+    physical noise challenges. Leveraging innovative deep learning techniques, including 
+    efficient hybrid transformer models, we dynamically merge these samples to further 
+    reduce jitter effects. This advanced approach significantly improves the overall prediction 
+    accuracy of the imaging system, setting new standards in scientific imaging.
+
+  image: /img/PBMS.png
+  url: #
+  time: 2024
+  org: STIR, BU
+-
+  name: 'Absorption Assisted Stereo Hyperspectral Depth Imaging'
+  description: >
+    This project utilizes the integration of hyperspectral and stereo imaging techniques to 
+    enhance predictions of depth, temperature, materials, and textures under varying conditions. 
+    Our innovative attention-based model architecture synergistically processes data from both 
+    imaging modalities, providing comprehensive material insights and improved depth perception. 
+    By incorporating physical loss functions that consider a range of optical properties—including 
+    light absorption, emissivity, temperature, and depth—our model achieves superior accuracy in 
+    predicting these complex attributes, thereby setting new standards in imaging technology.
+
+  image: /img/AASDI.png
+  url: #
+  time: 2024
+  org: STIR, BU
+-
+  name: 'Diffusion Model for Video Interpolation'
+  description: >
+    In this innovative project, we designed a novel 3D U-Net with temporal attention for video 
+    frame interpolation. Our approach begins by incorporating optical flow techniques to 
+    physically warp adjacent images closer to the center image. Subsequently, the diffusion
+    model is conditioned on these adjacent images as well as our physically warped center image, 
+    enhancing the prediction accuracy of the interpolated frames. This method results in 
+    significantly improved interpolation quality.
+
+  image: /img/dvi.jpg
+  url: #
+  time: 2023
+  org: STIR, BU
+-
   name: 'Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix'
   description: >
     Single photon imaging system is a photon counting based singel pixel camera, which 
@@ -30,7 +74,7 @@
    and achieves the state-of-the-art performance on video 
    interpolation on several benchmark datasets.
   image: /img/cure.mov
-  url: http://cure.wshangguan.com
+  url: https://www.cse.wustl.edu/~kamilov/projects/2022/cure/
   time: 2022
   org: CIG, WUSTL
 -
