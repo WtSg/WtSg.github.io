@@ -19,10 +19,10 @@
   pdf: 
   url: https://openscholarship.wustl.edu/eng_etds/681/
 -
-  type: Arxiv
-  title: "Learning Cross-Video Neural Representations for High-Quality Frame Interpolation"
+  type: Conforance
+  title: "Learning Cross-Video Neural Representations for High-Quality Frame Interpolation (ECCV2022)"
   authors: Wentao Shangguan, Yu Sun, Weijie Gan, Ulugbek S. Kamilov
-  journal: Arxiv
+  journal: ECCV
   year: 2022
   pdf: https://arxiv.org/pdf/2203.00137.pdf
   url: https://arxiv.org/abs/2203.00137
