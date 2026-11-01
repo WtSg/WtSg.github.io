@@ -1,0 +1,389 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T16:30:00Z",
+  "title": "Design System: Wentao Shangguan",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Figure White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Plot Ink",
+        "canonical": "#121212",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Label Gray",
+        "canonical": "#404040",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Muted Gray",
+        "canonical": "#616161",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "spine": {
+        "role": "neutral",
+        "displayName": "Spine",
+        "canonical": "#121212",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e3e3e3",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "link": {
+        "role": "primary",
+        "displayName": "Matplotlib Tab Blue",
+        "canonical": "oklch(54.9% 0.124 244.6)",
+        "tonalRamp": [
+          "#020c17",
+          "#09273e",
+          "#164568",
+          "#246697",
+          "#3689c6",
+          "#6eacdf",
+          "#a0cff7",
+          "#d2f3ff"
+        ]
+      },
+      "link-hover": {
+        "role": "primary",
+        "displayName": "Deep Tab Blue",
+        "canonical": "oklch(41.7% 0.096 245.7)",
+        "tonalRamp": [
+          "#040c15",
+          "#122738",
+          "#254560",
+          "#38658b",
+          "#4f88b8",
+          "#7daad3",
+          "#abceed",
+          "#d9f2ff"
+        ]
+      },
+      "marker": {
+        "role": "secondary",
+        "displayName": "Matplotlib Tab Orange",
+        "canonical": "oklch(73.1% 0.185 51.9)",
+        "tonalRamp": [
+          "#190500",
+          "#421500",
+          "#6f2a00",
+          "#a03f00",
+          "#d35800",
+          "#ec8744",
+          "#ffb484",
+          "#ffe1bf"
+        ]
+      },
+      "select": {
+        "role": "neutral",
+        "displayName": "Selection Blue",
+        "canonical": "oklch(90.3% 0.029 241.6)",
+        "tonalRamp": [
+          "#020c17",
+          "#09273e",
+          "#164568",
+          "#246697",
+          "#3689c6",
+          "#6eacdf",
+          "#a0cff7",
+          "#d2f3ff"
+        ]
+      },
+      "mark-target": {
+        "role": "neutral",
+        "displayName": "Target Blue",
+        "canonical": "oklch(95.6% 0.013 241.0)",
+        "tonalRamp": [
+          "#020c17",
+          "#09273e",
+          "#164568",
+          "#246697",
+          "#3689c6",
+          "#6eacdf",
+          "#a0cff7",
+          "#d2f3ff"
+        ]
+      },
+      "ink-raised": {
+        "role": "neutral",
+        "displayName": "Raised Ink",
+        "canonical": "#2f2f2f",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ground-hover": {
+        "role": "neutral",
+        "displayName": "Hover Paper",
+        "canonical": "#f2f2f2",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The name only, inside the wide hero axes, sized to the panel with container units."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The single research statement under the hero, 34ch."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Entry headings and the Updates heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All reading text at a 68ch measure, old-style proportional figures."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Figure captions, profile links, slider row; DejaVu Sans."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav, buttons, entry dates, reference numbers, colophon; tabular lining figures."
+      },
+      "tick": {
+        "displayName": "Tick",
+        "purpose": "Axis tick values in label gray."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-state",
+        "value": "160ms ease-out",
+        "purpose": "Color and underline-color transitions on links and buttons."
+      },
+      {
+        "name": "target-fade",
+        "value": "background-color 600ms ease-out",
+        "purpose": "Highlight on the reference a citation jumps to."
+      },
+      {
+        "name": "sampling-run",
+        "value": "250ms hold, then 1800ms, t = cos^2(pi/2 * p) from 1 to 0",
+        "purpose": "The one load moment: name and portrait resolve from noise, after fonts load. Reduced motion opens at t = 0."
+      },
+      {
+        "name": "copy-feedback",
+        "value": "2400ms",
+        "purpose": "How long the copy button shows Copied before resetting."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "md",
+        "value": "64rem"
+      },
+      {
+        "name": "sm",
+        "value": "48rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid ink action for the email call; square, DejaVu label.",
+      "html": "<a class=\"ds-btn\" href=\"#\">Email wentaos@bu.edu</a>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 1.125rem; border: 1px solid #121212; border-radius: 0; background: #121212; color: #ffffff; font: 400 0.9375rem/1 \"DejaVu Sans\", \"Bitstream Vera Sans\", Verdana, sans-serif; text-decoration: none; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out; } .ds-btn:hover { background: #2f2f2f; } .ds-btn:active { background: #000; } .ds-btn:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; }"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Outline companion action, e.g. Copy address with a stroked SVG icon.",
+      "html": "<button class=\"ds-btn-line\" type=\"button\"><svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" aria-hidden=\"true\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M10.5 3.5v-1h-8v8h1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg><span>Copy address</span></button>",
+      "css": ".ds-btn-line { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 1.125rem; border: 1px solid #121212; border-radius: 0; background: #ffffff; color: #121212; font: 400 0.9375rem/1 \"DejaVu Sans\", \"Bitstream Vera Sans\", Verdana, sans-serif; cursor: pointer; transition: background-color 160ms ease-out; } .ds-btn-line:hover { background: #f2f2f2; } .ds-btn-line:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Sticky header: DejaVu wordmark, gray section links, small solid Email button.",
+      "html": "<header class=\"ds-nav\"><a class=\"ds-nav__mark\" href=\"#\">Wentao Shangguan</a><ul><li><a href=\"#\">Research</a></li><li><a href=\"#\">Work</a></li><li><a href=\"#\">Publications</a></li></ul><a class=\"ds-nav__btn\" href=\"#\">Email</a></header>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 1.5rem; min-height: 3.25rem; padding: 0 1rem; background: #ffffff; border-bottom: 1px solid #e3e3e3; } .ds-nav__mark { margin-right: auto; color: #121212; text-decoration: none; font: 700 0.875rem/1 \"DejaVu Sans\", Verdana, sans-serif; } .ds-nav ul { display: flex; gap: 1.5rem; margin: 0; padding: 0; list-style: none; } .ds-nav ul a { color: #404040; text-decoration: none; font: 400 0.875rem/1 \"DejaVu Sans\", Verdana, sans-serif; padding-block: 0.5rem; } .ds-nav ul a:hover { color: #121212; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.3em; } .ds-nav a:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; } .ds-nav__btn { display: inline-flex; align-items: center; min-height: 2rem; padding: 0 0.75rem; border: 1px solid #121212; background: #121212; color: #ffffff; font: 400 0.875rem/1 \"DejaVu Sans\", Verdana, sans-serif; text-decoration: none; } .ds-nav__btn:hover { background: #2f2f2f; }"
+    },
+    {
+      "name": "Link and Citation",
+      "kind": "custom",
+      "refersTo": "link",
+      "description": "Tab-blue inline link with a thin offset underline, and a bracketed DejaVu citation.",
+      "html": "<p class=\"ds-prose\">Guidance that improves sample quality at no extra cost <a class=\"ds-cite\" href=\"#\">[1]</a>, advised by <a href=\"#\">Prof. Vivek K. Goyal</a>.</p>",
+      "css": ".ds-prose { font: 400 1.1875rem/1.55 \"STIX Two Text\", \"Times New Roman\", serif; color: #121212; max-width: 68ch; } .ds-prose a { color: #1f77b4; text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, #1f77b4 45%, transparent); transition: color 160ms ease-out, text-decoration-color 160ms ease-out; } .ds-prose a:hover { color: #12507d; text-decoration-color: currentColor; } .ds-prose a:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; } .ds-prose .ds-cite { font: 400 0.75em \"DejaVu Sans\", Verdana, sans-serif; font-variant-numeric: tabular-nums lining-nums; text-decoration: none; white-space: nowrap; } .ds-prose .ds-cite:hover { text-decoration: underline; }"
+    },
+    {
+      "name": "Axes Panel with Noise",
+      "kind": "custom",
+      "refersTo": "axes-plot",
+      "description": "Signature imshow panel: 1px ink spine, outward ticks with DejaVu labels, axis title, and a pixelated grayscale noise field. The preview bakes one seeded N(0,1) draw (30x6 cells, gray = 127.5 + 52z) into an inline SVG; the site paints it on a canvas.",
+      "html": "<figure class=\"ds-axes\"><p class=\"ds-axes__title\">(a) <i>t</i> = 1.00</p><div class=\"ds-axes__box\"><div class=\"ds-axes__plot\"></div><span class=\"ds-tick ds-tick--x\" style=\"left:0%\">0</span><span class=\"ds-tick ds-tick--x\" style=\"left:50%\">60</span><span class=\"ds-tick ds-tick--x\" style=\"left:100%\">120</span><span class=\"ds-tick ds-tick--y\" style=\"top:0%\">0</span><span class=\"ds-tick ds-tick--y\" style=\"top:100%\">24</span></div></figure>",
+      "css": ".ds-axes { margin: 0; padding: 0 0 1.75rem 1.75rem; } .ds-axes__title { margin: 0 0 0.625rem; text-align: center; color: #121212; font: 400 0.8125rem/1.2 \"DejaVu Sans\", Verdana, sans-serif; } .ds-axes__title i { font-family: \"STIX Two Text\", serif; font-size: 1.15em; } .ds-axes__box { position: relative; } .ds-axes__plot { aspect-ratio: 5 / 1; border: 1px solid #121212; image-rendering: pixelated; background: #808080 url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 6' shape-rendering='crispEdges' preserveAspectRatio='none'><rect x='0' y='0' width='1' height='1' fill='%23ececec'/><rect x='1' y='0' width='1' height='1' fill='%237d7d7d'/><rect x='2' y='0' width='1' height='1' fill='%234f4f4f'/><rect x='3' y='0' width='1' height='1' fill='%239e9e9e'/><rect x='4' y='0' width='1' height='1' fill='%236f6f6f'/><rect x='5' y='0' width='1' height='1' fill='%23636363'/><rect x='6' y='0' width='1' height='1' fill='%23737373'/><rect x='7' y='0' width='1' height='1' fill='%23afafaf'/><rect x='8' y='0' width='1' height='1' fill='%23979797'/><rect x='9' y='0' width='1' height='1' fill='%23656565'/><rect x='10' y='0' width='1' height='1' fill='%238e8e8e'/><rect x='11' y='0' width='1' height='1' fill='%23656565'/><rect x='12' y='0' width='1' height='1' fill='%23787878'/><rect x='13' y='0' width='1' height='1' fill='%23434343'/><rect x='14' y='0' width='1' height='1' fill='%235a5a5a'/><rect x='15' y='0' width='1' height='1' fill='%235f5f5f'/><rect x='16' y='0' width='1' height='1' fill='%234f4f4f'/><rect x='17' y='0' width='1' height='1' fill='%23bebebe'/><rect x='18' y='0' width='1' height='1' fill='%23858585'/><rect x='19' y='0' width='1' height='1' fill='%23373737'/><rect x='20' y='0' width='1' height='1' fill='%234d4d4d'/><rect x='21' y='0' width='1' height='1' fill='%23707070'/><rect x='22' y='0' width='1' height='1' fill='%23909090'/><rect x='23' y='0' width='1' height='1' fill='%23858585'/><rect x='24' y='0' width='1' height='1' fill='%23b6b6b6'/><rect x='25' y='0' width='1' height='1' fill='%23525252'/><rect x='26' y='0' width='1' height='1' fill='%23ffffff'/><rect x='27' y='0' width='1' height='1' fill='%234c4c4c'/><rect x='28' y='0' width='1' height='1' fill='%23e1e1e1'/><rect x='29' y='0' width='1' height='1' fill='%234c4c4c'/><rect x='0' y='1' width='1' height='1' fill='%231e1e1e'/><rect x='1' y='1' width='1' height='1' fill='%23313131'/><rect x='2' y='1' width='1' height='1' fill='%23afafaf'/><rect x='3' y='1' width='1' height='1' fill='%23757575'/><rect x='4' y='1' width='1' height='1' fill='%23c0c0c0'/><rect x='5' y='1' width='1' height='1' fill='%236b6b6b'/><rect x='6' y='1' width='1' height='1' fill='%23040404'/><rect x='7' y='1' width='1' height='1' fill='%23424242'/><rect x='8' y='1' width='1' height='1' fill='%23020202'/><rect x='9' y='1' width='1' height='1' fill='%23a1a1a1'/><rect x='10' y='1' width='1' height='1' fill='%23474747'/><rect x='11' y='1' width='1' height='1' fill='%23878787'/><rect x='12' y='1' width='1' height='1' fill='%23848484'/><rect x='13' y='1' width='1' height='1' fill='%23a9a9a9'/><rect x='14' y='1' width='1' height='1' fill='%239b9b9b'/><rect x='15' y='1' width='1' height='1' fill='%23979797'/><rect x='16' y='1' width='1' height='1' fill='%23030303'/><rect x='17' y='1' width='1' height='1' fill='%23a1a1a1'/><rect x='18' y='1' width='1' height='1' fill='%23303030'/><rect x='19' y='1' width='1' height='1' fill='%23919191'/><rect x='20' y='1' width='1' height='1' fill='%23b2b2b2'/><rect x='21' y='1' width='1' height='1' fill='%23484848'/><rect x='22' y='1' width='1' height='1' fill='%23717171'/><rect x='23' y='1' width='1' height='1' fill='%23e0e0e0'/><rect x='24' y='1' width='1' height='1' fill='%23b3b3b3'/><rect x='25' y='1' width='1' height='1' fill='%23676767'/><rect x='26' y='1' width='1' height='1' fill='%23777777'/><rect x='27' y='1' width='1' height='1' fill='%238f8f8f'/><rect x='28' y='1' width='1' height='1' fill='%23060606'/><rect x='29' y='1' width='1' height='1' fill='%23737373'/><rect x='0' y='2' width='1' height='1' fill='%23afafaf'/><rect x='1' y='2' width='1' height='1' fill='%238e8e8e'/><rect x='2' y='2' width='1' height='1' fill='%239f9f9f'/><rect x='3' y='2' width='1' height='1' fill='%23bcbcbc'/><rect x='4' y='2' width='1' height='1' fill='%23707070'/><rect x='5' y='2' width='1' height='1' fill='%233f3f3f'/><rect x='6' y='2' width='1' height='1' fill='%23616161'/><rect x='7' y='2' width='1' height='1' fill='%23898989'/><rect x='8' y='2' width='1' height='1' fill='%23707070'/><rect x='9' y='2' width='1' height='1' fill='%23131313'/><rect x='10' y='2' width='1' height='1' fill='%23414141'/><rect x='11' y='2' width='1' height='1' fill='%237c7c7c'/><rect x='12' y='2' width='1' height='1' fill='%23333333'/><rect x='13' y='2' width='1' height='1' fill='%23696969'/><rect x='14' y='2' width='1' height='1' fill='%236b6b6b'/><rect x='15' y='2' width='1' height='1' fill='%235c5c5c'/><rect x='16' y='2' width='1' height='1' fill='%237b7b7b'/><rect x='17' y='2' width='1' height='1' fill='%23686868'/><rect x='18' y='2' width='1' height='1' fill='%23adadad'/><rect x='19' y='2' width='1' height='1' fill='%23393939'/><rect x='20' y='2' width='1' height='1' fill='%237e7e7e'/><rect x='21' y='2' width='1' height='1' fill='%238a8a8a'/><rect x='22' y='2' width='1' height='1' fill='%23767676'/><rect x='23' y='2' width='1' height='1' fill='%23d4d4d4'/><rect x='24' y='2' width='1' height='1' fill='%239e9e9e'/><rect x='25' y='2' width='1' height='1' fill='%23c2c2c2'/><rect x='26' y='2' width='1' height='1' fill='%237a7a7a'/><rect x='27' y='2' width='1' height='1' fill='%23a1a1a1'/><rect x='28' y='2' width='1' height='1' fill='%23b1b1b1'/><rect x='29' y='2' width='1' height='1' fill='%239f9f9f'/><rect x='0' y='3' width='1' height='1' fill='%23484848'/><rect x='1' y='3' width='1' height='1' fill='%23000000'/><rect x='2' y='3' width='1' height='1' fill='%23a9a9a9'/><rect x='3' y='3' width='1' height='1' fill='%23737373'/><rect x='4' y='3' width='1' height='1' fill='%237e7e7e'/><rect x='5' y='3' width='1' height='1' fill='%23818181'/><rect x='6' y='3' width='1' height='1' fill='%23303030'/><rect x='7' y='3' width='1' height='1' fill='%237f7f7f'/><rect x='8' y='3' width='1' height='1' fill='%23bebebe'/><rect x='9' y='3' width='1' height='1' fill='%23b9b9b9'/><rect x='10' y='3' width='1' height='1' fill='%23929292'/><rect x='11' y='3' width='1' height='1' fill='%23a6a6a6'/><rect x='12' y='3' width='1' height='1' fill='%237d7d7d'/><rect x='13' y='3' width='1' height='1' fill='%23c5c5c5'/><rect x='14' y='3' width='1' height='1' fill='%23c9c9c9'/><rect x='15' y='3' width='1' height='1' fill='%23353535'/><rect x='16' y='3' width='1' height='1' fill='%23949494'/><rect x='17' y='3' width='1' height='1' fill='%23393939'/><rect x='18' y='3' width='1' height='1' fill='%23ababab'/><rect x='19' y='3' width='1' height='1' fill='%236c6c6c'/><rect x='20' y='3' width='1' height='1' fill='%236e6e6e'/><rect x='21' y='3' width='1' height='1' fill='%232e2e2e'/><rect x='22' y='3' width='1' height='1' fill='%23cecece'/><rect x='23' y='3' width='1' height='1' fill='%233b3b3b'/><rect x='24' y='3' width='1' height='1' fill='%23b7b7b7'/><rect x='25' y='3' width='1' height='1' fill='%232d2d2d'/><rect x='26' y='3' width='1' height='1' fill='%23606060'/><rect x='27' y='3' width='1' height='1' fill='%23343434'/><rect x='28' y='3' width='1' height='1' fill='%23f1f1f1'/><rect x='29' y='3' width='1' height='1' fill='%23a9a9a9'/><rect x='0' y='4' width='1' height='1' fill='%23eeeeee'/><rect x='1' y='4' width='1' height='1' fill='%23555555'/><rect x='2' y='4' width='1' height='1' fill='%23a7a7a7'/><rect x='3' y='4' width='1' height='1' fill='%239e9e9e'/><rect x='4' y='4' width='1' height='1' fill='%23818181'/><rect x='5' y='4' width='1' height='1' fill='%23222222'/><rect x='6' y='4' width='1' height='1' fill='%23868686'/><rect x='7' y='4' width='1' height='1' fill='%23c0c0c0'/><rect x='8' y='4' width='1' height='1' fill='%234f4f4f'/><rect x='9' y='4' width='1' height='1' fill='%23434343'/><rect x='10' y='4' width='1' height='1' fill='%23111111'/><rect x='11' y='4' width='1' height='1' fill='%235f5f5f'/><rect x='12' y='4' width='1' height='1' fill='%235b5b5b'/><rect x='13' y='4' width='1' height='1' fill='%232a2a2a'/><rect x='14' y='4' width='1' height='1' fill='%23787878'/><rect x='15' y='4' width='1' height='1' fill='%23454545'/><rect x='16' y='4' width='1' height='1' fill='%23bababa'/><rect x='17' y='4' width='1' height='1' fill='%23161616'/><rect x='18' y='4' width='1' height='1' fill='%23bababa'/><rect x='19' y='4' width='1' height='1' fill='%23b1b1b1'/><rect x='20' y='4' width='1' height='1' fill='%23c6c6c6'/><rect x='21' y='4' width='1' height='1' fill='%23484848'/><rect x='22' y='4' width='1' height='1' fill='%23666666'/><rect x='23' y='4' width='1' height='1' fill='%23717171'/><rect x='24' y='4' width='1' height='1' fill='%23656565'/><rect x='25' y='4' width='1' height='1' fill='%235c5c5c'/><rect x='26' y='4' width='1' height='1' fill='%23696969'/><rect x='27' y='4' width='1' height='1' fill='%237e7e7e'/><rect x='28' y='4' width='1' height='1' fill='%23424242'/><rect x='29' y='4' width='1' height='1' fill='%23686868'/><rect x='0' y='5' width='1' height='1' fill='%23616161'/><rect x='1' y='5' width='1' height='1' fill='%23aaaaaa'/><rect x='2' y='5' width='1' height='1' fill='%23585858'/><rect x='3' y='5' width='1' height='1' fill='%23555555'/><rect x='4' y='5' width='1' height='1' fill='%23535353'/><rect x='5' y='5' width='1' height='1' fill='%23525252'/><rect x='6' y='5' width='1' height='1' fill='%23c2c2c2'/><rect x='7' y='5' width='1' height='1' fill='%23222222'/><rect x='8' y='5' width='1' height='1' fill='%234e4e4e'/><rect x='9' y='5' width='1' height='1' fill='%235c5c5c'/><rect x='10' y='5' width='1' height='1' fill='%23555555'/><rect x='11' y='5' width='1' height='1' fill='%23989898'/><rect x='12' y='5' width='1' height='1' fill='%23020202'/><rect x='13' y='5' width='1' height='1' fill='%235a5a5a'/><rect x='14' y='5' width='1' height='1' fill='%236f6f6f'/><rect x='15' y='5' width='1' height='1' fill='%23272727'/><rect x='16' y='5' width='1' height='1' fill='%23adadad'/><rect x='17' y='5' width='1' height='1' fill='%23717171'/><rect x='18' y='5' width='1' height='1' fill='%23656565'/><rect x='19' y='5' width='1' height='1' fill='%23949494'/><rect x='20' y='5' width='1' height='1' fill='%23a2a2a2'/><rect x='21' y='5' width='1' height='1' fill='%236f6f6f'/><rect x='22' y='5' width='1' height='1' fill='%23e1e1e1'/><rect x='23' y='5' width='1' height='1' fill='%23606060'/><rect x='24' y='5' width='1' height='1' fill='%23afafaf'/><rect x='25' y='5' width='1' height='1' fill='%23696969'/><rect x='26' y='5' width='1' height='1' fill='%23636363'/><rect x='27' y='5' width='1' height='1' fill='%23979797'/><rect x='28' y='5' width='1' height='1' fill='%23676767'/><rect x='29' y='5' width='1' height='1' fill='%234c4c4c'/></svg>\") 0 0 / 100% 100% no-repeat; } .ds-tick { position: absolute; color: #404040; font: 400 0.6875rem/1 \"DejaVu Sans\", Verdana, sans-serif; white-space: nowrap; } .ds-tick::before { content: \"\"; position: absolute; background: #121212; } .ds-tick--x { top: 100%; transform: translateX(-50%); padding-top: 9px; } .ds-tick--x::before { left: 50%; top: 0; width: 1px; height: 5px; } .ds-tick--y { right: 100%; transform: translateY(-50%); padding-right: 9px; } .ds-tick--y::before { top: 50%; right: 0; width: 5px; height: 1px; }"
+    },
+    {
+      "name": "t Slider",
+      "kind": "input",
+      "refersTo": "slider-thumb",
+      "description": "Noise-level range input: 1px ink track, square tab-orange thumb, tabular t readout.",
+      "html": "<div class=\"ds-scrub\"><label for=\"ds-t\">Noise level</label><input id=\"ds-t\" class=\"ds-range\" type=\"range\" min=\"0\" max=\"1\" step=\"0.01\" value=\"0.4\"><output><i>t</i> = 0.40</output></div>",
+      "css": ".ds-scrub { display: flex; align-items: center; gap: 0.75rem; font: 400 0.9375rem/1.45 \"DejaVu Sans\", Verdana, sans-serif; } .ds-scrub label { color: #404040; } .ds-scrub output { min-width: 4.75em; color: #121212; font-variant-numeric: tabular-nums; } .ds-scrub output i { font-family: \"STIX Two Text\", serif; } .ds-range { -webkit-appearance: none; appearance: none; width: 11rem; height: 1.75rem; margin: 0; background: transparent; cursor: ew-resize; } .ds-range::-webkit-slider-runnable-track { height: 1px; background: #121212; } .ds-range::-moz-range-track { height: 1px; background: #121212; } .ds-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 0.75rem; height: 1.125rem; margin-top: -0.5625rem; background: #ff7f0e; border: 1px solid #121212; border-radius: 0; } .ds-range::-moz-range-thumb { width: 0.75rem; height: 1.125rem; background: #ff7f0e; border: 1px solid #121212; border-radius: 0; } .ds-range:focus-visible { outline: 2px solid #1f77b4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Time-Axis Entry",
+      "kind": "custom",
+      "description": "Dated entry: right-aligned DejaVu date gutter on a 1px spine with a 5px outward tick.",
+      "html": "<ol class=\"ds-entries\"><li class=\"ds-entry\"><p class=\"ds-entry__dates\">Sep 2022 – present</p><div><h3>Boston University</h3><p>PhD, Electrical and Computer Engineering</p></div></li></ol>",
+      "css": ".ds-entries { --gw: 9rem; --sx: calc(var(--gw) + 0.875rem); position: relative; margin: 0; padding: 0; list-style: none; } .ds-entries::before { content: \"\"; position: absolute; top: 0; bottom: 0; left: var(--sx); width: 1px; background: #121212; } .ds-entry { display: grid; grid-template-columns: var(--gw) minmax(0, 1fr); column-gap: 2.5rem; } .ds-entry__dates { position: relative; margin: 0; padding-top: 0.3rem; text-align: right; color: #404040; font: 400 0.875rem/1.4 \"DejaVu Sans\", Verdana, sans-serif; font-variant-numeric: tabular-nums lining-nums; } .ds-entry__dates::after { content: \"\"; position: absolute; top: calc(0.3rem + 0.7em); left: calc(var(--sx) - 5px); width: 5px; height: 1px; background: #121212; } .ds-entry h3 { margin: 0; font: 700 1.375rem/1.3 \"STIX Two Text\", serif; color: #121212; } .ds-entry p:not(.ds-entry__dates) { margin: 0.375rem 0 0; font: 400 1.1875rem/1.55 \"STIX Two Text\", serif; color: #121212; }"
+    },
+    {
+      "name": "Reference",
+      "kind": "custom",
+      "description": "Numbered publication entry; ink title link with hairline underline, target highlight in pale tab blue.",
+      "html": "<div class=\"ds-ref\"><span class=\"ds-ref__n\">[1]</span><div><p class=\"ds-ref__title\"><a href=\"#\">Diffusion Posterior Sampling with Uncertain Forward Models</a></p><p class=\"ds-ref__meta\"><strong>W. Shangguan</strong>, V. K. Goyal</p><p class=\"ds-ref__meta\"><em>Preprint</em>, 2026.</p></div></div>",
+      "css": ".ds-ref { display: grid; grid-template-columns: 3rem minmax(0, 1fr); padding: 0.5rem 0.75rem; font: 400 1.1875rem/1.55 \"STIX Two Text\", serif; color: #121212; transition: background-color 600ms ease-out; } .ds-ref:hover { background: #e9f2f9; } .ds-ref p { margin: 0; } .ds-ref__n { padding-top: 0.25rem; color: #616161; font: 400 0.875rem \"DejaVu Sans\", Verdana, sans-serif; font-variant-numeric: tabular-nums lining-nums; } .ds-ref__title { font-weight: 700; line-height: 1.35; } .ds-ref__title a { color: #121212; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: #e3e3e3; } .ds-ref__title a:hover { color: #12507d; text-decoration-color: currentColor; } .ds-ref__title a:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; } .ds-ref__meta { margin-top: 0.25rem; color: #404040; } .ds-ref__meta strong { color: #121212; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Paper's Figure",
+    "overview": "The page is laid out the way a machine-learning paper presents results: a white figure ground, imshow panels framed by thin black spines with outward ticks, numbered figure captions, and bracketed [n] citations that jump to a reference list. Every visual device is borrowed from matplotlib and the publication page, never from web-template furniture. The only material is grayscale Gaussian noise, i.i.d. standard-normal samples painted one per pixel on a canvas and scaled up with crisp, pixelated edges.\n\nTwo voices carry the type: STIX Two Text, a scientific serif, for the name, headings and reading text; DejaVu Sans, matplotlib's default label face, for everything a plot would label (ticks, captions, dates, navigation, buttons, reference numbers). Color is almost absent. The matplotlib default cycle supplies the only two hues: tab:blue for links and focus, tab:orange for the one live marker. Density is generous and editorial: long section gaps, a 68ch measure, and no containers around content.\n\nMotion is one authored moment. On load the hero samples from t = 1 to t = 0, the name and portrait resolving out of noise, and the t slider lets the visitor re-noise both panels. Nothing else on the page animates in.",
+    "keyCharacteristics": [
+      "White ground, near-black ink, three gray steps for text hierarchy.",
+      "1px black spines with 5px outward ticks frame every image and the time axis of dated entries.",
+      "Pixelated N(0,1) grayscale noise as the single material.",
+      "tab:blue links; tab:orange on the slider handle only.",
+      "Square corners everywhere; no shadows, gradients or cards.",
+      "Serif for reading, DejaVu Sans for anything a plot would label."
+    ],
+    "rules": [
+      {
+        "name": "The One Orange Rule",
+        "body": "Tab orange appears on exactly one element: the handle of the live t slider. Bullets, highlights and badges stay in ink or tab blue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Matplotlib Cycle Rule",
+        "body": "New hues come from the matplotlib default cycle in its order, and only for a plotted or interactive mark. Nothing is decorated with color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plot Label Rule",
+        "body": "If matplotlib would draw it as a label (ticks, axis titles, captions, dates, numbers in brackets, controls), it is DejaVu Sans with tabular lining figures. Everything a reader reads as prose is STIX.",
+        "section": "typography"
+      },
+      {
+        "name": "The Math Italic Rule",
+        "body": "Variables in captions and axis titles (t, x, ε, N) are STIX italic at about 1.12 to 1.15em, even inside DejaVu text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Figure Is Flat Rule",
+        "body": "A surface that needs separation gets a 1px spine or hairline, never a shadow or a tinted card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do frame every image or figure as axes: 1px ink spine, 5px outward ticks, DejaVu tick labels, and a \"Figure n.\" caption.",
+      "Do use the noise field, with real N(0,1) samples at the panel's own pixel grid, as the placeholder for missing imagery.",
+      "Do cite claims with bracketed [n] numbers that link to the reference list.",
+      "Do keep tab orange on the slider handle alone, and links in tab blue (#1f77b4).",
+      "Do keep every corner square (0px) and every rule 1px.",
+      "Do give any new motion a reduced-motion state that shows the settled result."
+    ],
+    "donts": [
+      "Don't add cards, tinted panels, shadows, gradients or rounded tiles; separation is a spine or a hairline.",
+      "Don't use tab orange for text, bullets or highlights.",
+      "Don't set prose in DejaVu or labels in STIX; the split follows the Plot Label Rule.",
+      "Don't add entrance animations beyond the hero sampling run.",
+      "Don't use colored or smoothed noise; it is grayscale and pixelated."
+    ]
+  }
+}
