@@ -133,6 +133,7 @@
       {%- endif %}
     </section>
 
+    {%- assign fig_n = 1 %}
     {%- assign current = site.data.projects | where: "group", "current" %}
     {%- if current.size > 0 %}
     <section class="section wrap" id="work" aria-labelledby="work-h">
@@ -145,6 +146,11 @@
           <div class="entry__body">
             {%- capture c %}{% if p.cite %} {% include cite.html id=p.cite %}{% endif %}{% endcapture %}
             <p>{{ p.description | strip }}{{ c }}</p>
+            {%- if p.figure %}
+            {%- assign fig_n = fig_n | plus: 1 %}
+            {%- capture fc %}{% if p.cite %}{% include cite.html id=p.cite %}{% endif %}{% endcapture %}
+            {% include docfig.html f=p.figure n=fig_n cite=fc %}
+            {%- endif %}
           </div>
         </li>
         {%- endfor %}
@@ -165,6 +171,10 @@
             <p class="ref__venue"><em>{{ pub.venue }}</em>, {{ pub.year }}.{% if pub.note %} {{ pub.note }}{% endif %}</p>
             {%- if pub.links %}
             <p class="ref__links">{% for l in pub.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% endfor %}</p>
+            {%- endif %}
+            {%- if pub.figure %}
+            {%- assign fig_n = fig_n | plus: 1 %}
+            {% include docfig.html f=pub.figure n=fig_n %}
             {%- endif %}
           </div>
         </li>
@@ -231,7 +241,8 @@
         </figure>
         {%- endfor %}
       </div>
-      <figcaption class="fig-sub__cap"><span class="figlabel">Figure 2.</span> Earlier projects, newest first. Axes are in image pixels.</figcaption>
+      {%- assign fig_n = fig_n | plus: 1 %}
+      <figcaption class="fig-sub__cap"><span class="figlabel">Figure {{ fig_n }}.</span> Earlier projects, newest first. Axes are in image pixels.</figcaption>
       </figure>
     </section>
     {%- endif %}
@@ -240,6 +251,7 @@
     {%- assign insta = me.profiles | where: "network", "Instagram" | first %}
     <section class="section wrap" id="photography" aria-labelledby="photography-h">
       <h2 id="photography-h">Photography</h2>
+      {%- assign fig_n = fig_n | plus: 1 %}
       <figure class="fig2">
         <div class="axes">
           <div class="axes__plot axes__plot--photo">
@@ -252,9 +264,9 @@
         </div>
         <figcaption>
           {%- if me.photography.url %}
-          <span class="figlabel">Figure 3.</span> Photography.
+          <span class="figlabel">Figure {{ fig_n }}.</span> Photography.
           {%- else %}
-          <span class="figlabel">Figure 3.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
+          <span class="figlabel">Figure {{ fig_n }}.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
           {%- endif %}
         </figcaption>
       </figure>

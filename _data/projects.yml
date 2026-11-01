@@ -1,6 +1,7 @@
 # Newest first; shown in the order listed.
 # group: current -> "Current work" list; earlier -> "Earlier work" figure grid
 # (needs `image` plus its pixel size as `w` and `h`; the frame and ticks follow them).
+# Optional `figure` (src, w, h, alt, caption) on any entry shows a numbered figure under it.
 
 - group: current
   id: transformer
@@ -35,6 +36,15 @@
     problems (Gaussian and motion deblurring, CT, MRI, ultrasound and
     fluorescence microscopy), with better ensemble predictions (CRPS, energy
     and variogram scores).
+  figure:
+    src: /img/figures/ual-overview.webp
+    w: 1800
+    h: 1077
+    alt: >-
+      Grid of reconstructions for Gaussian blur, motion blur, CT, MRI,
+      ultrasound and microscopy, in rows labelled Ref, Pub and UAL, with
+      per-task improvement bars above.
+    caption: Overview of results on six inverse problems, from the UAL preprint
 
 - group: current
   id: specdepth

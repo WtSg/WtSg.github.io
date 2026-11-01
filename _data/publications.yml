@@ -1,4 +1,5 @@
 # Newest first; shown in the order listed. Numbers [1], [2], ... follow this order.
+# Optional `figure` (src, w, h, alt, caption) shows a numbered figure under the entry.
 - id: ual
   title: Diffusion Posterior Sampling with Uncertain Forward Models
   authors: W. Shangguan, V. K. Goyal
@@ -19,6 +20,18 @@
   links:
     - label: DOI
       url: https://doi.org/10.1109/TCI.2026.3668998
+  figure:
+    src: /img/figures/ozone-radiance.webp
+    w: 1600
+    h: 611
+    alt: >-
+      Diagram of a camera viewing an object over the ground, with arrows for
+      object emission, reflected light and air emission, a hemisphere of
+      downwelling radiation and ground-sourced radiation.
+    caption: >-
+      Radiance reaching a passive LWIR camera: object emission, reflected
+      light, air emission, and downwelling and ground-sourced radiation.
+      Reprinted from this paper, © 2026 IEEE.
 
 - id: cure
   title: Learning Cross-Video Neural Representations for High-Quality Frame Interpolation
