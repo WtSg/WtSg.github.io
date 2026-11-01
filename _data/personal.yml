@@ -70,9 +70,7 @@ research_threads:
     project: transformer
     text: >-
       that share information across Transformer layers without reading from
-      every layer (in recent tests at 40M parameters, 8.9% lower held-out
-      perplexity than a standard Transformer, and ahead of Kimi's Block
-      Attention Residuals, published in 2026).
+      every layer.
     joined: true
   - lead: Physics-guided adaptation
     project: specdepth
