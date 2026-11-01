@@ -67,14 +67,15 @@
     held-out evaluation.
   figure:
     src: /img/figures/specdepth-forest.webp
-    w: 1640
-    h: 307
+    w: 1610
+    h: 246
     alt: >-
       Four panels of a distant forest: the broadband LWIR image and depth maps
       from UniDepth-V2, physics inversion and SpecDepth.
     caption: >-
-      A distant forest background in broadband LWIR, with depth maps from
-      UniDepth-V2, physics inversion and SpecDepth (colour shows depth).
+      A distant forest background. From left: the broadband LWIR image, then
+      depth maps from UniDepth-V2, physics inversion and SpecDepth (colour
+      shows depth).
 
 - group: earlier
   name: Time-Resolved Particle Beam Microscopy

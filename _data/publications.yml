@@ -20,6 +20,8 @@
   links:
     - label: DOI
       url: https://doi.org/10.1109/TCI.2026.3668998
+    - label: arXiv
+      url: https://arxiv.org/abs/2603.00273
   figure:
     src: /img/figures/ozone-radiance.webp
     w: 1600
