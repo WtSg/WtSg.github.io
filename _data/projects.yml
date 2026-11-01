@@ -24,6 +24,16 @@
     or network evaluations. On DiT-XL/2 with 50-step DDIM: 23–30% lower FID and
     22–25% lower FD-DINOv2 than constant guidance at matched class accuracy.
     Also tested across step counts and on SiT flow models.
+  figure:
+    src: /img/figures/guidance-paired-samples.webp
+    w: 1600
+    h: 841
+    alt: >-
+      Two rows of four generated images (a man holding a fish, goldfish, a
+      great white shark and a tiger shark), with the same subjects in both rows.
+    caption: >-
+      Class-conditional samples from the same seeds, with noise-aware guidance
+      (top) and DG-CFG (bottom).
 
 - group: current
   id: ual
@@ -37,14 +47,13 @@
     fluorescence microscopy), with better ensemble predictions (CRPS, energy
     and variogram scores).
   figure:
-    src: /img/figures/ual-overview.webp
+    src: /img/figures/ual-results.webp
     w: 1800
-    h: 1077
+    h: 860
     alt: >-
       Grid of reconstructions for Gaussian blur, motion blur, CT, MRI,
-      ultrasound and microscopy, in rows labelled Ref, Pub and UAL, with
-      per-task improvement bars above.
-    caption: Overview of results on six inverse problems, from the UAL preprint
+      ultrasound and microscopy, in rows labelled Ref, Pub and UAL.
+    caption: Results on six inverse problems, from the UAL preprint
 
 - group: current
   id: specdepth
@@ -56,6 +65,16 @@
     predicts depth, temperature and per-band emissivity and is coupled to a
     differentiable radiative-transfer renderer; lidar is used only for
     held-out evaluation.
+  figure:
+    src: /img/figures/specdepth-forest.webp
+    w: 1640
+    h: 307
+    alt: >-
+      Four panels of a distant forest: the broadband LWIR image and depth maps
+      from UniDepth-V2, physics inversion and SpecDepth.
+    caption: >-
+      A distant forest background in broadband LWIR, with depth maps from
+      UniDepth-V2, physics inversion and SpecDepth (colour shows depth).
 
 - group: earlier
   name: Time-Resolved Particle Beam Microscopy
