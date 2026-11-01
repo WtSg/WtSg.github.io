@@ -53,6 +53,7 @@
     var layers = fig.querySelectorAll("canvas[data-noise]");
     var slider = fig.querySelector("input[type=range]");
     var out = fig.querySelector("output");
+    var titles = fig.querySelectorAll("[data-t]");
     var painted = layers.length > 0;
     for (var k = 0; k < layers.length; k++) painted = paintNoise(layers[k], 1729 + k) && painted;
 
@@ -62,6 +63,7 @@
         for (var j = 0; j < layers.length; j++) layers[j].style.opacity = t;
         if (slider) slider.value = t.toFixed(2);
         if (out) out.innerHTML = "<i>t</i> = " + t.toFixed(2);
+        for (var q = 0; q < titles.length; q++) titles[q].textContent = t.toFixed(2);
       };
 
       var sample = function () {
@@ -138,24 +140,49 @@
       });
     });
 
-    // Videos play only while on screen, and never under reduced motion.
+    // Videos: a drawn play/pause control replaces the browser chrome. They play only
+    // while on screen, never on their own under reduced motion, and never after a pause.
+    var ICON_PLAY = '<svg class="icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5 3.5v9l7.25-4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+    var ICON_PAUSE = '<svg class="icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 3.5v9M10.5 3.5v9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
     var videos = document.querySelectorAll("video[data-autoplay]");
-    if (!reduceMotion && "IntersectionObserver" in window) {
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          var v = entry.target;
-          if (entry.isIntersecting) {
-            var p = v.play();
-            if (p && p.catch) p.catch(function () { v.setAttribute("controls", ""); });
-          } else {
-            v.pause();
-          }
-        });
-      }, { rootMargin: "120px" });
-      Array.prototype.forEach.call(videos, function (v) {
-        v.removeAttribute("controls");
-        io.observe(v);
+    var io = (!reduceMotion && "IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var v = entry.target;
+        if (entry.isIntersecting && !v._held) {
+          var p = v.play();
+          if (p && p.catch) p.catch(function () {});
+        } else if (!entry.isIntersecting) {
+          v.pause();
+        }
       });
-    }
+    }, { rootMargin: "120px" }) : null;
+
+    Array.prototype.forEach.call(videos, function (v) {
+      v.removeAttribute("controls");
+      v._held = !io;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "vctl";
+      var render = function () {
+        var playing = !v.paused && !v.ended;
+        btn.innerHTML = (playing ? ICON_PAUSE : ICON_PLAY) + "<span>" + (playing ? "Pause video" : "Play video") + "</span>";
+      };
+      btn.addEventListener("click", function () {
+        if (v.paused) {
+          v._held = false;
+          var p = v.play();
+          if (p && p.catch) p.catch(function () {});
+        } else {
+          v._held = true;
+          v.pause();
+        }
+      });
+      v.addEventListener("play", render);
+      v.addEventListener("pause", render);
+      render();
+      var cap = v.closest("figure").querySelector(".sub__meta");
+      if (cap) cap.insertAdjacentElement("afterend", btn);
+      if (io) io.observe(v);
+    });
   });
 })();

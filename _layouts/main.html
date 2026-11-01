@@ -45,27 +45,33 @@
           <li><a href="#publications">Publications</a></li>
           <li><a href="#photography">Photography</a></li>
         </ul>
-        <a class="btn btn--small" href="mailto:{{ me.email }}">Email</a>
       </nav>
+      <a class="btn btn--small masthead__email" href="mailto:{{ me.email }}">Email</a>
     </div>
   </header>
 
   <main id="main">
     <section class="hero wrap" id="top" aria-label="Introduction">
       <figure class="fig1" data-sampler>
-        <div class="fig1__a axes">
-          <div class="axes__plot axes__plot--name">
-            <h1 class="name"><span>{{ me.given_name }}</span> <span>{{ me.family_name }}</span></h1>
-            <canvas class="noise" data-noise="256x96" aria-hidden="true"></canvas>
+        <div class="fig1__a">
+          <p class="axes__title" aria-hidden="true">(a) <i>t</i> = <span data-t>0.00</span></p>
+          <div class="axes">
+            <div class="axes__plot axes__plot--name">
+              <h1 class="name"><span>{{ me.given_name }}</span> <span>{{ me.family_name }}</span></h1>
+              <canvas class="noise" data-noise="256x96" aria-hidden="true"></canvas>
+            </div>
+            {% include ticks.html w=256 h=96 xs="0,50,100,150,200,250" ys="0,20,40,60,80" %}
           </div>
-          {% include ticks.html w=256 h=96 xs="0,50,100,150,200,250" ys="0,20,40,60,80" %}
         </div>
-        <div class="fig1__b axes">
-          <div class="axes__plot axes__plot--portrait">
-            <img src="{{ base }}{{ me.picture }}" alt="{{ me.picture_alt }}" width="720" height="720" fetchpriority="high">
-            <canvas class="noise" data-noise="96x96" aria-hidden="true"></canvas>
+        <div class="fig1__b">
+          <p class="axes__title" aria-hidden="true">(b) <i>t</i> = <span data-t>0.00</span></p>
+          <div class="axes">
+            <div class="axes__plot axes__plot--portrait">
+              <img src="{{ base }}{{ me.picture }}" alt="{{ me.picture_alt }}" width="720" height="720" fetchpriority="high">
+              <canvas class="noise" data-noise="96x96" aria-hidden="true"></canvas>
+            </div>
+            {% include ticks.html w=96 h=96 xs="0,20,40,60,80" ys="0,20,40,60,80" %}
           </div>
-          {% include ticks.html w=96 h=96 xs="0,20,40,60,80" ys="0,20,40,60,80" %}
         </div>
         <figcaption class="fig1__cap">
           <p><span class="figlabel">Figure 1.</span> Sampling <i>x</i><sub>t</sub> = (1 − <i>t</i>)&#8239;<i>x</i><sub>0</sub> + <i>t</i>&#8239;<i>ε</i>, with <i>ε</i> ~ <i>N</i>(0,&nbsp;<i>I</i>), from <i>t</i>&nbsp;=&nbsp;1 to&nbsp;0. (a)&nbsp;Name. (b)&nbsp;Portrait.</p>
@@ -191,19 +197,30 @@
     {%- if earlier.size > 0 %}
     <section class="section wrap" id="earlier" aria-labelledby="earlier-h">
       <h2 id="earlier-h">Earlier work</h2>
+      <figure class="fig-sub">
       <div class="subplots">
         {%- assign letters = "abcdefghijklmnopqrstuvwxyz" %}
         {%- for p in earlier %}
         {%- assign ext = p.image | split: "." | last | downcase %}
+        {%- if p.w > 600 or p.h > 600 %}{% assign step = 200 %}{% else %}{% assign step = 100 %}{% endif %}
+        {%- assign nx = p.w | minus: 1 | divided_by: step %}
+        {%- assign ny = p.h | minus: 1 | divided_by: step %}
+        {%- capture xs %}{% for i in (0..nx) %}{{ i | times: step }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endcapture %}
+        {%- capture ys %}{% for i in (0..ny) %}{{ i | times: step }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endcapture %}
         <figure class="sub">
-          <div class="sub__frame">
-            {%- if ext == "mp4" or ext == "mov" %}
-            <video controls data-autoplay muted loop playsinline preload="none"{% if p.poster %} poster="{{ base }}{{ p.poster }}"{% endif %} aria-label="{{ p.image_alt }}">
-              <source src="{{ base }}{{ p.image }}" type="video/mp4">
-            </video>
-            {%- else %}
-            <img src="{{ base }}{{ p.image }}" alt="{{ p.image_alt }}" loading="lazy" decoding="async">
-            {%- endif %}
+          <div class="sub__slot">
+            <div class="axes sub__axes" style="--ar: {{ p.w | times: 1.0 | divided_by: p.h | round: 4 }}">
+              <div class="axes__plot sub__plot">
+                {%- if ext == "mp4" or ext == "mov" %}
+                <video controls data-autoplay muted loop playsinline preload="none"{% if p.poster %} poster="{{ base }}{{ p.poster }}"{% endif %} aria-label="{{ p.image_alt }}">
+                  <source src="{{ base }}{{ p.image }}" type="video/mp4">
+                </video>
+                {%- else %}
+                <img src="{{ base }}{{ p.image }}" alt="{{ p.image_alt }}" width="{{ p.w }}" height="{{ p.h }}" loading="lazy" decoding="async">
+                {%- endif %}
+              </div>
+              {% include ticks.html w=p.w h=p.h xs=xs ys=ys %}
+            </div>
           </div>
           <figcaption>
             <p class="sub__title"><span class="sub__letter">({{ letters | slice: forloop.index0 }})</span> {% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</p>
@@ -214,6 +231,8 @@
         </figure>
         {%- endfor %}
       </div>
+      <figcaption class="fig-sub__cap"><span class="figlabel">Figure 2.</span> Earlier projects, newest first. Axes are in image pixels.</figcaption>
+      </figure>
     </section>
     {%- endif %}
 
@@ -233,9 +252,9 @@
         </div>
         <figcaption>
           {%- if me.photography.url %}
-          <span class="figlabel">Figure 2.</span> Photography.
+          <span class="figlabel">Figure 3.</span> Photography.
           {%- else %}
-          <span class="figlabel">Figure 2.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
+          <span class="figlabel">Figure 3.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
           {%- endif %}
         </figcaption>
       </figure>

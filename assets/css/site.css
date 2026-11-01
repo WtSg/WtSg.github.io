@@ -54,8 +54,8 @@
   --link: #1f77b4;        /* matplotlib tab:blue */
   --link-hover: #12507d;
   --marker: #ff7f0e;      /* matplotlib tab:orange, marks only (not text) */
-  --select: #ffdcb8;
-  --mark-target: #fff1e3;
+  --select: #cfe2f1;
+  --mark-target: #e9f2f9;
 
   --serif: "STIX Two Text", "STIX Two", "Times New Roman", Times, serif;
   --label: "DejaVu Sans", "Bitstream Vera Sans", Verdana, sans-serif;
@@ -183,7 +183,7 @@ a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
   letter-spacing: 0;
 }
 .wordmark:hover { color: var(--ink); }
-.masthead nav { display: flex; align-items: center; gap: var(--space-3); }
+.wordmark { margin-right: auto; }
 .masthead nav ul { display: flex; gap: var(--space-3); }
 .masthead nav ul a {
   color: var(--ink-2);
@@ -191,7 +191,7 @@ a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
   font: 400 var(--text-sm)/1 var(--label);
   padding-block: 0.5rem;
 }
-.masthead nav ul a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--marker); text-decoration-thickness: 2px; }
+.masthead nav ul a:hover { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.3em; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -246,6 +246,15 @@ a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
 .tick--x::before { left: 50%; top: 0; width: 1px; height: 5px; }
 .tick--y { right: 100%; transform: translateY(-50%); padding-right: 9px; }
 .tick--y::before { top: 50%; right: 0; width: 5px; height: 1px; }
+
+.axes__title {
+  margin-bottom: 0.625rem;
+  text-align: center;
+  color: var(--ink);
+  font: 400 0.8125rem/1.2 var(--label);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.axes__title i { font-family: var(--serif); font-size: 1.15em; }
 
 /* ---------- Hero / Figure 1 ---------- */
 .hero { padding-top: clamp(1.25rem, 0.5rem + 2vw, 2rem); }
@@ -359,8 +368,7 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
   width: 0.75rem;
   height: 0.75rem;
   margin-top: 0.42em;
-  background: var(--marker);
-  border: 1px solid var(--ink);
+  background: var(--ink);
 }
 .actions {
   display: flex;
@@ -413,19 +421,46 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 .before { margin-top: var(--space-4); max-width: var(--measure); color: var(--ink-2); }
 
 /* Entries: current work, education */
-.entries { display: grid; gap: var(--space-4); }
+/* The date gutter is a time axis: 1px spine, outward ticks, labels in the figure face. */
+.entries {
+  --gutter-w: 11rem;
+  --spine-x: calc(var(--gutter-w) + 0.875rem);
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+}
+.entries::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--spine-x);
+  width: 1px;
+  background: var(--spine);
+}
 .entry {
   display: grid;
-  grid-template-columns: 11rem minmax(0, var(--measure));
+  grid-template-columns: var(--gutter-w) minmax(0, var(--measure));
   grid-template-areas: "dates title" "dates body";
   column-gap: var(--space-4);
 }
 .entry__dates {
   grid-area: dates;
-  padding-top: 0.35rem;
-  color: var(--ink-3);
+  position: relative;
+  padding-top: 0.3rem;
+  text-align: right;
+  color: var(--ink-2);
   font-size: var(--text-sm);
   line-height: 1.4;
+}
+.entry__dates::after {
+  content: "";
+  position: absolute;
+  top: calc(0.3rem + 0.7em);
+  left: calc(var(--spine-x) - 5px);
+  width: 5px;
+  height: 1px;
+  background: var(--spine);
 }
 .entry h3 {
   grid-area: title;
@@ -467,16 +502,44 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5) var(--space-4);
 }
-.sub__frame {
+/* Each slot is the subplot cell; the axes shrinks to its image's aspect, like imshow. */
+.sub__slot {
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--spine);
-  background: var(--ground);
-  overflow: hidden;
+  padding: 0 0 1.5rem 2rem;      /* room for tick labels */
+  container-type: size;
+  display: flex;
+  align-items: flex-end;
 }
-.sub__frame img,
-.sub__frame video { width: 100%; height: 100%; object-fit: contain; }
-.sub__frame--cover img { object-fit: cover; }
-.sub figcaption { margin-top: var(--space-2); }
+.sub__axes {
+  width: min(100cqw, 100cqh * var(--ar));
+  aspect-ratio: var(--ar);
+}
+.sub__plot { width: 100%; height: 100%; }
+.sub__plot img,
+.sub__plot video { width: 100%; height: 100%; object-fit: fill; }
+.sub figcaption { margin-top: var(--space-2); padding-left: 2rem; }
+.vctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2rem;
+  margin-top: 0.5rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 var(--text-sm)/1 var(--label);
+  cursor: pointer;
+}
+.vctl:hover { background: #f2f2f2; }
+.fig-sub__cap {
+  margin-top: var(--space-4);
+  padding-left: 2rem;
+  max-width: 72ch;
+  color: var(--ink-2);
+  font: 400 0.9375rem/1.5 var(--label);
+}
 .sub__title { font-weight: 700; line-height: 1.35; text-wrap: balance; }
 .sub__title a { color: var(--ink); text-decoration-color: var(--hairline); }
 .sub__title a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
@@ -527,32 +590,34 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 }
 
 @media (max-width: 48rem) {
-  :root { --text-base: 1.125rem; --text-md: 1.25rem; --text-lg: 1.5rem; }
-  .masthead nav ul { display: none; }
+  :root { --text-base: 1.125rem; --text-md: 1.25rem; --text-lg: 1.5rem; --header-h: 5rem; }
+  .masthead__inner { flex-wrap: wrap; min-height: 0; padding-block: 0.5rem 0; row-gap: 0; }
+  .masthead nav { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
+  .masthead nav ul { gap: 1.25rem; padding-block: 0.625rem 0.75rem; }
+  .masthead nav ul a { font-size: 0.8125rem; white-space: nowrap; }
 
   .fig1 {
-    grid-template-columns: 7.5rem minmax(0, 1fr);
-    grid-template-areas:
-      "a a"
-      "b cap"
-      "scrub scrub";
-    column-gap: 1.25rem;
-    row-gap: 2.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "a" "b" "cap" "scrub";
+    row-gap: 2.25rem;
     padding-left: 1.5rem;
   }
-  .fig1__b .tick { display: none; }
+  .fig1__b { width: min(100%, 15rem); }
   .fig1__cap { margin-top: 0; font-size: var(--text-sm); }
-  .scrub { margin-top: -1rem; font-size: var(--text-sm); }
+  .scrub { margin-top: -1.25rem; font-size: var(--text-sm); }
 
   .threads { grid-template-columns: minmax(0, 1fr); }
+  .entries { --spine-x: 0px; padding-left: 1.125rem; }
   .entry {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "title" "dates" "body";
+    grid-template-areas: "dates" "title" "body";
   }
-  .entry__dates { padding-top: 0.25rem; }
+  .entry__dates { padding-top: 0; text-align: left; }
+  .entry__dates::after { top: 0.7em; left: -1.125rem; }
   .ref { grid-template-columns: 2.25rem minmax(0, 1fr); }
   .subplots { grid-template-columns: minmax(0, 1fr); }
   .fig2 { padding-left: 1.5rem; }
+  .sub__slot { aspect-ratio: 5 / 4; }
 }
 
 @media print {

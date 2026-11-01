@@ -1,5 +1,6 @@
 # Newest first; shown in the order listed.
-# group: current -> "Current work" list; earlier -> "Earlier work" figure grid (needs `image`).
+# group: current -> "Current work" list; earlier -> "Earlier work" figure grid
+# (needs `image` plus its pixel size as `w` and `h`; the frame and ticks follow them).
 
 - group: current
   name: Information Sharing Across Transformer Layers
@@ -47,6 +48,8 @@
   dates: Jan – Nov 2023
   org: Boston University
   image: /img/PBMS.png
+  w: 834
+  h: 834
   image_alt: Schematic of a time-resolved particle beam microscope scan
   description: >-
     Learning-based scan-jitter correction for SEM, using a simulated forward
@@ -57,6 +60,8 @@
   dates: 2020 – 2022
   org: Washington University in St. Louis
   image: /img/web/cure-480.mp4
+  w: 480
+  h: 480
   poster: /img/web/cure-480-poster.jpg
   image_alt: Side-by-side video of input frames and CURE's interpolated frames
   url: https://cure.wshangguan.com
@@ -72,6 +77,8 @@
   dates: "2019"
   org: SIAT
   image: /img/cod.jpg
+  w: 521
+  h: 383
   image_alt: The underwater COD sensor and the buoy used in coastal trials
   url: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11752/2588022/Underwater-spectrophotometer-for-in-situ-seawater-COD-monitoring/10.1117/12.2588022.full
   description: >-
@@ -85,6 +92,8 @@
   dates: "2018"
   org: Nanchang University
   image: /img/compressedSPC.jpg
+  w: 330
+  h: 266
   image_alt: Reconstructions from standard and adaptive measurement matrices
   url: https://doi.org/10.3390/s18103449
   cite: spc
@@ -99,6 +108,8 @@
   dates: "2017"
   org: Nanchang University
   image: /img/web/emg-800.jpg
+  w: 800
+  h: 662
   image_alt: The electromagnetic gun and its wireless controller
   description: >-
     A wireless electromagnetic gun; both the radio and the gun run on an
@@ -112,6 +123,8 @@
   dates: "2017"
   org: Nanchang University
   image: /img/web/dcac-800.jpg
+  w: 800
+  h: 744
   image_alt: The three-phase DC-AC converter circuit boards
   description: >-
     Converts 12 V DC to three-phase 24 V AC under STM32F103 control, with
