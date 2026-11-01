@@ -1,105 +1,167 @@
--
-  name: 'Time-Resolved Particle Beam Microscopy with Deep Learning-Based Jitter Mitigation'
-  description: >
-    This project significantly enhances the fidelity of particle beam microscopy images by 
-    segmenting the exposure duration into small time bins to acquire numerous time-resolved 
-    samples. This technique effectively mitigates spatial sampling jitter and addresses 
-    physical noise challenges. Leveraging innovative deep learning techniques, including 
-    efficient hybrid transformer models, we dynamically merge these samples to further 
-    reduce jitter effects. This advanced approach significantly improves the overall prediction 
-    accuracy of the imaging system, setting new standards in scientific imaging.
+# Newest first; shown in the order listed.
+# group: current -> "Current work" list; earlier -> "Earlier work" figure grid
+# (needs `image` plus its pixel size as `w` and `h`; the frame and ticks follow them).
+# Optional `figure` (src, w, h, alt, caption) on any entry shows a numbered figure under it.
 
+- group: current
+  id: transformer
+  name: Information Sharing Across Transformer Layers
+  dates: Sep 2026 – present
+  description: >-
+    Efficient LLM architectures that share information across Transformer
+    layers without reading from every layer (in recent tests at 40M
+    parameters, 8.9% lower held-out perplexity than a standard Transformer,
+    and ahead of Kimi's Block Attention Residuals, published in 2026). Trained
+    40M-parameter, 48-layer decoder-only Transformers from scratch on about
+    200M FineWeb-Edu tokens.
+
+- group: current
+  id: cfg
+  name: Noise-Aware Classifier-Free Guidance
+  dates: Sep 2026 – present
+  description: >-
+    A noise-informed schedule for the guidance strength, with no extra training
+    or network evaluations. On DiT-XL/2 with 50-step DDIM: 23–30% lower FID and
+    22–25% lower FD-DINOv2 than constant guidance at matched class accuracy.
+    Also tested across step counts and on SiT flow models.
+  figure:
+    src: /img/figures/guidance-paired-samples.webp
+    w: 1600
+    h: 841
+    alt: >-
+      Two rows of four generated images (a man holding a fish, goldfish, a
+      great white shark and a tiger shark), with the same subjects in both rows.
+    caption: >-
+      Class-conditional samples from the same seeds, with noise-aware guidance
+      (top) and DG-CFG (bottom).
+
+- group: current
+  id: ual
+  name: Diffusion Posterior Sampling with Uncertain Forward Models (UAL)
+  dates: May – Sep 2026
+  cite: ual
+  description: >-
+    An uncertainty-aware likelihood that keeps pretrained diffusion priors
+    reliable when the forward model is uncertain. Tested on six inverse
+    problems (Gaussian and motion deblurring, CT, MRI, ultrasound and
+    fluorescence microscopy), with better ensemble predictions (CRPS, energy
+    and variogram scores).
+  figure:
+    src: /img/figures/ual-results.webp
+    w: 1800
+    h: 860
+    alt: >-
+      Grid of reconstructions for Gaussian blur, motion blur, CT, MRI,
+      ultrasound and microscopy, in rows labelled Ref, Pub and UAL.
+    caption: Results on six inverse problems, from the UAL preprint
+
+- group: current
+  id: specdepth
+  name: "SpecDepth: Physics-Guided Reference-Free Adaptation of Depth Priors for Hyperspectral LWIR Ranging"
+  dates: Nov 2023 – May 2026
+  description: >-
+    Adapts a frozen DINOv2-DPT metric-depth model to a 49-band passive LWIR
+    hyperspectral cube without depth labels, lidar, stereo or RGB. The model
+    predicts depth, temperature and per-band emissivity and is coupled to a
+    differentiable radiative-transfer renderer; lidar is used only for
+    held-out evaluation.
+  figure:
+    src: /img/figures/specdepth-forest.webp
+    w: 1610
+    h: 246
+    alt: >-
+      Four panels of a distant forest: the broadband LWIR image and depth maps
+      from UniDepth-V2, physics inversion and SpecDepth.
+    caption: >-
+      A distant forest background. From left: the broadband LWIR image, then
+      depth maps from UniDepth-V2, physics inversion and SpecDepth (colour
+      shows depth).
+
+- group: earlier
+  name: Time-Resolved Particle Beam Microscopy
+  dates: Jan – Nov 2023
+  org: Boston University
   image: /img/PBMS.png
-  url: #
-  time: 2024
-  org: STIR, BU
--
-  name: 'Absorption Assisted Stereo Hyperspectral Depth Imaging'
-  description: >
-    This project utilizes the integration of hyperspectral and stereo imaging techniques to 
-    enhance predictions of depth, temperature, materials, and textures under varying conditions. 
-    Our innovative attention-based model architecture synergistically processes data from both 
-    imaging modalities, providing comprehensive material insights and improved depth perception. 
-    By incorporating physical loss functions that consider a range of optical properties—including 
-    light absorption, emissivity, temperature, and depth—our model achieves superior accuracy in 
-    predicting these complex attributes, thereby setting new standards in imaging technology.
+  w: 834
+  h: 834
+  image_alt: Schematic of a time-resolved particle beam microscope scan
+  description: >-
+    Learning-based scan-jitter correction for SEM, using a simulated forward
+    model and Transformer models (cross deformable attention, Swin).
 
-  image: /img/AASDI.png
-  url: #
-  time: 2024
-  org: STIR, BU
--
-  name: 'Diffusion Model for Video Interpolation'
-  description: >
-    In this innovative project, we designed a novel 3D U-Net with temporal attention for video 
-    frame interpolation. Our approach begins by incorporating optical flow techniques to 
-    physically warp adjacent images closer to the center image. Subsequently, the diffusion
-    model is conditioned on these adjacent images as well as our physically warped center image, 
-    enhancing the prediction accuracy of the interpolated frames. This method results in 
-    significantly improved interpolation quality.
+- group: earlier
+  name: "CURE: Cross-Video Neural Representations for Frame Interpolation"
+  dates: 2020 – 2022
+  org: Washington University in St. Louis
+  image: /img/web/cure-480.mp4
+  w: 480
+  h: 480
+  poster: /img/web/cure-480-poster.jpg
+  image_alt: Side-by-side video of input frames and CURE's interpolated frames
+  url: https://cure.wshangguan.com
+  cite: cure
+  description: >-
+    A deep-learning model for video frame interpolation, which synthesizes a
+    new frame from its two neighbors. It was the first video interpolation
+    method based on neural fields and achieved state-of-the-art results on
+    several benchmark datasets. Published at ECCV 2022.
 
-  image: /img/dvi.jpg
-  url: #
-  time: 2023
-  org: STIR, BU
--
-  name: 'Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix'
-  description: >
-    Single photon imaging system is a photon counting based singel pixel camera, which 
-    takes picture with compressed sensing (CS) theory. We proposed an smart adaptive 
-    measurement matrix to improve the performance of CS reconstruction ability. The 
-    experiement shows our smart matrix could work for many algorithms and could be used
-    for modify any kind of measurement matrix. 
-  image: /img/compressedSPC.jpg
-  url: https://www.mdpi.com/1424-8220/18/10/3449
-  time: 2018
-  org: NCU
--
-  name: 'Underwater spectrophotometer for in-situ seawater COD monitoring'
-  description: >
-    We designed an in-situ chemical oxygen demand (COD) sensor for long-term seawater 
-    monitoring, and interrated it to a buoy for coastal trials. It makes COD monitoring 
-    becomes possible and simple. The sensors had been contiously working underwater for 
-    more than 6 months and provides thousands of valuable UV-Vis absorption spectrum.  
-  image: /img/cod.jpg
-  url: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11752/2588022/Underwater-spectrophotometer-for-in-situ-seawater-COD-monitoring/10.1117/12.2588022.full?SSO=1
-  time: 2019
+- group: earlier
+  name: Underwater Spectrophotometer for In-Situ Seawater COD Monitoring
+  dates: "2019"
   org: SIAT
--
-  name: 'Learning Cross-Video Neural Representations for High-Quality Frame Interpolation'
-  description: >
-   Cross-Video Neural Representation (CURE) is a Deep-learning-based model for temporal 
-   video interpolation, where the goal is to synthesize a new video frame given its two 
-   neighbors. It is the first video interpolation method based on neural fields (NF) 
-   and achieves the state-of-the-art performance on video 
-   interpolation on several benchmark datasets.
-  image: /img/cure.mov
-  url: https://www.cse.wustl.edu/~kamilov/projects/2022/cure/
-  time: 2022
-  org: CIG, WUSTL
--
-  name: 'Wireless Auto-Detection Electromagnetic Gun'
-  description: >
-   In this small project, I designed and made a wireless electromagnetic gun. 
-   Both radio and gun are built with STM32F103. The radio could show the current voltage, 
-   firing status, and could auto detect object near it. When the object approaching, 
-   it will send fire signal to the electromagnetic gun through 2.4G NFR24L01. The controller 
-   has two buttons that user could use for manually firing. The electromagnetic gun is 
-   powered by two XL6009 that transfer 12V DC to ~70V DC. Two capacitances are used 
-   to store the power. The steel ball could be ejected for ~30 feets.
-  image: /img/emg.jpg
-  url: #
-  time: 2017
-  org: CRSN Lab, NCU
--
-  name: 'Three Phase DC-AC Converter'
-  description: >
-   This three phase DC-AC converter aims for converting 12V DC power to 
-   three phase 24V AC power. This system is controlled by a STM32F103 Microcontrol Unit, 
-   which provides features like voltage regulation, phase regulation, over-current protection.
-   The efficiency is higher than 90%. Phase regulation enables two converter grid-connected. 
-   The output voltage is regulated with PID algorithm for 100 times per second.
-  image: /img/dcac.jpg
-  url: #
-  time: 2017
-  org: CRSN Lab, NCU
+  image: /img/cod.jpg
+  w: 521
+  h: 383
+  image_alt: The underwater COD sensor and the buoy used in coastal trials
+  url: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11752/2588022/Underwater-spectrophotometer-for-in-situ-seawater-COD-monitoring/10.1117/12.2588022.full
+  description: >-
+    An in-situ chemical oxygen demand (COD) sensor for long-term seawater
+    monitoring, integrated into a buoy for coastal trials. The sensors worked
+    underwater continuously for more than six months and recorded thousands of
+    UV-Vis absorption spectra.
+
+- group: earlier
+  name: Adaptive Single-Photon Compressed Imaging
+  dates: "2018"
+  org: Nanchang University
+  image: /img/compressedSPC.jpg
+  w: 330
+  h: 266
+  image_alt: Reconstructions from standard and adaptive measurement matrices
+  url: https://doi.org/10.3390/s18103449
+  cite: spc
+  description: >-
+    A single-photon imaging system is a photon-counting single-pixel camera
+    that images with compressed sensing (CS). We proposed a smart adaptive
+    measurement matrix to improve CS reconstruction; experiments show it works
+    with many algorithms and can modify any kind of measurement matrix.
+
+- group: earlier
+  name: Wireless Auto-Detection Electromagnetic Gun
+  dates: "2017"
+  org: Nanchang University
+  image: /img/web/emg-800.jpg
+  w: 800
+  h: 662
+  image_alt: The electromagnetic gun and its wireless controller
+  description: >-
+    A wireless electromagnetic gun; both the radio and the gun run on an
+    STM32F103. The radio shows voltage and firing status and detects nearby
+    objects, sending a fire signal over 2.4 GHz (nRF24L01). Two XL6009
+    converters step 12 V DC up to about 70 V, and the steel ball travels about
+    30 feet.
+
+- group: earlier
+  name: Three-Phase DC-AC Converter
+  dates: "2017"
+  org: Nanchang University
+  image: /img/web/dcac-800.jpg
+  w: 800
+  h: 744
+  image_alt: The three-phase DC-AC converter circuit boards
+  description: >-
+    Converts 12 V DC to three-phase 24 V AC under STM32F103 control, with
+    voltage regulation, phase regulation and over-current protection.
+    Efficiency is above 90%, phase regulation lets two converters connect to a
+    grid, and a PID loop regulates the output 100 times per second.

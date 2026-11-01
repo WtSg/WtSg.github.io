@@ -1,0 +1,11 @@
+{%- comment -%}
+  A numbered document figure. include.f: figure hash (src, w, h, alt, caption);
+  include.n: figure number; include.cite: optional rendered [n] citation.
+{%- endcomment -%}
+{%- assign cite_s = include.cite | strip -%}
+<figure class="docfig">
+  <a class="docfig__frame" href="{{ site.baseurl }}{{ include.f.src }}" aria-label="Open figure {{ include.n }} at full size">
+    <img src="{{ site.baseurl }}{{ include.f.src }}" alt="{{ include.f.alt | strip }}" width="{{ include.f.w }}" height="{{ include.f.h }}" loading="lazy" decoding="async">
+  </a>
+  <figcaption><span class="figlabel">Figure {{ include.n }}.</span> {{ include.f.caption | strip }}{% if cite_s != "" %} {{ cite_s }}.{% endif %}</figcaption>
+</figure>

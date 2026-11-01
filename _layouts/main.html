@@ -1,346 +1,295 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
 
-  <title>{{ site.data.personal.name }}</title>
+  <title>{{ me.name }} · {{ me.label }}</title>
+  <meta name="description" content="{{ me.name }}, PhD candidate in {{ me.department }} at {{ me.institution }}. Research on statistics in generative models: diffusion guidance, posterior sampling and efficient LLM architectures.">
+  <link rel="canonical" href="https://www.wshangguan.com/">
+  <meta name="theme-color" content="#ffffff">
 
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:400,700">
-  <!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css"> -->
-  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-  <link rel="stylesheet" href="{{ site.baseurl }}/assets/main/css/default.css">
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="{{ me.name }}">
+  <meta property="og:description" content="{{ me.label }}. Statistics in generative models: diffusion guidance, posterior sampling, efficient LLM architectures.">
+  <meta property="og:url" content="https://www.wshangguan.com/">
+  <meta property="og:image" content="https://www.wshangguan.com{{ me.picture }}">
 
-  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-  <!--[if lt IE 9]>
-    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-  <![endif]-->
+  <link rel="preload" href="{{ base }}/assets/fonts/stix-two-text-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/stix-two-text-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/dejavu-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/site.css">
 
-  <!-- Javascript -->
-  <script src="https://kit.fontawesome.com/ec992c8f1a.js" crossorigin="anonymous"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-  <script src="//netdna.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-PSWJT5W8PE');
   </script>
 </head>
-<body >
+<body>
+  <a class="skip" href="#main">Skip to content</a>
 
-  <!-- ==================== -->
-  <!-- HEADER -->
-  <!-- ==================== -->
-  <header>
-    <div class="container">
-      <div class="row">
-        <div class="col-xs-9 col-lg-9">
-          {% assign fn_ln = site.data.personal.name | split: " " %}
-          <h1>
-            <!-- {{ site.data.personal.name }} -->
-            {{fn_ln[0]}}
-          </h1>
-          <h1 class="fmname">{{fn_ln[1]}}</h1>
-          <h2>
-            {{ site.data.personal.label }}
-          </h2>
-        </div>
-        <div class="col-3 col-xs-3 col-sm-3">
-          <img id="profile_img"
-               src="{{ site.baseurl }}{{ site.data.personal.picture }}" 
-               class="img-circle"
-               style="margin-top:10px;width:200px;border:2px solid rgba(255,255,255,0.75)">
-        </div>
-      </div>
+  <header class="masthead">
+    <div class="wrap masthead__inner">
+      <a class="wordmark" href="#top">{{ me.name }}</a>
+      <nav aria-label="Sections">
+        <ul>
+          <li><a href="#research">Research</a></li>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#publications">Publications</a></li>
+          <li><a href="#photography">Photography</a></li>
+        </ul>
+      </nav>
+      <a class="btn btn--small masthead__email" href="#contact" data-mail>Email</a>
     </div>
   </header>
-  
-  <!-- ==================== -->
-  <!-- SECTION About Me-->
-  <!-- ==================== -->
-  <div class="container"
-           id="section-about">
-    <div class="row">
-      <div id="ns"> 
-        {% if site.data.personal.news %}
-          <section class="col-md-8">
-            <div class="alert alert-dark">
-              <a href="#" class="close" id="news_close"> 
-                <!-- data-dismiss="alert"> -->
-                &times;
-              </a>
-              <strong>News: </strong> 
-              {% assign news_data = site.data.personal.news | sort: 'date' | reverse %}
-              {% for news in news_data %}
-                <p> - {{news.description | markdownify | replace: "</p>", ""| replace: "<p>", ""}} @ {{news.date | date: "%b %-d %Y" | markdownify| replace: "<p>", ""}}
-              {% endfor %}
 
+  <main id="main">
+    <section class="hero wrap" id="top" aria-label="Introduction">
+      <figure class="fig1" data-sampler>
+        <div class="fig1__a">
+          <p class="axes__title" aria-hidden="true">(a) <i>t</i> = <span data-t>0.00</span></p>
+          <div class="axes">
+            <div class="axes__plot axes__plot--name">
+              <h1 class="name"><span>{{ me.given_name }}</span> <span>{{ me.family_name }}</span></h1>
+              <canvas class="noise" data-noise="256x96" aria-hidden="true"></canvas>
             </div>
-          </section>
-        {% endif %}
-      </div>
-      <script>
-        $( "#news_close" ).click(function() {
-          $("#ns").hide();
-        });
-        
-      </script>
-
-      <section class="col-md-8">
-        {% if site.data.personal.intro.title %}
-          <h3 style="font-size:48px">
-            {{ site.data.personal.intro.title }}
-          </h3>
-        {% else %}
-          <h3>
-            About me
-          </h3>
-        {% endif %}
-
-        <div class="lead">
-          {{ site.data.personal.intro.body | markdownify }}
-        </div>
-        
-      </section>
-      
-      <section class="col-md-offset-1 col-md-3">
-        <h3>Contact</h3>
-        
-        <p>
-          {{ site.data.personal.department }}<br>
-          {{ site.data.personal.institution }}<br>
-          {{ site.data.personal.mailing_address | replace:'\n','<br>' }}
-        </p>
-        <p>
-          {{ site.data.personal.email | replace:'@',' <small>[at]</small> ' | replace:'.',' <small>[dot]</small> ' }}
-        </p>
-        <p>
-          {% for profile in site.data.personal.profiles %}
-            
-            {% if profile.network == 'Google Scholar' %}
-              <i class="fa fa-google"></i>
-            {% elsif profile.network == 'LinkedIn' %}
-              <i class="fa fa-linkedin-square"></i>
-            {% elsif profile.network == 'Twitter' %}
-              <i class="fa fa-twitter-square"></i>
-            {% elsif profile.network == 'Github' %}
-              <i class="fa-brands fa-github-square"></i>
-              {% elsif profile.network == 'Instagram' %}
-              <i class="fa-brands fa-instagram-square"></i>
-            {% elsif profile.network == 'CV' %}
-              <i class="fa-solid fa-file-lines"></i>
-            {% endif %}
-            <a href="{{ profile.url }}">
-              {{ profile.network }}
-            </a>
-            {% if forloop.last == false %}
-              <br>
-            {% endif %}
-          {% endfor %}
-        </p>
-      </section>
-    </div>
-  </div>
-  <!-- Publications -->
-  {% if site.data.publications.size > 0 %}
-  <div class="container">
-    <div class="row">
-      <section class="col-md-9">
-        <h3>Publications</h3>
-        {% assign pubs = site.data.publications | sort: 'year' | reverse %}
-        {% for publication in pubs %}
-          <p>
-            <b>
-              <a href="{{ publication.url }}">
-                {{ publication.title }}
-              </a>
-            </b>
-            <small>
-              {{ publication.year }}
-            </small>
-            <br>
-            {{ publication.authors }}
-            <br>
-            {% case publication.type %}
-              {% when 'conference' %}
-                {{ publication.conference }}
-              {% when 'dissertation' %}
-                {{ publication.publisher }} -
-                {{ publication.type }}
-              {% when 'journal' %}
-                {{ publication.journal }},
-                {{ publication.volume }},
-                {{ publication.issue }},
-                {{ publication.pages }}
-              {% when 'magazine' %}
-                {{ publication.magazine }},
-                {{ publication.volume }},
-                {{ publication.issue }},
-                {{ publication.pages }}
-            {% endcase %}
-          </p>
-        {% endfor %}
-      </section>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if site.data.projects.size > 0 %} 
-    <!-- ==================== -->
-    <!-- PROJECTS -->
-    <!-- ==================== -->
-    <section class="container">
-      <div class="row">
-        <div class="col-md-9">
-          <h3>Projects</h3>
-        </div>
-      </div>
-      {% assign projs = site.data.projects | sort: 'time' | reverse %}
-      {% for project in projs %}
-        <div class="row">
-          <div class="col-xs-8
-                      col-sm-4
-                      col-md-3
-                      col-lg-2">
-                      
-            <p>
-              <!-- {{ project.image }} -->
-              {% assign ext = project.image | split: "." | last %}
-              {% if ext == 'png' or ext == 'jpg' or ext == 'jpeg' or ext == 'tiff' %}
-                <img src="{{ site.baseurl }}{{ project.image }}" 
-                    class="img-responsive img-thumbnail"
-                    style="width:100%">
-              {% elsif ext == 'mov' or ext == 'mp4' %}
-                <video width="100%" playsinline="" autoplay="" loop="" preload="" muted="" class="img-responsive img-thumbnail">
-                  <source src="{{ site.baseurl }}{{ project.image }}" type="video/mp4" >
-                </video>
-              {% endif %}
-            </p>
-          </div>
-          <div class="col-xs-12
-                      col-sm-8
-                      col-md-6
-                      col-lg-7">
-            <p>
-              <b>
-                {% if project.url %}
-                  <a href="{{ project.url }}">
-                    {{ project.name }} <small>{{project.time}}</small>
-                  </a>
-                {% else %}
-                  {{ project.name }} <small>{{project.time}}</small>
-                {% endif %}
-              </b>
-            </p>
-            
-            {{ project.description | markdownify }} 
-            
+            {% include ticks.html w=256 h=96 xs="0,50,100,150,200,250" ys="0,20,40,60,80" %}
           </div>
         </div>
-      {% endfor %}
+        <div class="fig1__b">
+          <p class="axes__title" aria-hidden="true">(b) <i>t</i> = <span data-t>0.00</span></p>
+          <div class="axes">
+            <div class="axes__plot axes__plot--portrait">
+              <img src="{{ base }}{{ me.picture }}" alt="{{ me.picture_alt }}" width="720" height="720" fetchpriority="high">
+              <canvas class="noise" data-noise="96x96" aria-hidden="true"></canvas>
+            </div>
+            {% include ticks.html w=96 h=96 xs="0,20,40,60,80" ys="0,20,40,60,80" %}
+          </div>
+        </div>
+        <figcaption class="fig1__cap">
+          <p><span class="figlabel">Figure 1.</span> Sampling <i>x</i><sub>t</sub> = (1 − <i>t</i>)&#8239;<i>x</i><sub>0</sub> + <i>t</i>&#8239;<i>ε</i>, with <i>ε</i> ~ <i>N</i>(0,&nbsp;<i>I</i>), from <i>t</i>&nbsp;=&nbsp;1 to&nbsp;0. (a)&nbsp;Name. (b)&nbsp;Portrait.</p>
+        </figcaption>
+        <div class="scrub">
+          <label for="t-slider">Noise level</label>
+          <input id="t-slider" type="range" min="0" max="1" step="0.01" value="0">
+          <output for="t-slider" aria-live="off"><i>t</i> = 0.00</output>
+        </div>
+      </figure>
+      <script src="{{ base }}/assets/js/site.js"></script>
+
+      <div class="intro">
+        <div class="intro__main">
+          <p class="role">{{ me.label }}, advised by <a href="{{ me.advisor.url }}">{{ me.advisor.name }}</a></p>
+          <p class="lede">{{ me.research }}</p>
+          <p class="seeking"><span class="marker" aria-hidden="true"></span><span>{{ me.seeking }}</span></p>
+          <div class="actions">
+            <a class="btn" href="#contact" data-mail>Email me</a>
+            <button class="btn btn--line" type="button" data-copy>
+              <span class="icon--copy">{% include icon.html name='copy' %}</span><span class="icon--done">{% include icon.html name='check' %}</span>
+              <span data-copy-label aria-live="polite">Copy address</span>
+            </button>
+          </div>
+          <ul class="links" aria-label="Profiles">
+            {%- for profile in me.profiles %}
+            <li><a href="{{ profile.url }}">{{ profile.network }}</a></li>
+            {%- endfor %}
+          </ul>
+        </div>
+
+        {% if me.news %}
+        <aside class="updates" aria-labelledby="updates-h">
+          <h2 id="updates-h">Updates</h2>
+          <ol>
+            {%- for item in me.news %}
+            <li>
+              <span class="date">{{ item.when }}</span>
+              <p>{{ item.description | markdownify | remove: '<p>' | remove: '</p>' | strip }}</p>
+            </li>
+            {%- endfor %}
+          </ol>
+        </aside>
+        {% endif %}
+      </div>
     </section>
-  {% endif %}
 
-  {% if site.data.presentations.size > 0 %}
-  <!-- ==================== -->
-  <!-- PRESENTATIONS -->
-  <!-- ==================== -->
-  <section class="container">
-    <div class="row">
-      <div class="col-md-9">
-        <h3>Presentations</h3>
+    <section class="section wrap" id="research" aria-labelledby="research-h">
+      <h2 id="research-h">Research</h2>
+      <div class="threads">
+        {%- for th in me.research_threads %}
+        {%- capture c %}{% include cite.html id=th.cite %}{% endcapture %}
+        <p class="thread"><strong>{% if th.project %}<a class="thread__lead" href="#work-{{ th.project }}">{{ th.lead }}</a>{% else %}{{ th.lead }}{% endif %}</strong>{% if th.joined %} {% else %}. {% endif %}{{ th.text | strip | replace: '%cite%', c }}</p>
+        {%- endfor %}
       </div>
-    </div>
+      {%- if me.before %}
+      {%- capture c %}{% include cite.html id=me.before.cite %}{% endcapture %}
+      <p class="before">{{ me.before.text | markdownify | remove: '<p>' | remove: '</p>' | strip | replace: '%cite%', c }}</p>
+      {%- endif %}
+    </section>
 
-    {% for presentation in site.data.presentations %}
-      <div class="row">
-        <div class="col-md-9">
-          <p>
-            <b>
-              {% if presentation.slides_url %}
-                <a href="{{ presentation.slides_url }}">
-                  {{ presentation.title }}
-                </a>
-              {% else %}
-                {{ presentation.title }}
-              {% endif %}
-            </b>
-            <small>
-              {{ presentation.date }}
-            </small>
-            <br>
-            {{ presentation.location }}
-          </p>
-        </div>
-      </div>
-    {% endfor %}
-  </section>
-  {% endif %}
+    {%- assign fig_n = 1 %}
+    {%- assign current = site.data.projects | where: "group", "current" %}
+    {%- if current.size > 0 %}
+    <section class="section wrap" id="work" aria-labelledby="work-h">
+      <h2 id="work-h">Current work</h2>
+      <ol class="entries">
+        {%- for p in current %}
+        <li class="entry"{% if p.id %} id="work-{{ p.id }}"{% endif %}>
+          <h3>{% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</h3>
+          <p class="entry__dates">{{ p.dates }}</p>
+          <div class="entry__body">
+            {%- capture c %}{% if p.cite %} {% include cite.html id=p.cite %}{% endif %}{% endcapture %}
+            <p>{{ p.description | strip }}{{ c }}</p>
+            {%- if p.figure %}
+            {%- assign fig_n = fig_n | plus: 1 %}
+            {%- capture fc %}{% if p.cite %}{% include cite.html id=p.cite %}{% endif %}{% endcapture %}
+            {% include docfig.html f=p.figure n=fig_n cite=fc %}
+            {%- endif %}
+          </div>
+        </li>
+        {%- endfor %}
+      </ol>
+    </section>
+    {%- endif %}
 
-  <!-- ==================== -->
-  <!-- FOOTER -->
-  <!-- ==================== -->
-  <footer>
-    <div class="container">
-      <div class="row">
-        <div class="col-xs-12">
-          <hr>
-        </div>
+    {%- if site.data.publications.size > 0 %}
+    <section class="section wrap" id="publications" aria-labelledby="publications-h">
+      <h2 id="publications-h">Publications</h2>
+      <ol class="refs">
+        {%- for pub in site.data.publications %}
+        <li class="ref" id="ref-{{ pub.id }}">
+          <span class="ref__n">[{{ forloop.index }}]</span>
+          <div>
+            <p class="ref__title"><a href="{{ pub.url }}">{{ pub.title }}</a></p>
+            <p class="ref__authors">{{ pub.authors | replace: 'W. Shangguan', '<strong>W. Shangguan</strong>' }}</p>
+            <p class="ref__venue"><em>{{ pub.venue }}</em>, {{ pub.year }}.{% if pub.note %} {{ pub.note }}{% endif %}</p>
+            {%- if pub.links %}
+            <p class="ref__links">{% for l in pub.links %}<a href="{{ l.url }}">{{ l.label }}</a>{% endfor %}</p>
+            {%- endif %}
+            {%- if pub.figure %}
+            {%- assign fig_n = fig_n | plus: 1 %}
+            {% include docfig.html f=pub.figure n=fig_n %}
+            {%- endif %}
+          </div>
+        </li>
+        {%- endfor %}
+      </ol>
+    </section>
+    {%- endif %}
+
+    {%- if me.education %}
+    <section class="section wrap" id="education" aria-labelledby="education-h">
+      <h2 id="education-h">Education</h2>
+      <ol class="entries">
+        {%- for e in me.education %}
+        <li class="entry">
+          <h3>{{ e.school }}</h3>
+          <p class="entry__dates">{{ e.dates }}</p>
+          <div class="entry__body">
+            <p>{{ e.degree }}</p>
+            {%- if e.advisor %}
+            <p class="entry__meta">Advisor: {% if e.advisor_url %}<a href="{{ e.advisor_url }}">{{ e.advisor }}</a>{% else %}{{ e.advisor }}{% endif %}{% if e.note %}. {{ e.note }}.{% endif %}</p>
+            {%- endif %}
+          </div>
+        </li>
+        {%- endfor %}
+      </ol>
+    </section>
+    {%- endif %}
+
+    {%- assign earlier = site.data.projects | where: "group", "earlier" %}
+    {%- if earlier.size > 0 %}
+    <section class="section wrap" id="earlier" aria-labelledby="earlier-h">
+      <h2 id="earlier-h">Earlier work</h2>
+      <figure class="fig-sub">
+      <div class="subplots">
+        {%- assign letters = "abcdefghijklmnopqrstuvwxyz" %}
+        {%- for p in earlier %}
+        {%- assign ext = p.image | split: "." | last | downcase %}
+        {%- if p.w > 600 or p.h > 600 %}{% assign step = 200 %}{% else %}{% assign step = 100 %}{% endif %}
+        {%- assign nx = p.w | minus: 1 | divided_by: step %}
+        {%- assign ny = p.h | minus: 1 | divided_by: step %}
+        {%- capture xs %}{% for i in (0..nx) %}{{ i | times: step }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endcapture %}
+        {%- capture ys %}{% for i in (0..ny) %}{{ i | times: step }}{% unless forloop.last %},{% endunless %}{% endfor %}{% endcapture %}
+        <figure class="sub">
+          <div class="sub__slot">
+            <div class="axes sub__axes" style="--ar: {{ p.w | times: 1.0 | divided_by: p.h | round: 4 }}">
+              <div class="axes__plot sub__plot">
+                {%- if ext == "mp4" or ext == "mov" %}
+                <video controls data-autoplay muted loop playsinline preload="none"{% if p.poster %} poster="{{ base }}{{ p.poster }}"{% endif %} aria-label="{{ p.image_alt }}">
+                  <source src="{{ base }}{{ p.image }}" type="video/mp4">
+                </video>
+                {%- else %}
+                <img src="{{ base }}{{ p.image }}" alt="{{ p.image_alt }}" width="{{ p.w }}" height="{{ p.h }}" loading="lazy" decoding="async">
+                {%- endif %}
+              </div>
+              {% include ticks.html w=p.w h=p.h xs=xs ys=ys %}
+            </div>
+          </div>
+          <figcaption>
+            <p class="sub__title"><span class="sub__letter">({{ letters | slice: forloop.index0 }})</span> {% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</p>
+            <p class="sub__meta">{{ p.dates }}{% if p.org %} · {{ p.org }}{% endif %}</p>
+            {%- capture c %}{% if p.cite %} {% include cite.html id=p.cite %}{% endif %}{% endcapture %}
+            <p class="sub__desc">{{ p.description | strip }}{{ c }}</p>
+          </figcaption>
+        </figure>
+        {%- endfor %}
       </div>
-      <div class="row">
-        <div class="col-xs-12">          
-          {{ site.data.personal.name }} @ {{ site.data.personal.revised_date | date: "%b %-d %Y" }} <br>
-          Acknoledgement: Web template comes from <a href="http://ianli.github.io/elbowpatched-boilerplate/">ianli</a>
+      {%- assign fig_n = fig_n | plus: 1 %}
+      <figcaption class="fig-sub__cap"><span class="figlabel">Figure {{ fig_n }}.</span> Earlier projects, newest first. Axes are in image pixels.</figcaption>
+      </figure>
+    </section>
+    {%- endif %}
+
+    {%- if me.photography %}
+    {%- assign insta = me.profiles | where: "network", "Instagram" | first %}
+    <section class="section wrap" id="photography" aria-labelledby="photography-h">
+      <h2 id="photography-h">Photography</h2>
+      {%- assign fig_n = fig_n | plus: 1 %}
+      <figure class="fig2">
+        <div class="axes">
+          <div class="axes__plot axes__plot--photo">
+            <canvas class="noise noise--static" data-noise="120x24" aria-hidden="true"></canvas>
+            {%- if me.photography.url %}
+            <a class="btn photo-link" href="{{ me.photography.url }}">Open the photography site {% include icon.html name='arrow' %}</a>
+            {%- endif %}
+          </div>
+          {% include ticks.html w=120 h=24 xs="0,20,40,60,80,100" ys="0,10,20" %}
         </div>
-      </div>
-    </div>
+        <figcaption>
+          {%- if me.photography.url %}
+          <span class="figlabel">Figure {{ fig_n }}.</span> Photography.
+          {%- else %}
+          <span class="figlabel">Figure {{ fig_n }}.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
+          {%- endif %}
+        </figcaption>
+      </figure>
+    </section>
+    {%- endif %}
+  </main>
+
+  <footer class="contact wrap" id="contact" aria-labelledby="contact-h" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <h2 id="contact-h">Get in touch</h2>
+    <p class="contact__email">
+      <a href="#contact" data-mail>Email me</a>
+      <button class="btn btn--line" type="button" data-copy>
+        <span class="icon--copy">{% include icon.html name='copy' %}</span><span class="icon--done">{% include icon.html name='check' %}</span>
+        <span data-copy-label aria-live="polite">Copy address</span>
+      </button>
+    </p>
+    <noscript><p class="contact__fallback">{{ me.email_user }} [at] {{ me.email_domain | replace: '.', ' [dot] ' }}</p></noscript>
+    <ul class="links" aria-label="Profiles">
+      {%- for profile in me.profiles %}
+      <li><a href="{{ profile.url }}">{{ profile.network }}</a></li>
+      {%- endfor %}
+    </ul>
+    <p class="colophon">{{ me.department }}, {{ me.institution }} · {{ me.location }} · Updated {{ me.revised_date | date: "%B %Y" }}</p>
   </footer>
-  <script>
-    function set_prof_wid(){
-
-      let doc_width = $(document).width()
-      console.log(doc_width)
-      if(doc_width < 699){
-        $('#profile_img').attr('style', 'width: 80px;margin-top:10px;border:0px solid rgba(255,255,255,0.75)')
-      }
-      else if(doc_width < 799){
-        $('#profile_img').attr('style', 'width: 140px;margin-top:10px;border:2px solid rgba(255,255,255,0.75)')
-      }
-      else{
-        $('#profile_img').attr('style', 'width: 200px;margin-top:10px;border:2px solid rgba(255,255,255,0.75)')
-      }
-    }
-
-    $(document).ready(function () {
-      set_prof_wid()
-    });
-    $(window).resize(function(){
-      set_prof_wid()
-    })
-
-  </script>
-  <!-- ==================== -->
-  <!-- JAVASCRIPTS -->
-  <!-- ==================== -->
-  <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/waypoints/2.0.4/waypoints.min.js"></script>
-  <script>
-    $(document).ready(function () {
-      $('#section-about').waypoint(function (direction) {
-        if (direction === 'down') {
-          $('body').removeClass('intro-screen');
-        } else {
-          $('body').addClass('intro-screen');
-        }
-      });
-    });
-  </script> -->
 </body>
 </html>

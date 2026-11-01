@@ -2,4 +2,16 @@
 markdown: kramdown
 
 # http://jekyllrb.com/docs/github-pages/#project-page-url-structure
-baseurl: 
+baseurl: ""
+
+# Repository files that are not part of the published site.
+exclude:
+  - PRODUCT.md
+  - DESIGN.md
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - "img/**/*.json"
+  - "img/figures/*.json"
