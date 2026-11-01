@@ -1,0 +1,16 @@
+# Local build output and caches
+.sass-cache/
+.bundle/
+vendor/
+node_modules/
+
+# Impeccable working files (review captures and local state stay local)
+.impeccable/review/
+.impeccable/build/
+.impeccable/history/
+.impeccable/mocks/
+.impeccable/config.local.json
+**/.impeccable/hook.cache.json
+
+# macOS
+.DS_Store

@@ -1,28 +1,56 @@
--
-  type: journal
-  title: Adaptive Single Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix
-  authors:  Wentao Shangguan, Qiurong Yan, Hui Wang, Chenglong Yuan, Bing Li andYuhao Wang
-  journal: Sensors
-  volume: 18
-  issue: 10
-  year: 2018
-  pages: 3449
-  month: March
-  pdf: https://www.mdpi.com/1424-8220/18/10/3449/pdf
-  url: https://doi.org/10.3390/s18103449
--
-  type: dissertation
-  title: "NeVR: Learning Continuous Neural Video Representation with Local Feature Codes for Video Interpolation"
-  authors: Wentao Shangguan
-  year: 2021
-  publisher: Washington University in St. Louis
-  pdf: 
-  url: https://openscholarship.wustl.edu/eng_etds/681/
--
-  type: Conforance
-  title: "Learning Cross-Video Neural Representations for High-Quality Frame Interpolation (ECCV2022)"
-  authors: Wentao Shangguan, Yu Sun, Weijie Gan, Ulugbek S. Kamilov
-  journal: ECCV
+# Newest first; shown in the order listed. Numbers [1], [2], ... follow this order.
+- id: ual
+  title: Diffusion Posterior Sampling with Uncertain Forward Models
+  authors: W. Shangguan, V. K. Goyal
+  venue: Preprint, arXiv:2610.29102
+  year: 2026
+  url: https://arxiv.org/abs/2610.29102
+  links:
+    - label: arXiv
+      url: https://arxiv.org/abs/2610.29102
+
+- id: ozone
+  title: Ozone Cues Mitigate Reflected Downwelling Radiance in LWIR Absorption-Based Ranging
+  authors: U. Dorken Gallastegi, W. Shangguan, V. Choudhary, A. Agarwal, H. Rueda-Chacón, M. J. Stevens, V. K. Goyal
+  venue: IEEE Transactions on Computational Imaging, vol. 12, pp. 587–600
+  year: 2026
+  note: Selected for presentation at IEEE ICIP 2026.
+  url: https://doi.org/10.1109/TCI.2026.3668998
+  links:
+    - label: DOI
+      url: https://doi.org/10.1109/TCI.2026.3668998
+
+- id: cure
+  title: Learning Cross-Video Neural Representations for High-Quality Frame Interpolation
+  authors: W. Shangguan*, Y. Sun*, W. Gan, U. S. Kamilov
+  venue: European Conference on Computer Vision (ECCV)
   year: 2022
-  pdf: https://arxiv.org/pdf/2203.00137.pdf
-  url: https://arxiv.org/abs/2203.00137
+  note: "*Equal contribution."
+  url: https://doi.org/10.1007/978-3-031-19784-0_30
+  links:
+    - label: DOI
+      url: https://doi.org/10.1007/978-3-031-19784-0_30
+    - label: arXiv
+      url: https://arxiv.org/abs/2203.00137
+    - label: Project page
+      url: https://cure.wshangguan.com
+
+- id: nevr
+  title: "NeVR: Learning Continuous Neural Video Representation with Local Feature Codes for Video Interpolation"
+  authors: W. Shangguan
+  venue: MS thesis, Washington University in St. Louis
+  year: 2021
+  url: https://openscholarship.wustl.edu/eng_etds/681/
+  links:
+    - label: Thesis
+      url: https://openscholarship.wustl.edu/eng_etds/681/
+
+- id: spc
+  title: Adaptive Single-Photon Compressed Imaging Based on Constructing a Smart Threshold Matrix
+  authors: W. Shangguan, Q. Yan, H. Wang, C. Yuan, B. Li, Y. Wang
+  venue: Sensors 18(10):3449
+  year: 2018
+  url: https://doi.org/10.3390/s18103449
+  links:
+    - label: DOI
+      url: https://doi.org/10.3390/s18103449

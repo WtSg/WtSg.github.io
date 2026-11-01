@@ -1,0 +1,12 @@
+<div class="ticks" aria-hidden="true">
+{%- assign tick_xs = include.xs | split: "," -%}
+{%- for v in tick_xs -%}
+{%- assign pos = v | plus: 0.5 | times: 100.0 | divided_by: include.w -%}
+<span class="tick tick--x" style="left:{{ pos | round: 3 }}%">{{ v }}</span>
+{%- endfor -%}
+{%- assign tick_ys = include.ys | split: "," -%}
+{%- for v in tick_ys -%}
+{%- assign pos = v | plus: 0.5 | times: 100.0 | divided_by: include.h -%}
+<span class="tick tick--y" style="top:{{ pos | round: 3 }}%">{{ v }}</span>
+{%- endfor -%}
+</div>

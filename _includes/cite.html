@@ -1,0 +1,3 @@
+{%- assign cite_n = nil -%}
+{%- for p in site.data.publications -%}{%- if p.id == include.id -%}{%- assign cite_n = forloop.index -%}{%- endif -%}{%- endfor -%}
+{%- if cite_n -%}<a class="cite" href="#ref-{{ include.id }}" aria-label="Reference {{ cite_n }}">[{{ cite_n }}]</a>{%- endif -%}

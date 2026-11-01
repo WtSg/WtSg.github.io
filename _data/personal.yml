@@ -1,73 +1,104 @@
 name: Wentao Shangguan
+given_name: Wentao
+family_name: Shangguan
 
-label: Ph.D. Candidate at STIR, BU
+label: PhD Candidate, ECE @ Boston University
+department: Electrical and Computer Engineering
+institution: Boston University
+location: Boston, Massachusetts
+advisor:
+  name: Prof. Vivek K. Goyal
+  url: https://www.vivekgoyal.org
 
-picture: /img/profile-picture.jpg
+# Lead sentence under the hero figure. Keep the wording "statistics in generative models".
+research: >-
+  I study statistics in generative models: diffusion guidance, posterior
+  sampling and efficient LLM architectures.
+seeking: >-
+  Seeking 2027 research internships in generative models, world models and
+  foundation models; start date flexible.
+
+picture: /img/web/portrait-720.jpg
+picture_alt: Portrait of Wentao Shangguan outdoors by the water
 
 email: wentaos@bu.edu
 
-phone:
-
-department: STIR
-
-institution: Boston University
-
-mailing_address: Boston, Massachusetts
-
-revised_date: 2022-10-14
-
-news: 
-  - 
-    description: >
-      I am going to start Ph.D. at [Boston University](https://www.bu.edu/eng/departments/ece/phd/)
-      dvised by [Prof. Goyal](https://www.vivekgoyal.org/default.htm) in this fall! 
-    date: 2022-04-04
-  -
-    description: Successfully defended my MS thesis! 
-    date: 2021-12-01
-  - 
-    description: >
-      Cross-video neural representations (CURE) for video interpolation was accepted to the [ECCV2022](https://eccv2022.ecva.net)!
-    date: 2022-07-03
-
-  
-
+revised_date: 2026-11-01
 
 profiles:
-  - 
-    network: Github
-    username:
+  - network: Google Scholar
+    url: https://scholar.google.com/citations?user=Mu70MuAAAAAJ
+  - network: GitHub
     url: https://github.com/WtSg
-  -
-    network: LinkedIn
-    username:
+  - network: LinkedIn
     url: https://www.linkedin.com/in/wentaoshangguan/
-  -
-    network: Twitter
-    username: wentaoshangguan
-    url: https://twitter.com/wentaoshangguan/
-  -
-    network: Instagram
-    username: 
+  - network: Instagram
     url: https://www.instagram.com/wentaoshangguan/
-  -
-    network: CV
-    username: wentaoshangguan
-    url: /file/cv.pdf
+  # CV link stays off until an updated PDF is ready:
+  # - network: CV
+  #   url: /file/cv.pdf
 
-intro:
-  title: About me
-  body: >
-    I am a current Ph.D. candidate in the [Electrical and Computer Engineering Department 
-    at Boston University](https://www.bu.edu/eng/departments/ece/phd/), advised by 
-    [Prof. Vivek Goyal](https://www.vivekgoyal.org/default.htm). My research focuses on 
-    developing computational algorithms for imaging systems, particularly on a large-scale 
-    model designed to efficiently handle a substantial number of input frames.
-    <br><br>
-    Previously, I completed my MS at Washington University in St. Louis, where I was part 
-    of the [Computational Imaging Group](https://cigroup.wustl.edu/) under Prof. Ulugbek 
-    Kamilov, focusing on computer vision and deep learning algorithms. My experience also 
-    includes a stint as a visiting research assistant at the [The Center for Optoelectronics 
-    Technology, SIAT](https://coet.siat.ac.cn/frontend/web/#)
-    , where I further honed my skills in optical system design.
-    
+# Newest first; shown in the order listed.
+news:
+  - when: Oct 2026
+    description: >-
+      New preprint on arXiv:
+      [Diffusion Posterior Sampling with Uncertain Forward Models](https://arxiv.org/abs/2610.29102).
+  - when: Oct 2026
+    description: Passed my PhD prospectus.
+  - when: "2026"
+    description: >-
+      [Ozone Cues Mitigate Reflected Downwelling Radiance in LWIR Absorption-Based Ranging](https://doi.org/10.1109/TCI.2026.3668998)
+      was published in IEEE Transactions on Computational Imaging and selected
+      for presentation at IEEE ICIP 2026.
+
+# Research threads. `cite` names an `id` in publications.yml and renders as [n].
+research_threads:
+  - lead: Diffusion posterior sampling when the forward model is uncertain
+    text: >-
+      An uncertainty-aware likelihood (UAL) keeps pretrained diffusion priors
+      reliable under model mismatch %cite%.
+    cite: ual
+  - lead: Guidance for diffusion models
+    text: >-
+      A noise-aware guidance schedule improves sample quality at no extra cost
+      (23–30% lower FID on DiT-XL/2).
+  - lead: Efficient LLM architectures
+    text: >-
+      that share information across Transformer layers without reading from
+      every layer (in recent tests at 40M parameters, 8.9% lower held-out
+      perplexity than a standard Transformer, and ahead of Kimi's Block
+      Attention Residuals, published in 2026).
+    joined: true
+  - lead: Physics-guided adaptation
+    text: >-
+      Adapted a frozen depth foundation model to a new infrared sensor without
+      labels.
+
+before:
+  text: >-
+    Before BU, I worked on neural video representations for frame
+    interpolation (ECCV 2022) %cite% with Prof. Ulugbek Kamilov in the
+    [Computational Imaging Group](https://cigroup.wustl.edu/) at Washington
+    University in St. Louis.
+  cite: cure
+
+education:
+  - school: Boston University
+    degree: PhD, Electrical and Computer Engineering
+    dates: Sep 2022 – present
+    advisor: Prof. Vivek K. Goyal
+    advisor_url: https://www.vivekgoyal.org
+    note: Prospectus passed Oct 2026
+  - school: Washington University in St. Louis
+    degree: MSc, Electrical and Systems Engineering
+    dates: "2021"
+    advisor: Prof. Ulugbek S. Kamilov
+  - school: Nanchang University
+    degree: BEng, Communication Engineering
+    dates: "2019"
+
+# Photography site: set `url` once it exists; until then the section shows a placeholder.
+photography:
+  url:
+  note: My photography site is in development.
