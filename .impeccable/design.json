@@ -274,7 +274,7 @@
       "kind": "button",
       "refersTo": "button-primary",
       "description": "Solid ink action for the email call; square, DejaVu label.",
-      "html": "<a class=\"ds-btn\" href=\"#\">Email wentaos@bu.edu</a>",
+      "html": "<a class=\"ds-btn\" href=\"#\">Email me</a>",
       "css": ".ds-btn { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 1.125rem; border: 1px solid #121212; border-radius: 0; background: #121212; color: #ffffff; font: 400 0.9375rem/1 \"DejaVu Sans\", \"Bitstream Vera Sans\", Verdana, sans-serif; text-decoration: none; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out; } .ds-btn:hover { background: #2f2f2f; } .ds-btn:active { background: #000; } .ds-btn:focus-visible { outline: 2px solid #1f77b4; outline-offset: 3px; }"
     },
     {

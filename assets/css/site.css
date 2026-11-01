@@ -594,6 +594,7 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
+.contact__fallback { margin-top: var(--space-2); font: 400 var(--text-md)/1.4 var(--serif); }
 .colophon {
   margin-top: var(--space-5);
   padding-top: var(--space-2);

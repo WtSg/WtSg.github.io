@@ -21,7 +21,10 @@ seeking: >-
 picture: /img/web/portrait-720.jpg
 picture_alt: Portrait of Wentao Shangguan outdoors by the water
 
-email: wentaos@bu.edu
+# Email is stored in two parts and assembled in the browser, so the address
+# never appears in the published HTML (keeps spam harvesters away).
+email_user: wentaos
+email_domain: bu.edu
 
 revised_date: 2026-11-01
 

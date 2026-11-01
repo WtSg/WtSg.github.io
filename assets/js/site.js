@@ -108,6 +108,18 @@
   }
 
   ready(function () {
+    // Email: assembled here so the address never appears in the published HTML.
+    var mailSrc = document.querySelector("[data-mail-u][data-mail-d]");
+    if (mailSrc) {
+      var addr = mailSrc.getAttribute("data-mail-u") + "@" + mailSrc.getAttribute("data-mail-d");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-mail]"), function (a) {
+        a.setAttribute("href", "mailto:" + addr);
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-copy]"), function (b) {
+        b.setAttribute("data-copy", addr);
+      });
+    }
+
     // Static noise panels (t = 1).
     var statics = document.querySelectorAll("canvas.noise--static[data-noise]");
     for (var i = 0; i < statics.length; i++) paintNoise(statics[i], 4242 + i);
@@ -129,13 +141,14 @@
       };
       btn.addEventListener("click", function () {
         var text = btn.getAttribute("data-copy");
+        if (!text) { show("Couldn't copy; use the Email me button", false); return; }
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(text).then(
             function () { show("Copied", true); },
-            function () { show("Couldn't copy; select the address instead", false); }
+            function () { show("Couldn't copy; use the Email me button", false); }
           );
         } else {
-          show("Couldn't copy; select the address instead", false);
+          show("Couldn't copy; use the Email me button", false);
         }
       });
     });

@@ -27,7 +27,7 @@ Research on statistics in generative models (diffusion guidance, posterior sampl
 
 - A single-page static site built by GitHub Pages' own Jekyll: plain Jekyll, no plugins outside the GitHub Pages set. The custom domain (`CNAME`, www.wshangguan.com) stays.
 - Content lives in `_data/` (`personal.yml`, `publications.yml`, `projects.yml`); the page template lives in `_layouts/`.
-- Primary action: email (wentaos@bu.edu). Secondary: Google Scholar, GitHub, LinkedIn.
+- Primary action: email (the owner's BU address, assembled in the browser and never written in the page source). Secondary: Google Scholar, GitHub, LinkedIn.
 - Every research claim, number, venue, date and image on the site comes from the owner. Do not add, extend or reword results, venues or dates without the owner's approval.
 - Work happens on a preview branch; nothing reaches `main` until the owner has reviewed it.
 

@@ -46,7 +46,7 @@
           <li><a href="#photography">Photography</a></li>
         </ul>
       </nav>
-      <a class="btn btn--small masthead__email" href="mailto:{{ me.email }}">Email</a>
+      <a class="btn btn--small masthead__email" href="#contact" data-mail>Email</a>
     </div>
   </header>
 
@@ -90,8 +90,8 @@
           <p class="lede">{{ me.research }}</p>
           <p class="seeking"><span class="marker" aria-hidden="true"></span><span>{{ me.seeking }}</span></p>
           <div class="actions">
-            <a class="btn" href="mailto:{{ me.email }}">Email {{ me.email }}</a>
-            <button class="btn btn--line" type="button" data-copy="{{ me.email }}">
+            <a class="btn" href="#contact" data-mail>Email me</a>
+            <button class="btn btn--line" type="button" data-copy>
               <span class="icon--copy">{% include icon.html name='copy' %}</span><span class="icon--done">{% include icon.html name='check' %}</span>
               <span data-copy-label aria-live="polite">Copy address</span>
             </button>
@@ -274,15 +274,16 @@
     {%- endif %}
   </main>
 
-  <footer class="contact wrap" id="contact" aria-labelledby="contact-h">
+  <footer class="contact wrap" id="contact" aria-labelledby="contact-h" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
     <h2 id="contact-h">Get in touch</h2>
     <p class="contact__email">
-      <a href="mailto:{{ me.email }}">{{ me.email }}</a>
-      <button class="btn btn--line" type="button" data-copy="{{ me.email }}">
+      <a href="#contact" data-mail>Email me</a>
+      <button class="btn btn--line" type="button" data-copy>
         <span class="icon--copy">{% include icon.html name='copy' %}</span><span class="icon--done">{% include icon.html name='check' %}</span>
         <span data-copy-label aria-live="polite">Copy address</span>
       </button>
     </p>
+    <noscript><p class="contact__fallback">{{ me.email_user }} [at] {{ me.email_domain | replace: '.', ' [dot] ' }}</p></noscript>
     <ul class="links" aria-label="Profiles">
       {%- for profile in me.profiles %}
       <li><a href="{{ profile.url }}">{{ profile.network }}</a></li>
