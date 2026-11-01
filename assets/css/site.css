@@ -418,6 +418,9 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
   max-width: 68rem;
 }
 .thread { max-width: 44ch; line-height: 1.5; }
+.thread__lead { color: var(--ink); text-decoration-color: var(--hairline); }
+.thread__lead:hover { color: var(--link-hover); text-decoration-color: currentColor; }
+.entry:target h3 { background: var(--mark-target); box-shadow: none; }
 .before { margin-top: var(--space-4); max-width: var(--measure); color: var(--ink-2); }
 
 /* Entries: current work, education */

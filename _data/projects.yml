@@ -3,6 +3,7 @@
 # (needs `image` plus its pixel size as `w` and `h`; the frame and ticks follow them).
 
 - group: current
+  id: transformer
   name: Information Sharing Across Transformer Layers
   dates: Sep 2026 – present
   description: >-
@@ -14,6 +15,7 @@
     200M FineWeb-Edu tokens.
 
 - group: current
+  id: cfg
   name: Noise-Aware Classifier-Free Guidance
   dates: Sep 2026 – present
   description: >-
@@ -23,6 +25,7 @@
     Also tested across step counts and on SiT flow models.
 
 - group: current
+  id: ual
   name: Diffusion Posterior Sampling with Uncertain Forward Models (UAL)
   dates: May – Sep 2026
   cite: ual
@@ -34,6 +37,7 @@
     and variogram scores).
 
 - group: current
+  id: specdepth
   name: "SpecDepth: Physics-Guided Reference-Free Adaptation of Depth Priors for Hyperspectral LWIR Ranging"
   dates: Nov 2023 – May 2026
   description: >-

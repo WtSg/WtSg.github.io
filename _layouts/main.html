@@ -124,7 +124,7 @@
       <div class="threads">
         {%- for th in me.research_threads %}
         {%- capture c %}{% include cite.html id=th.cite %}{% endcapture %}
-        <p class="thread"><strong>{{ th.lead }}</strong>{% if th.joined %} {% else %}. {% endif %}{{ th.text | strip | replace: '%cite%', c }}</p>
+        <p class="thread"><strong>{% if th.project %}<a class="thread__lead" href="#work-{{ th.project }}">{{ th.lead }}</a>{% else %}{{ th.lead }}{% endif %}</strong>{% if th.joined %} {% else %}. {% endif %}{{ th.text | strip | replace: '%cite%', c }}</p>
         {%- endfor %}
       </div>
       {%- if me.before %}
@@ -139,7 +139,7 @@
       <h2 id="work-h">Current work</h2>
       <ol class="entries">
         {%- for p in current %}
-        <li class="entry">
+        <li class="entry"{% if p.id %} id="work-{{ p.id }}"{% endif %}>
           <h3>{% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</h3>
           <p class="entry__dates">{{ p.dates }}</p>
           <div class="entry__body">

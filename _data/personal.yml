@@ -52,18 +52,22 @@ news:
       was published in IEEE Transactions on Computational Imaging and selected
       for presentation at IEEE ICIP 2026.
 
-# Research threads. `cite` names an `id` in publications.yml and renders as [n].
+# Research threads. `cite` names an `id` in publications.yml and renders as [n];
+# `project` names an `id` in projects.yml and links the lead to that entry.
 research_threads:
   - lead: Diffusion posterior sampling when the forward model is uncertain
+    project: ual
     text: >-
       An uncertainty-aware likelihood (UAL) keeps pretrained diffusion priors
       reliable under model mismatch %cite%.
     cite: ual
   - lead: Guidance for diffusion models
+    project: cfg
     text: >-
       A noise-aware guidance schedule improves sample quality at no extra cost
       (23–30% lower FID on DiT-XL/2).
   - lead: Efficient LLM architectures
+    project: transformer
     text: >-
       that share information across Transformer layers without reading from
       every layer (in recent tests at 40M parameters, 8.9% lower held-out
@@ -71,6 +75,7 @@ research_threads:
       Attention Residuals, published in 2026).
     joined: true
   - lead: Physics-guided adaptation
+    project: specdepth
     text: >-
       Adapted a frozen depth foundation model to a new infrared sensor without
       labels.
