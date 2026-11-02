@@ -369,7 +369,7 @@ body[data-lights="on"] .dr-sign__switch::before {
 }
 
 /* A developer tray: black plastic rim, a pool of developer catching the safelight.
-   The sheen and the meniscus live in the liquid around the print, never over it. */
+   At rest the sheen and the meniscus live in the liquid around the print, never over it. */
 .tray__basin {
   position: relative;
   padding: var(--basin-pad);
@@ -385,7 +385,9 @@ body[data-lights="on"] .dr-sign__switch::before {
     inset 0 .8rem 1.6rem rgba(0, 0, 0, .5),
     0 1.8rem 3rem -1.4rem rgba(0, 0, 0, .85);
 }
-/* The surface of the developer catching the light while it moves. */
+/* While a print develops, a band of light slides across the moving developer,
+   over the print too. It is gone once the print is done, so a finished print
+   is never tinted. */
 .tray__basin::after {
   content: "";
   position: absolute;
