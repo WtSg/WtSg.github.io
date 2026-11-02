@@ -2,7 +2,7 @@
 # Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
 # Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.
 # You can edit a title, place or year here by hand; keep each photo on one line.
-- {"id":"20261102-all-photos-1-of-1-1-c9e7","src":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7.jpg","thumb":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7-thumb.jpg","w":2000,"h":1500,"title":"All Photos 1 of 1 (1)","place":"","year":"2025","exif":{"camera":"iPhone 13 Pro","lens":"back triple camera 9mm f/2.8","focal":"9 mm","aperture":"f/2.8","shutter":"1/950 s","iso":"ISO 32"},"added":"2026-11-02"}
+- {"id":"20261102-all-photos-1-of-1-1-c9e7","src":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7.jpg","thumb":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"2025","exif":{"camera":"iPhone 13 Pro","lens":"back triple camera 9mm f/2.8","focal":"9 mm","aperture":"f/2.8","shutter":"1/950 s","iso":"ISO 32"},"added":"2026-11-02"}
 - {"id":"20261102-b-0890-liqw","src":"/img/gallery/20261102-b-0890-liqw.jpg","thumb":"/img/gallery/20261102-b-0890-liqw-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-b-1118-wt50","src":"/img/gallery/20261102-b-1118-wt50.jpg","thumb":"/img/gallery/20261102-b-1118-wt50-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-b-1589-zz50","src":"/img/gallery/20261102-b-1589-zz50.jpg","thumb":"/img/gallery/20261102-b-1589-zz50-thumb.jpg","w":2000,"h":1125,"title":"","place":"","year":"","added":"2026-11-02"}
