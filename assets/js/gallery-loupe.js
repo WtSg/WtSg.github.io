@@ -73,6 +73,46 @@
     if (e.target.tagName === "IMG") e.preventDefault();
   });
 
+  /* ---------- The camera's maker, as its mark ---------- */
+  // [maker test, mark file ("" sets the name as a wordmark), name, mark width / height,
+  // the words dropped from the model]. Marks: Simple Icons (CC0), in assets/img/brands.
+  var MAKERS = [
+    [/^leica\b/i, "leica", "Leica", 1, /^leica(\s+camera(\s+ag)?)?\s*/i],
+    [/^(apple\b|iphone|ipad)/i, "apple", "Apple", 0.818, /^apple\s*/i],
+    [/^sony\b/i, "sony", "Sony", 5.277, /^sony\s*/i],
+    [/^fuji(film)?\b/i, "fujifilm", "Fujifilm", 5.515, /^fuji(film)?\s*/i],
+    [/^nikon\b/i, "nikon", "Nikon", 3.467, /^nikon(\s+corporation)?\s*/i],
+    [/^(panasonic|lumix)\b/i, "panasonic", "Panasonic", 5.983, /^panasonic\s*/i],
+    [/^(eastman\s+)?kodak\b/i, "kodak", "Kodak", 1.147, /^(eastman\s+)?kodak(\s+company)?\s*/i],
+    [/^dji\b/i, "dji", "DJI", 1.676, /^dji\s*/i],
+    [/^(google\b|pixel\b)/i, "google", "Google", 0.975, /^google\s*/i],
+    [/^samsung\b/i, "samsung", "Samsung", 5.998, /^samsung\s*/i],
+    [/^canon\b/i, "", "Canon", 0, /^canon\s*/i],
+    [/^hasselblad\b/i, "", "Hasselblad", 0, /^hasselblad\s*/i],
+    [/^(olympus|om\s*system|om\s*digital)\b/i, "", "OM System", 0, /^(olympus(\s+corporation)?|om\s*(system|digital(\s+solutions)?))\s*/i],
+    [/^ricoh\b/i, "", "Ricoh", 0, /^ricoh(\s+imaging(\s+company)?)?\s*/i],
+    [/^pentax\b/i, "", "Pentax", 0, /^pentax\s*/i],
+    [/^sigma\b/i, "", "Sigma", 0, /^sigma\s*/i]
+  ];
+  function makerOf(camera) {
+    camera = strip(camera);
+    for (var k = 0; k < MAKERS.length; k++) {
+      var m = MAKERS[k];
+      if (m[0].test(camera)) return { file: m[1], name: m[2], ar: m[3], model: strip(camera.replace(m[4], "")) || camera };
+    }
+    return null;
+  }
+  // The camera as markup: the maker's mark in the ink colour (or its name set as a
+  // wordmark), then the model; markOnly gives just the mark. Unknown makers stay as text.
+  function cameraHtml(camera, markOnly) {
+    var m = makerOf(camera);
+    if (!m) return markOnly ? "" : esc(camera);
+    var mark = m.file
+      ? '<span class="gl-mark' + (m.ar > 2 ? " gl-mark--wide" : "") + '" role="img" aria-label="' + esc(m.name) + '" style="--mark:url(' + esc(base + "/assets/img/brands/" + m.file + ".svg") + ");--mark-ar:" + m.ar + '"></span>'
+      : '<span class="gl-mark gl-mark--word">' + esc(m.name) + "</span>";
+    return markOnly ? mark : mark + ' <span class="gl-model">' + esc(m.model) + "</span>";
+  }
+
   /* ---------- The close-up viewer ---------- */
   var dialog = document.querySelector("dialog.gl");
   var api = {
@@ -83,6 +123,7 @@
     metaLine: metaLine,
     specLine: specLine,
     altText: altText,
+    cameraHtml: cameraHtml,
     open: function () {},
     go: function () {},
     onClose: null,
@@ -129,7 +170,7 @@
     var meta = metaLine(p);
     cap.innerHTML = '<p class="gl__title">' + esc(label(p)) + "</p>" + (meta ? '<p class="gl__meta">' + esc(meta) + "</p>" : "");
     var rows = specRows(p);
-    spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>"; }).join("");
+    spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + (r[0] === "Camera" ? cameraHtml(r[1]) : esc(r[1])) + "</dd></div>"; }).join("");
     spec.hidden = !rows.length;
     count.textContent = (i + 1) + " / " + photos.length;
     if (roll) {
