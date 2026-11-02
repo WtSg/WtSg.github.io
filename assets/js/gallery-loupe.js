@@ -209,7 +209,7 @@
     cap.innerHTML = '<p class="gl__title">' + esc(label(p)) + "</p>" + (meta ? '<p class="gl__meta">' + esc(meta) + "</p>" : "");
     var rows = specRows(p);
     spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + (r[0] === "Camera" ? cameraHtml(r[1]) : esc(r[1])) + "</dd></div>"; }).join("");
-    spec.hidden = !rows.length;
+    spec.classList.toggle("is-empty", !rows.length);
     mark(i);
     if (api.onFill) api.onFill(i, p, dialog.open);
     warmAround(i);
