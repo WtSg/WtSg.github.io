@@ -441,7 +441,12 @@ p { margin: 0; }
   letter-spacing: .12em;
   text-transform: uppercase;
 }
-.gl .gl__btn:hover { color: var(--led); border-color: rgba(255, 74, 46, .45); }
+/* a tap is answered at once: the key gives under the finger, two quick taps are two
+   steps (never a zoom), and the hover colour is for a mouse only, so it never sticks */
+.gl__controls, .gl .gl__btn, .gl__frm { touch-action: manipulation; }
+.gl .gl__btn { -webkit-tap-highlight-color: transparent; transition: transform .12s ease-out, background-color .12s ease-out; }
+@media (hover: hover) { .gl .gl__btn:hover { color: var(--led); border-color: rgba(255, 74, 46, .45); } }
+.gl .gl__btn:active { transform: scale(.92); background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .32); transition-duration: 0s; }
 .gl .gl__btn--close { margin: 0; background: rgba(0, 0, 0, .8); color: var(--ink); border-color: rgba(255, 255, 255, .14); padding: .55rem 1rem; }
 
 /* The roll: frames on a strip of film, sprocket holes along both edges. It runs off a

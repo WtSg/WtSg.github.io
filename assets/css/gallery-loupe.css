@@ -95,7 +95,7 @@ html.gl-open { overflow: hidden; }
   font-weight: 600;
   cursor: pointer;
 }
-.gl__btn:hover { border-color: var(--gl-fg); }
+@media (hover: hover) { .gl__btn:hover { border-color: var(--gl-fg); } }
 .gl__btn--close { margin-left: auto; background: var(--gl-fg); border-color: var(--gl-fg); color: var(--gl-bg); }
 .gl-ico { display: block; }
 
