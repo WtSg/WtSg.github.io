@@ -149,7 +149,37 @@
         '<span class="gl__edge" aria-hidden="true">' + n + "</span></button></li>";
     }).join("");
   }
-  var index = 0, openedAt = 0, opener = null, closing = false;
+  // (a touch listener is what lets an iPhone show the keys' pressed state)
+  document.addEventListener("touchstart", function () {}, { passive: true });
+  var index = 0, openedAt = 0, opener = null, closing = false, markedI = -1;
+  // Which pictures are here already: a step shows the full photograph if it has come,
+  // else its small print (sharpened once the full one arrives), and never waits on the network.
+  var got = Object.create(null), warming = Object.create(null);
+  function abs(src) { try { return new URL(src, document.baseURI).href; } catch (e) { return src; } }
+  function have(src) {
+    var k = abs(src);
+    if (got[k]) return true;
+    var t = new Image();
+    t.src = src;
+    return !!(got[k] = t.complete && t.naturalWidth > 0);
+  }
+  function warm(src) {
+    var k = abs(src);
+    if (got[k] || warming[k]) return;
+    var t = warming[k] = new Image();
+    t.onload = function () { got[k] = true; delete warming[k]; if (t.decode) t.decode().catch(function () {}); };
+    t.onerror = function () { delete warming[k]; };
+    t.src = src;
+  }
+  // the photographs either side in full, a little further their small prints
+  function warmAround(i) {
+    var N = photos.length;
+    [1, -1, 2, -2].forEach(function (k) {
+      var q = photos[((i + k) % N + N) % N];
+      if (k === 1 || k === -1) warm(q.src);
+      warm(q.thumb);
+    });
+  }
   // Focus is shown and handed back only to someone using the keyboard: after a tap or a
   // click, neither the Close key's ring nor the photograph's label should appear.
   var keyed = false;
@@ -164,7 +194,7 @@
     img.src = fromSrc || p.src;
     if (fromSrc && fromSrc !== p.src) {
       var pre = new Image();
-      pre.onload = function () { if (index === i && dialog.open) img.src = p.src; };
+      pre.onload = function () { got[abs(p.src)] = true; if (index === i && dialog.open) img.src = p.src; };
       pre.src = p.src;
     }
     var meta = metaLine(p);
@@ -172,6 +202,14 @@
     var rows = specRows(p);
     spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + (r[0] === "Camera" ? cameraHtml(r[1]) : esc(r[1])) + "</dd></div>"; }).join("");
     spec.hidden = !rows.length;
+    mark(i);
+    if (api.onFill) api.onFill(i, p, dialog.open);
+    warmAround(i);
+  }
+  // the counter and the roll show photograph i: at once when a step begins, not when it lands
+  function mark(i) {
+    if (i === markedI) return;
+    markedI = i;
     count.textContent = (i + 1) + " / " + photos.length;
     if (roll) {
       Array.prototype.forEach.call(roll.querySelectorAll(".gl__frm"), function (b) {
@@ -181,11 +219,6 @@
       });
       if (dialog.open) centre(i, true);
     }
-    if (api.onFill) api.onFill(i, p, dialog.open);
-    [i + 1, i - 1].forEach(function (k) {
-      var n = new Image();
-      n.src = photos[(k + photos.length) % photos.length].src;
-    });
   }
 
   // Opening and closing move as an app does on a phone: the close-up grows out of the
@@ -215,8 +248,8 @@
     home = from || null;
     fill(i, fromSrc);
     dialog.showModal();
-    // the click of the tap that opened it (some phones send it to what is now under the finger) is not a tap to close
-    quietUntil = performance.now() + 450;
+    // when it opened: the click of the opening tap is not a tap in it (below)
+    openT = performance.now();
     if (!keyed && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     root.classList.add("gl-open");
     if (roll) { measureRoll(); centre(i, false); }
@@ -407,23 +440,35 @@
   /* ---------- Paging, as in a phone's photo album ---------- */
   // Sideways the photographs lie side by side, a gap apart: a drag moves them with the
   // finger, the next coming in from the side, and let go they glide on to it or back. The
-  // arrows, the keys and the roll slide the same way. Nothing fades: the photograph
-  // arriving is decoded before it moves, and takes the main place only once it shows.
+  // arrows, the keys and the roll slide the same way, and every tap is answered at once:
+  // a quick run of taps keeps gliding. Nothing fades: the photograph arriving moves once
+  // it is drawn (its small print if the full one has not come; it sharpens on arrival),
+  // and takes the main place only once it shows.
   var GAP = 28, EASE = "cubic-bezier(.25,.8,.25,1)", slide = null, goTok = 0;
+  var Matrix = window.DOMMatrix || window.WebKitCSSMatrix;
+  // photograph n as a picture beside the one shown: in full if it has come, else its small print
   function sideOf(n) {
-    var el = document.createElement("img");
+    var p = photos[n], el = document.createElement("img");
     el.className = "gl__img gl__img--side";
     el.alt = "";
     el.draggable = false;
     el.setAttribute("aria-hidden", "true");
-    el.style.setProperty("--ar", photos[n].ar);
-    el.src = photos[n].src;
+    el.style.setProperty("--ar", p.ar);
+    el._src = have(p.src) ? p.src : p.thumb;
+    if (el._src !== p.src) warm(p.src);
+    el.src = el._src;
     stage.insertBefore(el, img.nextSibling);
     return el;
   }
-  // where a side photograph sits: a gap beyond the edge of the one shown, on side d
-  function offsetOf(el, d) { return d * (img.getBoundingClientRect().width / 2 + GAP + el.getBoundingClientRect().width / 2); }
+  // where a side photograph sits: a gap beyond the edge of ref (the one shown), on side d
+  function offsetOf(el, d, ref) { return d * ((ref || img).getBoundingClientRect().width / 2 + GAP + el.getBoundingClientRect().width / 2); }
   function at(el, x) { el.style.transform = "translateX(" + x.toFixed(1) + "px)"; }
+  // where a picture is at this moment, mid-glide or not
+  function xOf(el) {
+    var t = getComputedStyle(el).transform;
+    if (!t || t === "none" || !Matrix) return 0;
+    try { return new Matrix(t).m41; } catch (e) { return 0; }
+  }
   function lines(on) {
     if (!frameEl) return;
     frameEl.style.transition = "opacity " + (on ? ".25s" : ".1s") + " ease-out";
@@ -431,25 +476,31 @@
   }
   // the slide under way, finished at once: its photograph shown, nothing left over
   function endSlide() { if (slide) slide.done(); }
-  // glide from fromDx to photograph n, which lies on side d as el; others move along and go
-  function slideTo(n, fromDx, el, others) {
-    endSlide();
-    var off = el._off, to = -off, dur = Math.max(240, Math.min(440, Math.abs(to - fromDx) * 0.85));
+  // Glide so that el (photograph n) lands in the middle, everything else moving with it by
+  // the same distance; from holds where the shown one, el and the others start.
+  function glide(n, el, others, from) {
+    var shift = -from[1], dur = Math.max(240, Math.min(440, Math.abs(shift) * 0.85));
     var tx = function (x) { return { transform: "translateX(" + x.toFixed(1) + "px)" }; };
+    var moving = [img, el].concat(others);
+    if (slide) slide.drop();
     lines(false);
-    var anims = [img.animate([tx(fromDx), tx(to)], { duration: dur, easing: EASE, fill: "forwards" }),
-      el.animate([tx(off + fromDx), tx(0)], { duration: dur, easing: EASE, fill: "forwards" })];
-    (others || []).forEach(function (o) { anims.push(o.animate([tx(o._off + fromDx), tx(o._off + to)], { duration: dur, easing: EASE, fill: "forwards" })); });
-    var s = { over: false };
+    var anims = moving.map(function (m, k) { return m.animate([tx(from[k]), tx(from[k] + shift)], { duration: dur, easing: EASE, fill: "forwards" }); });
+    var s = { n: n, el: el, others: others, over: false };
+    // let go of this slide without finishing it: the next one takes its pictures over
+    s.drop = function () {
+      s.over = true;
+      if (slide === s) slide = null;
+      anims.forEach(function (a) { a.cancel(); });
+    };
     s.done = function () {
       if (s.over) return;
       s.over = true;
       if (slide === s) slide = null;
-      fill(n);
+      fill(n, el._src);
       at(el, 0);
       img.style.transform = "";
       anims.forEach(function (a) { a.cancel(); });
-      (others || []).forEach(function (o) { o.remove(); });
+      others.forEach(function (o) { o.remove(); });
       var drop = function () { el.remove(); lines(true); };
       if (img.decode) img.decode().then(drop, drop); else drop();
     };
@@ -460,16 +511,29 @@
     if (api.onStep) api.onStep(n);
     index = n;
     var tok = ++goTok;
-    endSlide();
-    if (still() || !img.animate) { fill(n); return; }
-    var el = sideOf(n);
+    mark(n);
+    warmAround(n);
+    if (still() || !img.animate) { endSlide(); fill(n); return; }
+    var s = slide, el = sideOf(n);
+    // A step while one is still gliding runs on from where everything is: the photograph
+    // arriving is where the next one is measured from, and nothing jumps.
+    if (s) {
+      var xs = [img, s.el].concat(s.others).map(xOf);
+      var cx = xs[1] + offsetOf(el, d, s.el);
+      glide(n, el, [s.el].concat(s.others), [xs[0], cx].concat(xs.slice(1)));
+      return;
+    }
+    // out at its side at once, never over the photograph shown while it is drawn
+    var off = offsetOf(el, d), begun = false;
+    at(el, off);
     var start = function () {
+      if (begun) return;
+      begun = true;
       if (tok !== goTok || !dialog.open) { el.remove(); return; }
-      el._off = offsetOf(el, d);
-      at(el, el._off);
-      slideTo(n, 0, el);
+      glide(n, el, [], [0, off]);
     };
-    if (el.decode) el.decode().then(start, start); else start();
+    // decoded first so it never arrives blank, but a tap is answered within a moment either way
+    if (el.decode) { el.decode().then(start, start); setTimeout(start, 120); } else start();
   }
 
   dialog.addEventListener("click", function (e) {
@@ -497,7 +561,7 @@
   // sideways steps to the next or the previous one; on a touch screen, down takes it
   // away, as a phone's photo viewer does: it follows the finger and shrinks a little,
   // everything else fades, and let go far or fast enough it leaves, else it springs back.
-  var g = null, quietUntil = 0;
+  var g = null, quietUntil = 0, openT = -1e9;
   function rest() { return Array.prototype.filter.call(dialog.children, function (c) { return c !== stage; }); }
   function pull(dy, p, bg) {
     stage.style.transform = dy ? "translateY(" + dy.toFixed(1) + "px) scale(" + (1 - p * 0.14).toFixed(4) + ")" : "";
@@ -508,9 +572,12 @@
     pull(0, 0);
     if (stage.getAnimations) stage.getAnimations().forEach(function (a) { a.cancel(); });
   }
-  // the click a drag ends with is not a tap: it must not close the close-up
+  // The click a drag on the photograph ends with is not a tap: it must not close the
+  // close-up. Nor is the click of the tap that opened it, which some phones send a moment
+  // later to whatever is now under the finger. The keys below answer every real tap.
   dialog.addEventListener("click", function (e) {
-    if (performance.now() < quietUntil) { e.stopPropagation(); e.preventDefault(); }
+    var now = performance.now(), sinceOpen = now - openT, keys = e.target.closest && e.target.closest(".gl__controls, .gl__info");
+    if (sinceOpen < 120 || (!keys && (sinceOpen < 450 || now < quietUntil))) { e.stopPropagation(); e.preventDefault(); }
   }, true);
   stage.addEventListener("pointerdown", function (e) {
     if (e.button > 0 || closing || g) return;
@@ -542,6 +609,7 @@
     if (!g.pages) {
       endSlide();
       var N = photos.length, prev = sideOf((index - 1 + N) % N), next = sideOf((index + 1) % N);
+      warmAround(index);
       prev._off = offsetOf(prev, -1);
       next._off = offsetOf(next, 1);
       g.pages = { prev: prev, next: next, w: img.getBoundingClientRect().width };
@@ -567,7 +635,8 @@
       if (api.onStep) api.onStep(n);
       index = n;
       ++goTok;
-      slideTo(n, dx, el, [other]);
+      mark(n);
+      glide(n, el, [other], [dx, el._off + dx, other._off + dx]);
       return;
     }
     // back to where it was
@@ -611,6 +680,7 @@
     unpull();
     endSlide();
     ++goTok;
+    markedI = -1;
     Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
     img.style.transform = "";
     lines(true);
