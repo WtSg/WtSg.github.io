@@ -26,7 +26,7 @@
   font-weight: 400;
   font-display: swap;
 }
-/* the lettering of a camera maker's name that has no free face of its own (Leica, Hasselblad) */
+/* the lettering of a camera maker's name that has no free face of its own (Leica) */
 @font-face {
   font-family: "Hanken Grotesk";
   src: url("../fonts/hanken-grotesk-latin-300-normal.woff2") format("woff2");
@@ -124,7 +124,7 @@ p { margin: 0; }
 .cv-list { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .cv-list::after { content: ""; flex: 999 1 0; }
 .cv-list li { flex: var(--ar) 1 calc(var(--ar) * 13rem); }
-.cv-key { display: grid; gap: .4rem; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: zoom-in; }
+.cv-key { display: grid; gap: .4rem; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
 .cv-key img { display: block; width: 100%; height: auto; aspect-ratio: var(--ar); object-fit: cover; }
 .cv-key__label { font: 400 .72rem/1.3 var(--mono); color: var(--muted); }
 .cv-empty { padding: 20vh 0; text-align: center; color: var(--muted); }
@@ -146,7 +146,7 @@ p { margin: 0; }
 }
 .cv-wall { position: absolute; inset: 0; transform-origin: 50% 50%; }
 .cv-on .cv-plane.is-dragging { cursor: grabbing; }
-.cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: zoom-in; }
+.cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: pointer; }
 /* Dragging the wall must never select it: Safari paints selected photographs with a
    light veil, which washed the whole wall out on a fast drag. */
 .cv-on .cv-room { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -256,14 +256,15 @@ p { margin: 0; }
   mask: var(--mark) center / contain no-repeat;
 }
 .gl-mark--wide { height: .8em; width: calc(.8em * var(--mark-ar, 1)); vertical-align: -.05em; }
+/* Hasselblad's wordmark is long and thin: a little lower, so it is not longer than the rest */
+.gl-mark[data-maker="hasselblad"] { height: .66em; width: calc(.66em * var(--mark-ar, 1)); vertical-align: 0; }
 /* The maker's name, after a mark that is only a symbol, or alone when there is no mark, in
    lettering close to the maker's own: Apple in Apple's own SF (on its devices); Leica in bold
-   capitals of a sober sans, as its Corporate S; Hasselblad light and widely spaced, as its
-   wordmark. Makers without lettering of their own here get plain spaced capitals. */
+   capitals of a sober sans, as its Corporate S. Makers without lettering of their own here
+   get plain spaced capitals. */
 .gl-brand { font: 600 .82em/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; }
 .gl-brand--apple { font: 600 1.02em/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.01em; text-transform: none; }
 .gl-brand--leica { font: 700 .9em/1 "Hanken Grotesk", var(--ui); letter-spacing: .07em; }
-.gl-brand--hasselblad { font: 300 .9em/1 "Hanken Grotesk", var(--ui); letter-spacing: .28em; }
 .gl .gl__spec [data-k="camera"] dd { color: var(--ink); }
 /* Leica's red dot, its script in silver as on the camera: a silver disc under the red,
    which the mark lets through only where the script is. */
@@ -412,6 +413,10 @@ p { margin: 0; }
 .gl__info { justify-self: center; align-self: start; display: grid; justify-items: center; gap: .55rem; text-align: center; }
 .gl__led:empty { display: none; }
 .gl__led .vf-led__cell--n:first-child { padding-left: 0; border-left: 0; }
+/* the frame number out of all of them: 08/46 */
+.gl__led .vf-led__of { margin: 0 .18rem 0 .12rem; font-size: 1rem; color: var(--led-label); align-self: center; }
+/* the close-up never scrolls sideways */
+.gl[open] { overflow-x: hidden; }
 .gl .gl__title { font: 500 .95rem/1.3 var(--ui); }
 .gl .gl__meta { font: 400 .76rem/1.4 var(--mono); }
 .gl .gl__spec { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem 1rem; font: 400 .72rem/1.4 var(--mono); color: var(--muted); }

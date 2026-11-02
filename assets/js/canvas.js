@@ -252,7 +252,7 @@
     var raw = String(e.shutter || "").replace(/\s*s$/i, "").trim(), sh = "", sl = "1/";
     if (/^1\/\d+$/.test(raw)) sh = raw.slice(2);
     else if (raw && !/\//.test(raw)) { sh = digits(raw); sl = "S"; }
-    return { f: f, s: sh, sl: sl, iso: digits(String(e.iso || "").replace(/^ISO\s*/i, "")), mm: digits(e.focal), n: pad(p.i + 1) };
+    return { f: f, s: sh, sl: sl, iso: digits(String(e.iso || "").replace(/^ISO\s*/i, "")), mm: digits(e.focal), n: pad(p.i + 1), of: pad(photos.length) };
   }
   function setLed(k, v) {
     led[k].textContent = v;
@@ -328,10 +328,16 @@
   /* ---------- The frame loop ---------- */
   function frame(now) {
     requestAnimationFrame(frame);
+    draw(now);
+  }
+  // snapping: one pass that puts everything straight where it is going (the wall behind
+  // an open close-up, out of sight)
+  var snapping = false;
+  function draw(now) {
     var dt = last ? clamp(now - last, 0, 50) : 16;
     last = now;
-    if (root.classList.contains("gl-open")) return;
-    var calm = still(), waking = now < hold;
+    if (root.classList.contains("gl-open") && !snapping) return;
+    var calm = still() || snapping, waking = now < hold;
 
     // inertia, then the nearest photograph is framed
     var coasting = !dragging && Math.abs(vx) + Math.abs(vy) > 0.012;
@@ -360,7 +366,9 @@
     // the lens pulls back with speed, and over a long glide
     var pull = clamp((spd - 1.5) / 20, 0, 1);
     if (dragging) pull = Math.max(pull, 0.28);
-    if (!moving) pull = Math.max(pull, clamp((dist * s) / (vw * 0.5), 0, 1) * 0.7);
+    // Over a long glide across the wall the lens pulls back too; a step to a neighbour
+    // does not, so the photograph eases straight to its new size with the frame lines.
+    if (!moving) pull = Math.max(pull, clamp((dist * s - vw * 1.1) / (vw * 1.2), 0, 1) * 0.7);
     var z = zr(), sRest = restScale();
     var sGoal = Math.max(S_MIN, (sTo + (1 - sTo) * pull) * z);
     if (calm || pinch) s = sGoal;
@@ -368,7 +376,7 @@
     // While the wall moves it is scaled as one layer. Once it rests, the scale goes into
     // each photograph's own size instead, so each is drawn at the size it shows: Safari
     // keeps a scaled layer at the resolution it was drawn at, and would show it soft.
-    var rest = !moving && !waking && !pinch && Math.abs(s - sGoal) < 2e-4;
+    var rest = !moving && !waking && !pinch && Math.abs(s - sGoal) < 1e-3;
     if (rest) s = sGoal;
     var bake = rest ? s : 0;
     if (bake !== baked) {
@@ -713,7 +721,24 @@
     var it = shot.it, back = shot.back || keys[it.i];
     G.open(it.i, it.img, back, it.img.currentSrc || it.img.src);
   }
-  // Closing goes back to the wall as it was before the close-up opened, wherever the roll was turned to.
+  // While the close-up is open the wall follows it out of sight: each photograph it steps
+  // to is framed at once, at rest, and its place handed over, so closing shrinks the
+  // close-up into that photograph on the wall instead of going back to the first one.
+  G.onStep = function (i) {
+    var t = nearest(tx, ty, i);
+    if (!t) return;
+    lock(t);
+    ox = tx;
+    oy = ty;
+    vx = vy = 0;
+    spd = 0;
+    hold = 0;
+    opening = false;
+    snapping = true;
+    draw(performance.now());
+    snapping = false;
+    if (G.rehome) G.rehome(i, t.it.img);
+  };
   G.onClose = function () {};
 
   /* ---------- The close-up: the same LED readout, under the photograph ---------- */
@@ -728,7 +753,7 @@
       (cells.length ? '<span class="vf-led__exif">' + cells.map(function (c) {
         return '<span class="vf-led__cell">' + c[1] + '<b data-k="' + c[0] + '"></b>' + c[2] + "</span>";
       }).join("") + "</span>" : "") +
-      '<span class="vf-led__cell vf-led__cell--n"><b data-k="n"></b></span></div>';
+      '<span class="vf-led__cell vf-led__cell--n"><b data-k="n"></b><em class="vf-led__of">/</em><b data-k="of"></b></span></div>';
     var bs = Array.prototype.slice.call(glLed.querySelectorAll("b[data-k]"));
     var put = function (b, t) { b.textContent = t; b.setAttribute("data-off", t.replace(/\d/g, "8")); };
     clearInterval(glRoll);
