@@ -429,6 +429,7 @@
   // flies back from where the finger left it. With no place to go back to, a short fade.
   function close() {
     if (!dialog.open || closing) return;
+    if (full) fullSet(false);
     if (still() || !dialog.animate) { dialog.close(); return; }
     closing = true;
     endSlide();
@@ -527,7 +528,7 @@
   var peeks = null;
   function peekShow() {
     peekDrop();
-    if (still() || photos.length < 2 || !dialog.open || closing || slide || g || zoomed() || !img.animate) return;
+    if (still() || photos.length < 2 || !dialog.open || closing || slide || g || zoomed() || peeksOff || full || !img.animate) return;
     var N = photos.length, prev = sideOf((index - 1 + N) % N), next = sideOf((index + 1) % N), half = window.innerWidth / 2;
     prev._off = offsetOf(prev, -1);
     next._off = offsetOf(next, 1);
@@ -540,6 +541,16 @@
     peeks = { prev: prev, next: next, at: index };
   }
   function peekDrop() { if (peeks) { peeks.prev.remove(); peeks.next.remove(); peeks = null; } }
+  // put away with a click: they fade, then go
+  function peekHide() {
+    var p = peeks;
+    peeks = null;
+    if (!p) return;
+    [p.prev, p.next].forEach(function (el) {
+      var a = el.animate ? el.animate([{ opacity: 0.3 }, { opacity: 0 }], { duration: 160, easing: "ease-out", fill: "forwards" }) : null;
+      if (a) a.onfinish = function () { el.remove(); }; else el.remove();
+    });
+  }
   // the window resized: the glimpses are measured afresh for it (there may now be room, or none)
   var peekT = 0;
   window.addEventListener("resize", function () {
@@ -639,22 +650,94 @@
       else close();
       return;
     }
-    // A tap or click beside the photograph, on the glimpse of a neighbour or the black on that
-    // side: that neighbour. On the photograph itself, nothing (closing is a swipe down, the
-    // Close key or Escape); zoomed in, it returns the photograph whole.
+    // A tap or click on the glimpse of a neighbour: that neighbour. Anywhere else on the
+    // photograph or round it (closing is a swipe down, the Close key or Escape): one click
+    // puts the glimpses away or brings them back, two clicks (or taps) close together make it
+    // full screen, and two more bring it back. Zoomed in, a click returns it whole.
     var peek = e.target.classList && e.target.classList.contains("gl__img--peek");
-    if (e.target === dialog || e.target === stage || e.target === img || peek) {
+    if (peek) {
       if (zoomed()) { zoomTo(1, 0, 0, 220); return; }
-      var r = img.getBoundingClientRect();
-      if (e.clientX < r.left) step(-1);
-      else if (e.clientX > r.right) step(1);
+      step(e.clientX < img.getBoundingClientRect().left ? -1 : 1);
+      return;
+    }
+    if (e.target === dialog || e.target === stage || e.target === img) {
+      if (zoomed()) { zoomTo(1, 0, 0, 220); clickAt = null; return; }
+      var now = performance.now();
+      if (clickAt && now - clickAt.t < 320 && Math.hypot(e.clientX - clickAt.x, e.clientY - clickAt.y) < 40) {
+        clearTimeout(clickT);
+        clickAt = null;
+        fullSet(!full);
+        return;
+      }
+      clickAt = { t: now, x: e.clientX, y: e.clientY };
+      clearTimeout(clickT);
+      clickT = setTimeout(function () {
+        clickAt = null;
+        if (!full && dialog.open && !closing) peeksToggle();
+      }, 320);
     }
   });
-  dialog.addEventListener("keydown", function (e) {
+  /* ---------- One click, two clicks, the arrows ---------- */
+  var peeksOff = false, full = false, clickT = 0, clickAt = null, peekAfterFs = false;
+  function peeksToggle() {
+    peeksOff = !peeksOff;
+    if (peeksOff) peekHide(); else peekShow();
+  }
+  // Full screen: the photograph alone, as large as the screen allows, the readout, roll and
+  // keys put away. Where the browser lets it, the photograph's own room takes the whole
+  // screen; where it does not (an iPhone), it takes the whole window.
+  function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function fullSet(on) {
+    if (on === full) return;
+    var wasFs = !!fsEl();
+    full = on;
+    clearTimeout(clickT);
+    clickAt = null;
+    endSlide();
+    zoomOff();
+    if (on) peekDrop();
+    dialog.classList.toggle("is-full", on);
+    frameSize();
+    try {
+      var pr;
+      if (on) {
+        var rq = stage.requestFullscreen || stage.webkitRequestFullscreen;
+        if (rq) pr = rq.call(stage);
+      } else if (fsEl()) {
+        var ex = document.exitFullscreen || document.webkitExitFullscreen;
+        if (ex) pr = ex.call(document);
+      }
+      if (pr && pr.catch) pr.catch(function () {});
+    } catch (x) {}
+    // the glimpses come back once the photograph has its room again: leaving the browser's
+    // full screen takes a moment, and they are measured against the room they will have
+    if (!on) {
+      if (!wasFs) peekShow();
+      else {
+        peekAfterFs = true;
+        setTimeout(function () { if (peekAfterFs) { peekAfterFs = false; peekShow(); } }, 600);
+      }
+    }
+  }
+  // the browser's own way out of full screen (Escape, its button) leaves it here too
+  function fsChange() {
+    if (full && !fsEl()) fullSet(false);
+    else if (peekAfterFs && !fsEl()) { peekAfterFs = false; requestAnimationFrame(peekShow); }
+  }
+  document.addEventListener("fullscreenchange", fsChange);
+  document.addEventListener("webkitfullscreenchange", fsChange);
+  // The arrows step at any time, wherever the focus is (opened with a click, it is still on
+  // the wall behind), full screen too; not while typing, nor with a modifier held.
+  document.addEventListener("keydown", function (e) {
+    if (!dialog.open || closing || e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
     if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
   });
   dialog.addEventListener("cancel", function (e) {
+    // Escape in full screen comes back out of it first
+    if (full) { e.preventDefault(); fullSet(false); return; }
     if (!still()) { e.preventDefault(); close(); }
   });
   /* ---------- Zooming into the photograph ---------- */
@@ -1000,6 +1083,9 @@
   stage.addEventListener("pointerup", function (e) { release(e, false); });
   stage.addEventListener("pointercancel", function (e) { release(e, true); });
   dialog.addEventListener("close", function () {
+    if (full) fullSet(false);
+    clearTimeout(clickT);
+    clickAt = null;
     g = null;
     pts = {};
     pinch = null;
