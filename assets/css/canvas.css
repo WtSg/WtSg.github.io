@@ -301,7 +301,8 @@ p { margin: 0; }
 }
 .cv-on .cv-key img { width: 2rem; height: 2rem; aspect-ratio: 1; border-radius: 50%; }
 .cv-on .cv-key .cv-key__label { color: var(--bg); }
-.cv-on .cv-key:focus { left: 50%; transform: translateX(-50%); }
+/* only for the keyboard: focus handed back after a tap or click shows nothing */
+.cv-on .cv-key:focus-visible { left: 50%; transform: translateX(-50%); }
 
 /* ---------- The large view: the frame, developed ----------
    The photograph alone in the bright-line frame on black, the same LED readout

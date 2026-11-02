@@ -675,13 +675,19 @@
   });
 
   /* ---------- The shutter ---------- */
-  // One click opens the close-up straight from where the photograph is, zoomed out or
-  // not; behind it the wall frames that photograph, ready for when it closes.
+  // Zoomed out, a click zooms back in on the photograph clicked; at the framed size or
+  // closer, a click opens the close-up straight from where the photograph is, and behind
+  // it the wall frames that photograph, ready for when it closes.
   function shoot(it, back) {
     hideHint();
     hold = 0;
     opening = false;
     pendingShot = null;
+    if (zr() < 0.97) {
+      setZoom(1);
+      lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
+      return;
+    }
     var framed = subject === it && lockOn === it;
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
     fire({ it: it, back: back }, !framed);
