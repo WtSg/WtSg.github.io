@@ -1,6 +1,8 @@
 {%- assign me = site.data.personal -%}
 {%- assign base = site.baseurl -%}
 {%- assign photos = site.data.gallery -%}
+{%- comment -%} Each build stamps its scripts and styles, so a phone never keeps last deploy's {%- endcomment -%}
+{%- assign v = site.time | date: "%s" -%}
 <!DOCTYPE html>
 <html lang="en" class="no-js">
 <head>
@@ -17,8 +19,8 @@
   <link rel="preload" href="{{ base }}/assets/fonts/schibsted-grotesk-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ base }}/assets/fonts/geist-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ base }}/assets/fonts/dseg7-classic-bold.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{{ base }}/assets/css/gallery-loupe.css">
-  <link rel="stylesheet" href="{{ base }}/assets/css/canvas.css">
+  <link rel="stylesheet" href="{{ base }}/assets/css/gallery-loupe.css?v={{ v }}">
+  <link rel="stylesheet" href="{{ base }}/assets/css/canvas.css?v={{ v }}">
 
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
@@ -62,7 +64,6 @@
         <p class="cv-hint" data-cv-hint>Drag to look around · scroll to zoom · click to open</p>
       </div>
     </div>
-    <div class="vf-shutter" aria-hidden="true"></div>
     <!-- Zoom by hand: out to see more of the wall, in to look closer (also the wheel, a pinch, - and +) -->
     <div class="cv-zoom" role="group" aria-label="Zoom">
       <button class="cv-zoom__btn" type="button" data-cv-zoom="out" aria-label="Zoom out" title="Zoom out (-)"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10"/></svg></button>
@@ -94,8 +95,8 @@
 
   {% include gallery-data.html %}
   {% include gallery-loupe.html close="Close" %}
-  <script src="{{ base }}/assets/js/site.js" defer></script>
-  <script src="{{ base }}/assets/js/gallery-loupe.js" defer></script>
-  <script src="{{ base }}/assets/js/canvas.js" defer></script>
+  <script src="{{ base }}/assets/js/site.js?v={{ v }}" defer></script>
+  <script src="{{ base }}/assets/js/gallery-loupe.js?v={{ v }}" defer></script>
+  <script src="{{ base }}/assets/js/canvas.js?v={{ v }}" defer></script>
 </body>
 </html>
