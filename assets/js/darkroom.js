@@ -526,7 +526,11 @@
       stage: stage,
       photos: photos,
       reduce: still(),
-      onLost: function () { fallBack(new Error("WebGL context lost")); },
+      onLost: function () { fallBack(new Error("WebGL context lost or drawing black")); },
+      // What the 3D room had to give up on this device, for anyone listening (the preview does).
+      onDiag: function (d) {
+        try { window.dispatchEvent(new CustomEvent("darkroom:diag", { detail: d })); } catch (e) { /* old browser */ }
+      },
       onState: function (s) {
         if (s.index >= 0 && s.index !== shownIdx) {
           shownIdx = s.index;

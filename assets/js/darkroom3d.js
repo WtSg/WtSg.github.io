@@ -105,6 +105,21 @@ function texFrom(canvas, { srgb = false, repeat = [1, 1] } = {}) {
   t.anisotropy = 8;
   return t;
 }
+/* Liquid and glass without refraction: only the surface's reflections, laid over
+   what lies under it, which shows through a little dimmed. Refraction draws the
+   room a second time every frame; phones go without it, and so does any GPU
+   that draws the room black with it. */
+function plainClear(m, dim) {
+  m.transmission = 0;
+  m.color.setRGB(0, 0, 0);
+  m.transparent = true;
+  m.opacity = dim;
+  m.depthWrite = false;
+  m.blending = THREE.CustomBlending;
+  m.blendSrc = m.blendSrcAlpha = THREE.OneFactor;
+  m.blendDst = m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+  m.needsUpdate = true;
+}
 /* Smooth value noise: a random grid drawn up with bilinear smoothing. */
 function noiseLayer(size, cells, r) {
   const small = makeCanvas(cells, cells), g = small.getContext("2d");
@@ -414,6 +429,13 @@ export function start(o) {
 
   /* ---------- Trays with liquid ---------- */
   const U = { time: { value: 0 } };
+  // Everything see-through, with how much it dims what lies under it without refraction.
+  const clearMats = [];
+  function clearMat(m, dim) {
+    clearMats.push({ m, dim });
+    if (coarse) plainClear(m, dim);
+    return m;
+  }
   function makeTray(spec, idx) {
     const g = new THREE.Group();
     g.position.set(spec.x, 0, spec.z);
@@ -438,11 +460,11 @@ export function start(o) {
       rib.receiveShadow = true;
       g.add(rib);
     }
-    const liquidMat = new THREE.MeshPhysicalMaterial({
+    const liquidMat = clearMat(new THREE.MeshPhysicalMaterial({
       color: 0xffffff, roughness: 0.03, metalness: 0, transmission: 1, thickness: 0.08, ior: 1.34,
       attenuationColor: new THREE.Color(spec.key === "stop" ? 0xf2e2b8 : 0xf3ece0), attenuationDistance: 0.45,
       specularIntensity: 1, envMapIntensity: 1.6
-    });
+    }), 0.08);
     const lu = {
       uTime: U.time,
       uCenter: { value: new THREE.Vector2(spec.x, spec.z) },
@@ -475,7 +497,9 @@ export function start(o) {
             if (age > 0.0 && age < 4.5) {
               vec2 dv = q - uDrop.xy;
               float d = length(dv) + 1e-4;
-              float band = exp(-pow((d - age * 0.24) * 11.0, 2.0));
+              // squared by hand: pow() of a negative number is undefined, and black on some GPUs
+              float off = (d - age * 0.24) * 11.0;
+              float band = exp(-off * off);
               float env = exp(-age * 1.15) * (band + 0.35 * exp(-d * 9.0) * exp(-age * 2.5));
               g += (dv / d) * env * 1.5 * cos(d * 82.0 - age * 15.0);
             }
@@ -751,7 +775,7 @@ export function start(o) {
       map: faceTex, emissiveMap: faceTex, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.3
     }));
     face.position.z = 0.0355;
-    const glassC = new THREE.Mesh(new THREE.CircleGeometry(0.084, 48), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transmission: 1, thickness: 0.002, ior: 1.5 }));
+    const glassC = new THREE.Mesh(new THREE.CircleGeometry(0.084, 48), clearMat(new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transmission: 1, thickness: 0.002, ior: 1.5 }), 0.1));
     glassC.position.z = 0.04;
     const handMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0b, emissive: 0x6dff8d, emissiveIntensity: 1.6 });
     [0.07, 0.05].forEach((len, k) => {
@@ -1378,7 +1402,7 @@ export function start(o) {
         float n = h(floor(vUv * vec2(1600.0, 1000.0)) + fract(uTime * 7.0) * 91.0) - 0.5;
         c.rgb += n * uGrain;
         vec2 d = vUv - 0.5;
-        float v = smoothstep(0.82, 0.22, length(d * vec2(1.05, 1.15)));
+        float v = 1.0 - smoothstep(0.22, 0.82, length(d * vec2(1.05, 1.15)));
         c.rgb *= mix(1.0 - uVig, 1.0, v);
         gl_FragColor = c;
       }`
@@ -1509,6 +1533,8 @@ export function start(o) {
   }
 
   /* ---------- Lights: safelight, or the fluorescent tubes ---------- */
+  // Effects the GPU check below may have to give up: shadows, reflections, post-processing.
+  let noShadows = false, noEnv = false, direct = false;
   function setLightMix(m) {
     // m = 0 safelight, 1 white light
     spot.intensity = 3.6 * (1 - m);
@@ -1527,8 +1553,8 @@ export function start(o) {
     sun.intensity = 2.6 * m;
     litHemi.intensity = 1.25 * m;
     // Only the light that is on casts shadows (one shadow map per frame).
-    sun.castShadow = m > 0.5;
-    spot.castShadow = m <= 0.5;
+    sun.castShadow = !noShadows && m > 0.5;
+    spot.castShadow = !noShadows && m <= 0.5;
     // The bench safelight is put away under the tubes, out of the way of the room.
     lampGroup.visible = lampCord.visible = m <= 0.5;
     scene.background.copy(SAFE_BG).lerp(LIT_BG, m);
@@ -1537,8 +1563,8 @@ export function start(o) {
     grain.uniforms.uVig.value = lerp(0.42, 0.08, m);
     grain.uniforms.uGrain.value = lerp(0.045, 0.012, m);
     // The lit room's reflections are captured once, the first time the lights are fully up.
-    if (m >= 0.999 && !litEnv) litEnv = captureEnv();
-    scene.environment = m > 0.5 && litEnv ? litEnv : safeEnv;
+    if (m >= 0.999 && !litEnv && !noEnv) litEnv = captureEnv();
+    scene.environment = noEnv ? null : m > 0.5 && litEnv ? litEnv : safeEnv;
   }
   function setLights(on) {
     if (on !== lightsOn) {
@@ -1973,7 +1999,90 @@ export function start(o) {
     floor.position.x = camPos.x;
     floor.position.z = camPos.z - 20;
     hover(t);
-    if (running) composer.render();
+    if (running) {
+      if (direct) renderer.render(scene, camera);
+      else composer.render();
+      if (health.from >= 0 && ++health.frames >= health.from && t >= health.after) checkHealth(t);
+    }
+  }
+
+  /* ---------- Is the room really on screen? ----------
+     Some phone GPUs fail at a part of this scene and draw the whole frame black.
+     A few frames in, and twice more as the opening plays, a few patches of the
+     frame are read back: under the safelight or the tubes there is always light
+     on the bench. If there is none, the most demanding effect left goes and the
+     frame is looked at again; if nothing helps, the flat darkroom takes over. */
+  const glc = renderer.getContext();
+  const FALLBACKS = [
+    ["refraction", () => clearMats.forEach((c) => plainClear(c.m, c.dim))],
+    ["bloom", () => { bloom.enabled = false; }],
+    ["shadows", () => { noShadows = true; spot.castShadow = sun.castShadow = false; }],
+    ["reflections", () => { noEnv = true; scene.environment = null; }],
+    ["post-processing", () => { direct = true; }]
+  ];
+  // A check comes once `from` frames have been drawn and the clock has passed `after`.
+  const health = { frames: 0, from: 4, after: 0, passes: 0, step: coarse ? 1 : 0, dropped: coarse ? ["refraction"] : [], shares: [] };
+  const patch = new Uint8Array(16 * 16 * 4);
+  function litShare() {
+    renderer.setRenderTarget(null);
+    if (renderer.capabilities.isWebGL2) renderer.state.bindFramebuffer(glc.READ_FRAMEBUFFER, null);
+    const w = glc.drawingBufferWidth, h = glc.drawingBufferHeight;
+    let lit = 0, n = 0;
+    for (let gy = 1; gy <= 3; gy++) {
+      for (let gx = 1; gx <= 3; gx++) {
+        glc.readPixels(Math.round((gx * w) / 4) - 8, Math.round((gy * h) / 4) - 8, 16, 16, glc.RGBA, glc.UNSIGNED_BYTE, patch);
+        for (let k = 0; k < patch.length; k += 4) {
+          n++;
+          // the film grain alone reaches about 6; the darkest healthy view has 13% of its pixels above 14
+          if (Math.max(patch[k], patch[k + 1], patch[k + 2]) > 14) lit++;
+        }
+      }
+    }
+    return lit / n;
+  }
+  function checkHealth(t) {
+    const share = litShare();
+    health.shares.push(Math.round(share * 1000) / 1000);
+    if (share >= 0.02) {
+      // fine: look again in a moment, and once more as the opening plays
+      health.passes++;
+      if (health.passes >= 3) {
+        health.from = -1;
+        report("drawn");
+      } else {
+        health.from = health.frames + 2;
+        health.after = t + (health.passes === 1 ? 800 : 2500);
+      }
+      return;
+    }
+    if (health.step < FALLBACKS.length) {
+      const [name, drop] = FALLBACKS[health.step++];
+      drop();
+      health.dropped.push(name);
+      health.passes = 0;
+      health.from = health.frames + 3;
+      health.after = 0;
+      return;
+    }
+    health.from = -1;
+    report("flat");
+    running = false;
+    cancelAnimationFrame(raf);
+    if (o.onLost) o.onLost();
+  }
+  function report(state) {
+    if (!o.onDiag) return;
+    let gpu = "";
+    try {
+      const dbg = glc.getExtension("WEBGL_debug_renderer_info");
+      gpu = String(glc.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : glc.RENDERER));
+    } catch (e) { /* not told */ }
+    o.onDiag({
+      state, gpu, dropped: health.dropped.slice(), shares: health.shares.slice(),
+      webgl2: renderer.capabilities.isWebGL2, coarse, dpr: window.devicePixelRatio || 1,
+      buffer: [glc.drawingBufferWidth, glc.drawingBufferHeight],
+      ext: ["EXT_color_buffer_half_float", "EXT_color_buffer_float", "OES_texture_float_linear"].filter((x) => !!glc.getExtension(x))
+    });
   }
 
   /* If the GPU drops the context (a phone backgrounding the tab), hand back to the flat darkroom. */
