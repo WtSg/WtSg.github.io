@@ -195,8 +195,8 @@ p { margin: 0; }
   transform: translate(-50%, -50%);
   overflow: hidden;
   border: 1px solid var(--patch-edge);
-  /* a rangefinder's focus patch is a rounded rectangle; the frame lines round it stay square */
-  border-radius: .6rem;
+  /* a Leica's focus patch has the slightest rounding at its corners; the frame lines stay square */
+  border-radius: 2.5px;
   background: var(--patch-tint);
   transition: opacity .45s ease-out;
 }
@@ -515,7 +515,9 @@ p { margin: 0; }
   background-attachment: local;
 }
 .gl__roll::-webkit-scrollbar { display: none; }
-.gl__roll li { flex: none; scroll-snap-align: center; scroll-snap-stop: always; }
+/* every frame is a stop, but a fast fling runs on through as many as its speed carries it
+   (a short swipe still moves one: gallery-loupe.js) */
+.gl__roll li { flex: none; scroll-snap-align: center; }
 .gl__frm { position: relative; display: block; padding: 0; border: 0; background: none; cursor: pointer; opacity: .5; transition: opacity .2s; }
 .gl__frm:hover, .gl__frm.is-on, .gl__frm.is-near { opacity: 1; }
 .gl__frm img { display: block; height: 2.9rem; width: auto; aspect-ratio: var(--ar, 1.5); object-fit: cover; }
@@ -538,7 +540,7 @@ p { margin: 0; }
   .vf-led__exif { gap: .8rem; }
   .vf-led b { font-size: 1.1rem; }
   .vf-led__cell--n { padding-left: .75rem; }
-  .vf-patch { width: 5.2rem; height: 3.3rem; border-radius: .48rem; }
+  .vf-patch { width: 5.2rem; height: 3.3rem; }
   .cv-on .cv-key { top: 4.4rem; }
 }
 @media (prefers-reduced-motion: reduce) {
