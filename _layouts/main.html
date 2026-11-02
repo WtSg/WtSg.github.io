@@ -43,7 +43,7 @@
           <li><a href="#research">Research</a></li>
           <li><a href="#work">Work</a></li>
           <li><a href="#publications">Publications</a></li>
-          <li><a href="#photography">Photography</a></li>
+          <li><a href="{{ base }}/photography/">Photography</a></li>
         </ul>
       </nav>
       <a class="btn btn--small masthead__email" href="#contact" data-mail>Email</a>
@@ -270,6 +270,8 @@
             <canvas class="noise noise--static" data-noise="120x24" aria-hidden="true"></canvas>
             {%- if me.photography.url %}
             <a class="btn photo-link" href="{{ me.photography.url }}">Open the photography site {% include icon.html name='arrow' %}</a>
+            {%- else %}
+            <a class="btn photo-link" href="{{ base }}/photography/">Open the gallery {% include icon.html name='arrow' %}</a>
             {%- endif %}
           </div>
           {% include ticks.html w=120 h=24 xs="0,20,40,60,80,100" ys="0,10,20" %}
@@ -278,7 +280,7 @@
           {%- if me.photography.url %}
           <span class="figlabel">Figure {{ fig_n }}.</span> Photography.
           {%- else %}
-          <span class="figlabel">Figure {{ fig_n }}.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. {{ me.photography.note }}{% if insta %} In the meantime, there is <a href="{{ insta.url }}">Instagram</a>.{% endif %}
+          <span class="figlabel">Figure {{ fig_n }}.</span> Photography at <i>t</i>&nbsp;=&nbsp;1: not sampled yet. <a href="{{ base }}/photography/">Open the gallery</a>{% if insta %}, or see <a href="{{ insta.url }}">Instagram</a> in the meantime{% endif %}.
           {%- endif %}
         </figcaption>
       </figure>
