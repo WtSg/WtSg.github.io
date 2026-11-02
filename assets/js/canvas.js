@@ -265,11 +265,11 @@
     FIELDS.forEach(function (k) { cell[k].hidden = !v[k]; if (v[k]) any = true; });
     exifEl.hidden = !any;
     sLabel.textContent = v.sl;
-    // the caption: the camera maker's mark, then the title, place and year
+    // the caption: the camera's maker (its mark and name), then the title, place and year
     var cap = [p.title, p.place, p.year].filter(Boolean).join(" · ");
-    var mark = p.exif && p.exif.camera && G.cameraHtml ? G.cameraHtml(p.exif.camera, true) : "";
-    capEl.innerHTML = mark + (mark && cap ? '<span class="vf-caption__sep"> · </span>' : "") + G.esc(cap);
-    capEl.hidden = !cap && !mark;
+    var maker = p.exif && p.exif.camera && G.cameraHtml ? G.cameraHtml(p.exif.camera, true) : "";
+    capEl.innerHTML = maker + (maker && cap ? '<span class="vf-caption__sep"> · </span>' : "") + G.esc(cap);
+    capEl.hidden = !cap && !maker;
     belowW = below.offsetWidth || belowW;
     clearInterval(rollT);
     var live = FIELDS.filter(function (k) { return v[k]; }).concat("n");

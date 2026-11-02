@@ -73,22 +73,25 @@
     if (e.target.tagName === "IMG") e.preventDefault();
   });
 
-  /* ---------- The camera's maker, as its mark ---------- */
-  // [maker test, mark file ("" sets the name as a wordmark), name, mark width / height,
-  // the words dropped from the model]. Marks: Simple Icons (CC0), in assets/img/brands.
+  /* ---------- The camera's maker, as its mark and its name ---------- */
+  // [maker test, mark file ("" for none), name, mark width / height, the words dropped from
+  // the model, the lettering its name is set in, whether the mark is only a symbol].
+  // A symbol (Apple's apple, Leica's red dot) is followed by the maker's name; a mark that
+  // spells the name in the maker's own lettering (SONY, FUJIFILM) stands alone; a maker
+  // with no mark has its name alone. Marks: Simple Icons (CC0), in assets/img/brands.
   var MAKERS = [
-    [/^leica\b/i, "leica", "Leica", 1, /^leica(\s+camera(\s+ag)?)?\s*/i],
-    [/^(apple\b|iphone|ipad)/i, "apple", "Apple", 0.818, /^apple\s*/i],
+    [/^leica\b/i, "leica", "Leica", 1, /^leica(\s+camera(\s+ag)?)?\s*/i, "leica", true],
+    [/^(apple\b|iphone|ipad)/i, "apple", "Apple", 0.818, /^apple\s*/i, "apple", true],
     [/^sony\b/i, "sony", "Sony", 5.277, /^sony\s*/i],
     [/^fuji(film)?\b/i, "fujifilm", "Fujifilm", 5.515, /^fuji(film)?\s*/i],
     [/^nikon\b/i, "nikon", "Nikon", 3.467, /^nikon(\s+corporation)?\s*/i],
     [/^(panasonic|lumix)\b/i, "panasonic", "Panasonic", 5.983, /^panasonic\s*/i],
-    [/^(eastman\s+)?kodak\b/i, "kodak", "Kodak", 1.147, /^(eastman\s+)?kodak(\s+company)?\s*/i],
+    [/^(eastman\s+)?kodak\b/i, "kodak", "Kodak", 1.147, /^(eastman\s+)?kodak(\s+company)?\s*/i, "", true],
     [/^dji\b/i, "dji", "DJI", 1.676, /^dji\s*/i],
-    [/^(google\b|pixel\b)/i, "google", "Google", 0.975, /^google\s*/i],
+    [/^(google\b|pixel\b)/i, "google", "Google", 0.975, /^google\s*/i, "", true],
     [/^samsung\b/i, "samsung", "Samsung", 5.998, /^samsung\s*/i],
     [/^canon\b/i, "", "Canon", 0, /^canon\s*/i],
-    [/^hasselblad\b/i, "", "Hasselblad", 0, /^hasselblad\s*/i],
+    [/^hasselblad\b/i, "", "Hasselblad", 0, /^hasselblad\s*/i, "hasselblad"],
     [/^(olympus|om\s*system|om\s*digital)\b/i, "", "OM System", 0, /^(olympus(\s+corporation)?|om\s*(system|digital(\s+solutions)?))\s*/i],
     [/^ricoh\b/i, "", "Ricoh", 0, /^ricoh(\s+imaging(\s+company)?)?\s*/i],
     [/^pentax\b/i, "", "Pentax", 0, /^pentax\s*/i],
@@ -98,19 +101,24 @@
     camera = strip(camera);
     for (var k = 0; k < MAKERS.length; k++) {
       var m = MAKERS[k];
-      if (m[0].test(camera)) return { file: m[1], name: m[2], ar: m[3], model: strip(camera.replace(m[4], "")) || camera };
+      if (m[0].test(camera)) return { file: m[1], name: m[2], ar: m[3], model: strip(camera.replace(m[4], "")) || camera, type: m[5] || "", sym: !!m[6] };
     }
     return null;
   }
-  // The camera as markup: the maker's mark in the ink colour (or its name set as a
-  // wordmark), then the model; markOnly gives just the mark. Unknown makers stay as text.
-  function cameraHtml(camera, markOnly) {
+  // The camera as markup: the maker's mark in the ink colour and its name, then the model;
+  // makerOnly leaves the model out. Unknown makers stay as text.
+  function cameraHtml(camera, makerOnly) {
     var m = makerOf(camera);
-    if (!m) return markOnly ? "" : esc(camera);
+    if (!m) return makerOnly ? "" : esc(camera);
+    var named = !m.file || m.sym;
     var mark = m.file
-      ? '<span class="gl-mark' + (m.ar > 2 ? " gl-mark--wide" : "") + '" role="img" aria-label="' + esc(m.name) + '" style="--mark:url(' + esc(base + "/assets/img/brands/" + m.file + ".svg") + ");--mark-ar:" + m.ar + '"></span>'
-      : '<span class="gl-mark gl-mark--word">' + esc(m.name) + "</span>";
-    return markOnly ? mark : mark + ' <span class="gl-model">' + esc(m.model) + "</span>";
+      ? '<span class="gl-mark' + (m.ar > 2 ? " gl-mark--wide" : "") + '" data-maker="' + esc(m.file) + '"' +
+        (named ? ' aria-hidden="true"' : ' role="img" aria-label="' + esc(m.name) + '"') +
+        ' style="--mark:url(' + esc(base + "/assets/img/brands/" + m.file + ".svg") + ");--mark-ar:" + m.ar + '"></span>'
+      : "";
+    var name = named ? '<span class="gl-brand' + (m.type ? " gl-brand--" + m.type : "") + '">' + esc(m.name) + "</span>" : "";
+    var maker = mark && name ? mark + " " + name : mark || name;
+    return makerOnly ? maker : maker + ' <span class="gl-model">' + esc(m.model) + "</span>";
   }
 
   /* ---------- The close-up viewer ---------- */
