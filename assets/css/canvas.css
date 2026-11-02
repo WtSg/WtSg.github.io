@@ -309,6 +309,8 @@ p { margin: 0; }
    over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
 .vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }
 .vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; }
+/* zoomed out the readout stands alone at the foot: no caption under it */
+.vf.is-docked .vf-caption, .vf.is-docked .cv-hint { display: none; }
 .vf.is-docked .vf-led b { text-shadow: 0 0 .45rem rgba(255, 74, 46, .55); }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .vf.is-docked .vf-led, .vf.is-docked .vf-caption {
@@ -325,7 +327,9 @@ p { margin: 0; }
 .cv-on .cv-zoom {
   position: fixed;
   right: var(--gut);
-  bottom: calc(var(--foot-h, 3rem) + .5rem);
+  /* lifted above the docked readout where they would meet (canvas.js) */
+  bottom: calc(var(--foot-h, 3rem) + .5rem + var(--zoom-lift, 0px));
+  transition: bottom .3s ease-out;
   z-index: 21;
   display: flex;
   border-radius: .25rem;
