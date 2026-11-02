@@ -92,6 +92,9 @@
     {%- unless page.flat %}
     <!-- The 3D darkroom (darkroom3d.js); shown only where WebGL works -->
     <div class="dr-stage-wrap" style="--n: {{ photos.size }}" hidden>
+      {%- for ph in photos %}
+      <span class="dr-snap" style="--i: {{ forloop.index0 }}" aria-hidden="true"></span>
+      {%- endfor %}
       <div class="dr-stage">
         <canvas class="dr-canvas" aria-hidden="true"></canvas>
         <div class="dr-hud">

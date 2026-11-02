@@ -523,8 +523,6 @@
       reduce: still(),
       onLost: function () { fallBack(new Error("WebGL context lost")); },
       onState: function (s) {
-        // The hint has done its job once the first sheet is in the developer.
-        if (s.phase === "developing" && hudHint) hudHint.classList.add("is-gone");
         if (s.index >= 0 && s.index !== shownIdx) {
           shownIdx = s.index;
           showTape(s.index);
@@ -545,12 +543,17 @@
       if (N < 2) return 0;
       return Math.max(0, Math.min(N - 1, Math.round((window.pageYOffset - wrapTop) / stepPx)));
     }
+    // The scroll position is the darkroom's timeline: it is handed over as a
+    // continuous number, and the scene follows it both ways.
+    function progress() {
+      if (N < 2) return 0;
+      return Math.max(0, Math.min(N - 1, (window.pageYOffset - wrapTop) / stepPx));
+    }
     function onScroll() {
       queued = false;
-      if (lit) return;
-      var i = indexFromScroll();
-      if (i !== wanted) { wanted = i; ctrl.setIndex(i); }
-      if (window.pageYOffset - wrapTop > stepPx * 0.25) hudHint.classList.add("is-gone");
+      ctrl.setProgress(progress());
+      wanted = indexFromScroll();
+      if (window.pageYOffset - wrapTop > stepPx * 0.08) hudHint.classList.add("is-gone");
     }
     window.addEventListener("scroll", function () {
       if (!queued) { queued = true; requestAnimationFrame(onScroll); }
@@ -558,7 +561,7 @@
     window.addEventListener("resize", measure);
     measure();
     wanted = indexFromScroll();
-    if (wanted > 0) ctrl.setIndex(wanted);
+    if (progress() > 0.02) ctrl.setProgress(progress());
 
     function go(i) {
       i = Math.max(0, Math.min(N - 1, i));
@@ -600,9 +603,7 @@
         var on = lit;
         // The page's colours follow once the room light has actually changed.
         setTimeout(function () { setLightsAttr(on); }, on && !still() ? 380 : 0);
-        ctrl.setLights(on).then(function () {
-          if (!on) { wanted = indexFromScroll(); ctrl.setIndex(wanted); }
-        });
+        ctrl.setLights(on);
       },
       afterLoupe: function (i) {
         if (!lightsOn()) go(i);

@@ -809,10 +809,22 @@ body[data-lights="on"] .dr-bench {
 
 /* ---------- The 3D darkroom (where WebGL works) ---------- */
 .dr-stage-wrap {
-  --step: 72svh;
+  --step: 115svh;
   position: relative;
-  height: calc(100vh + (var(--n) - 1) * 72vh);
+  height: calc(100vh + (var(--n) - 1) * 115vh);
   height: calc(100svh + (var(--n) - 1) * var(--step));
+}
+/* The page comes to rest on a finished print: one snap point per print. */
+html.has-3d { scroll-snap-type: y proximity; }
+.dr-snap {
+  position: absolute;
+  left: 0;
+  top: calc(var(--i) * 115vh);
+  top: calc(var(--i) * var(--step));
+  width: 1px;
+  height: 1px;
+  scroll-snap-align: start;
+  pointer-events: none;
 }
 .dr-stage {
   position: sticky;
@@ -987,7 +999,7 @@ body[data-lights="on"] .dr-hud > * { opacity: 0; visibility: hidden; transition:
   .dr-sign__switch { font-size: 0; gap: 0; }
   .dr-add { display: none; }
   .dr-bench__tray { font-size: .62rem; letter-spacing: .06em; }
-  .dr-stage-wrap { --step: 62svh; }
+  .dr-stage-wrap { --step: 100svh; }
   .dr-hud__tape { max-width: calc(100% - 2 * var(--gut)); bottom: calc(var(--gut) + 3.6rem); }
   .dr-hud__look-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .dr-hud__timer { bottom: auto; top: 4.6rem; right: var(--gut); }

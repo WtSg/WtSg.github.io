@@ -827,7 +827,6 @@ export function start(o) {
 
   /* ---------- Camera ---------- */
   const view = { pos: V(0.4, 1.1, 2.4), look: V(0, 0.5, -0.3) };
-  const goal = { pos: view.pos.clone(), look: view.look.clone(), k: 2.2 };
   let aspect = 1, fov = 36;
   function fitDist(w, h) {
     const vf = THREE.MathUtils.degToRad(fov), hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
@@ -851,12 +850,6 @@ export function start(o) {
     const d = fitDist(aspect < 0.85 ? 1.5 : 2.3, 1.6);
     const el = THREE.MathUtils.degToRad(11);
     return { pos: look.clone().add(V(0.22, Math.sin(el) * d, Math.cos(el) * d)), look };
-  }
-  function camTo(v, k) {
-    goal.pos.copy(v.pos);
-    goal.look.copy(v.look);
-    goal.k = k || 2.6;
-    if (reduce) { view.pos.copy(v.pos); view.look.copy(v.look); }
   }
   let pointer = { x: 0, y: 0 };
 
@@ -894,120 +887,76 @@ export function start(o) {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
-    if (lights) { layoutWall(); prints.forEach((p) => setPose(p, wallPose(p))); camTo(wallView(), 99); }
-    else if (shown >= 0 && !busy) camTo(trayView(), 99);
+    if (lightsOn) layoutWall();
   }
-
-  /* ---------- Tweens ---------- */
-  const tweens = [];
-  let now = 0, hurryAll = false;
-  function tween(ms, fn, ease) {
-    return new Promise((res) => {
-      if (reduce || ms <= 0 || hurryAll) { fn(1); res(); return; }
-      tweens.push({ t0: now, ms, fn, ease: ease || E.inOut, res });
-    });
-  }
-  function wait(ms) { return tween(ms, () => {}, E.lin); }
 
   function splash(tray, x, z) {
     tray.u.uDrop.value.set(x - tray.spec.x, z - tray.spec.z, U.time.value);
   }
-
-  /* ---------- Sequences ---------- */
-  let shown = -1, target = 0, busy = false, lights = false;
   function setHands(sec) {
     if (!timerHands.length) return;
     timerHands[0].rotation.z = -(sec / 60) * Math.PI * 2;
     timerHands[1].rotation.z = -(sec / 3600) * Math.PI * 2 - 0.5;
   }
-  function hud(i, phase, sec) { if (o.onState) o.onState({ index: i, phase, seconds: sec }); }
 
-  async function develop(p) {
-    if (p.developed) return;
-    hud(p.i, "developing", 0);
-    if (reduce) { p.devK = 1; applyDev(p); p.developed = true; hud(p.i, "developed", DEV_SHOWN); return; }
-    devTray.u.uAgit.value = 1;
-    await new Promise((res) => {
-      p.devTick = (dt) => {
-        const hurry = target !== p.i || lights;
-        p.devK = hurryAll ? 1 : Math.min(1, p.devK + dt / (hurry ? 350 : DEV_MS));
-        applyDev(p);
-        hud(p.i, "developing", Math.round(p.devK * DEV_SHOWN));
-        setHands(p.devK * DEV_SHOWN);
-        if (p.devK >= 1) { p.devTick = null; res(); }
-      };
-    });
-    p.developed = true;
-    hud(p.i, "developed", DEV_SHOWN);
+  /* ---------- The darkroom follows the scroll ----------
+     The page gives a position from 0 to N - 1. Between print i and print i + 1
+     one scroll step plays the whole hand-off, and every part of it follows the
+     scroll in both directions: print i is lifted out of the developer and hung
+     on the line (the camera follows it up), sheet i + 1 slides off the easel
+     into the tray, and develops. A whole number is a finished print in the tray. */
+  const PH = { lift0: 0.02, lift1: 0.12, hang1: 0.38, slide0: 0.40, drop0: 0.52, drop1: 0.58, dev0: 0.60, dev1: 0.97 };
+  const INTRO_MS = 5600;
+  let target = 0, pos = 0, intro = reduce ? 1 : 0, introStart = -1;
+  let lightsOn = false, lightE = 0, lightM = 0, appliedM = -1, flickerUntil = 0, lightWaiters = [];
+  let shown = -1, hudKey = "";
+  let prevI = 0, prevF = 0, prevQ = 0;
+  const seg = (f, a, b) => clamp((f - a) / (b - a), 0, 1);
+  const liftedFrom = (q) => ({ pos: q.pos.clone().add(V(0, 0.2, 0.05)), rx: q.rx + 0.9, rz: q.rz, s: 1 });
+  const aboveOf = (q) => ({ pos: q.pos.clone().add(V(0, 0.07, 0)), rx: q.rx + 0.08, rz: q.rz, s: 1 });
+  function mixView(a, b, k) {
+    return { pos: a.pos.clone().lerp(b.pos, k), look: a.look.clone().lerp(b.look, k) };
+  }
+  function split(pp) {
+    const i = Math.min(N - 1, Math.floor(pp));
+    return { i, f: i >= N - 1 ? 0 : pp - i };
   }
 
-  async function bringIn(i, fast) {
-    const p = prints[i];
-    await whenReady(p);
-    p.hang.visible = true;
-    p.clips.forEach((c) => (c.visible = false));
-    useFull(p);
-    const to = pose.tray(p);
-    if (p.state === "hung") {
-      // down from the line, back into the tray
-      const from = p.pose;
-      p.state = "moving";
-      hud(i, "moving", 0);
-      await tween(fast ? 380 : 1100, (k) => setPose(p, blendPose(from, to, k, 0.12)));
-      splash(devTray, to.pos.x, to.pos.z + p.ph / 2);
-    } else {
-      const from = pose.easel(p);
-      setPose(p, from);
-      p.state = "moving";
-      hud(i, "moving", 0);
-      const above = { pos: to.pos.clone().add(V(0, 0.07, 0)), rx: to.rx + 0.08, rz: to.rz, s: 1 };
-      await tween(fast ? 320 : 950, (k) => setPose(p, blendPose(from, above, k, 0.06)));
-      await tween(fast ? 160 : 420, (k) => setPose(p, blendPose(above, to, k, 0)), E.in);
-      splash(devTray, to.pos.x, to.pos.z + p.ph / 2);
-    }
-    p.state = "tray";
-    shown = i;
-    hud(i, p.developed ? "developed" : "developing", p.developed ? DEV_SHOWN : 0);
-    if (!fast || i === target) await develop(p);
-    else { p.devK = 1; applyDev(p); p.developed = true; }
-  }
-
-  async function hangUp(i, fast) {
-    const p = prints[i];
-    if (!p.developed) { p.devK = 1; applyDev(p); p.developed = true; }
-    const from = p.pose, to = pose.line(p);
-    const lifted = { pos: from.pos.clone().add(V(0, 0.2, 0.05)), rx: from.rx + 0.9, rz: from.rz, s: 1 };
-    p.state = "moving";
-    splash(devTray, from.pos.x, from.pos.z + p.ph / 2);
-    devTray.u.uAgit.value = 0.35;
-    await tween(fast ? 260 : 720, (k) => setPose(p, blendPose(from, lifted, k, 0)), E.out);
-    if (!fast) camTo(lineView(i), 3.2);
-    await tween(fast ? 380 : 1250, (k) => setPose(p, blendPose(lifted, to, k, 0.14)));
-    p.clips.forEach((c) => (c.visible = true));
-    p.state = "hung";
-    p.swingT0 = now;
-    p.swingAmp = fast ? 0.08 : 0.2;
-    dropFull(p);
-    if (!fast) await wait(1200);
-  }
-
-  async function pump() {
-    if (busy) return;
-    busy = true;
-    try {
-      while (!lights && target !== shown) {
-        const dir = shown < 0 ? 0 : Math.sign(target - shown);
-        const next = shown < 0 ? target : shown + dir;
-        const fast = Math.abs(target - next) > 0;
-        if (shown >= 0) await hangUp(shown, fast);
-        if (lights) break;
-        camTo(trayView(), fast ? 4 : 1.6);
-        await bringIn(next, fast);
-        devTray.u.uAgit.value = 0.12;
+  // Where print k is at this point on the path, how far it has developed, and
+  // whether it hangs on the line with its clothespins.
+  function pathState(k, pp, q) {
+    const pr = prints[k], { i, f } = split(pp);
+    const tray = pose.tray(pr), easel = pose.easel(pr), line = pose.line(pr);
+    if (k < i) return { pose: line, dev: 1, vis: true, hung: true };
+    if (k === i) {
+      if (k === 0 && q < 1) {
+        // The opening: the first sheet slides off the easel, drops in, develops.
+        if (q < 0.15) return { pose: easel, dev: 0, vis: true };
+        if (q < 0.38) return { pose: blendPose(easel, aboveOf(tray), E.inOut(seg(q, 0.15, 0.38)), 0.06), dev: 0, vis: true };
+        if (q < 0.45) return { pose: blendPose(aboveOf(tray), tray, E.in(seg(q, 0.38, 0.45)), 0), dev: 0, vis: true };
+        return { pose: tray, dev: smooth(seg(q, 0.47, 0.97)), vis: true, inTray: true };
       }
-    } finally {
-      busy = false;
+      if (f <= PH.lift0) return { pose: tray, dev: 1, vis: true, inTray: true };
+      if (f <= PH.lift1) return { pose: blendPose(tray, liftedFrom(tray), E.out(seg(f, PH.lift0, PH.lift1)), 0), dev: 1, vis: true };
+      if (f <= PH.hang1) return { pose: blendPose(liftedFrom(tray), line, E.inOut(seg(f, PH.lift1, PH.hang1)), 0.14), dev: 1, vis: true };
+      return { pose: line, dev: 1, vis: true, hung: true };
     }
+    if (k === i + 1) {
+      if (f < PH.slide0) return { pose: easel, dev: 0, vis: f > 0.05 };
+      if (f < PH.drop0) return { pose: blendPose(easel, aboveOf(tray), E.inOut(seg(f, PH.slide0, PH.drop0)), 0.06), dev: 0, vis: true };
+      if (f < PH.drop1) return { pose: blendPose(aboveOf(tray), tray, E.in(seg(f, PH.drop0, PH.drop1)), 0), dev: 0, vis: true };
+      return { pose: tray, dev: smooth(seg(f, PH.dev0, PH.dev1)), vis: true, inTray: true };
+    }
+    return { pose: easel, dev: 0, vis: false };
+  }
+  // The camera on the same path: at the tray, up to the line while a print is hung, back down.
+  function pathCam(pp, q) {
+    const tv = trayView();
+    if (q < 1 && pp < 0.02) return mixView(roomView(), tv, E.inOut(seg(q, 0.08, 0.45)));
+    const { i, f } = split(pp);
+    if (i >= N - 1) return tv;
+    const up = E.inOut(seg(f, 0.06, 0.25)), down = E.inOut(seg(f, 0.34, 0.52));
+    return mixView(mixView(tv, lineView(i), up), tv, down);
   }
 
   /* ---------- Lights on: everything on the wall ---------- */
@@ -1063,17 +1012,18 @@ export function start(o) {
     wallRegion = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 - 0.04, w: fw, h: fh };
   }
   function wallPose(p) {
+    if (!wallSlots[p.i]) layoutWall();
     const s = wallSlots[p.i];
     return { pos: V(s.x, s.y, LINE_Z + 0.004), rx: 0, rz: 0, s: s.s };
   }
   function wallView() {
+    if (!wallRegion) layoutWall();
     const r = wallRegion;
     const look = V(r.cx, r.cy, LINE_Z);
     const d = fitDist(r.w, r.h);
     return { pos: look.clone().add(V(0, 0.05, d)), look };
   }
 
-  const lightLevels = { safe: 1, lit: 0 };
   function setLightMix(m) {
     // m = 0 safelight, 1 white light
     spot.intensity = 3.6 * (1 - m);
@@ -1083,7 +1033,6 @@ export function start(o) {
     // Under white light the print shows exactly its own pixels.
     emiLevel = lerp(0.68, 1, m);
     photoDiffuse = lerp(0.4, 0, m);
-    prints.forEach(applyDev);
     filterMat.emissiveIntensity = lerp(4.2, 0.25, m);
     hazeU.uAmt.value = 0.16 * (1 - m);
     sun.intensity = 2.6 * m;
@@ -1098,77 +1047,28 @@ export function start(o) {
     bloom.strength = lerp(0.55, 0.1, m);
     grain.uniforms.uVig.value = lerp(0.42, 0.08, m);
     grain.uniforms.uGrain.value = lerp(0.045, 0.012, m);
-    lightLevels.lit = m;
+    // The lit room's reflections are captured once, the first time the lights are fully up.
+    if (m >= 0.999 && !litEnv) litEnv = captureEnv();
+    scene.environment = m > 0.5 && litEnv ? litEnv : safeEnv;
+    gridWires.visible = m > 0.5;
+    lineWire.visible = m <= 0.5;
   }
-
-  function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
-  async function settle() {
-    hurryAll = true;
-    while (busy || tweens.length) await nextFrame();
-    hurryAll = false;
-  }
-  let lightsChain = Promise.resolve();
   function setLights(on) {
-    lightsChain = lightsChain.then(() => doLights(on));
-    return lightsChain;
-  }
-  async function doLights(on) {
-    if (on === lights) return;
-    lights = on;
-    if (on) {
-      await settle();
-      // the tubes catch: a few stutters, then full light
-      if (!reduce) {
-        for (const m of [0.7, 0.05, 0.45, 0.1, 0.9]) { setLightMix(m); await wait(70); }
+    if (on !== lightsOn) {
+      lightsOn = on;
+      if (on) {
+        layoutWall();
+        // the tubes catch: a few stutters, then full light
+        flickerUntil = reduce ? 0 : now + 380;
       }
-      setLightMix(1);
-      if (!litEnv) litEnv = captureEnv();
-      scene.environment = litEnv;
-      layoutWall();
-      camTo(wallView(), 2.0);
-      gridWires.visible = true;
-      lineWire.visible = false;
-      const moves = prints.map((p, n) => (async () => {
-        await whenReady(p);
-        if (!p.developed) { p.devK = 1; applyDev(p); p.developed = true; }
-        p.devTick = null;
-        const from = p.hang.visible ? p.pose : pose.easel(p);
-        p.hang.visible = true;
-        p.clips.forEach((c) => (c.visible = false));
-        if (!reduce) await wait(Math.min(n * 60, 700));
-        p.state = "moving";
-        await tween(1300, (k) => setPose(p, blendPose(from, wallPose(p), k, 0.1)));
-        p.clips.forEach((c) => (c.visible = true));
-        p.state = "wall";
-        p.swingT0 = now;
-        p.swingAmp = 0.07;
-      })());
-      await Promise.all(moves);
-      if (o.onLightsSettled) o.onLightsSettled(true);
-    } else {
-      await settle();
-      setLightMix(0);
-      scene.environment = safeEnv;
-      gridWires.visible = false;
-      lineWire.visible = true;
-      const keep = shown >= 0 ? shown : target;
-      camTo(trayView(), 1.8);
-      const moves = prints.map((p) => (async () => {
-        if (!p.hang.visible) return;
-        const from = p.pose;
-        const to = p.i === keep ? pose.tray(p) : pose.line(p);
-        p.clips.forEach((c) => (c.visible = false));
-        p.state = "moving";
-        await tween(1200, (k) => setPose(p, blendPose(from, to, k, 0.1)));
-        if (p.i === keep) { p.state = "tray"; splash(devTray, to.pos.x, to.pos.z + p.ph / 2); }
-        else { p.clips.forEach((c) => (c.visible = true)); p.state = "hung"; p.swingT0 = now; p.swingAmp = 0.06; }
-      })());
-      await Promise.all(moves);
-      shown = keep;
-      hud(shown, "developed", DEV_SHOWN);
-      pump();
     }
+    if (reduce) lightE = on ? 1 : 0;
+    return new Promise((res) => {
+      if (lightE === (on ? 1 : 0)) res();
+      else lightWaiters.push(res);
+    });
   }
+  const FLICKER = [0.7, 0.05, 0.45, 0.1, 0.9];
 
   /* ---------- Picking prints ---------- */
   const ray = new THREE.Raycaster();
@@ -1176,7 +1076,7 @@ export function start(o) {
     const r = canvas.getBoundingClientRect();
     const v = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(v, camera);
-    const hits = ray.intersectObjects(prints.filter((p) => p.hang.visible && p.state !== "moving").map((p) => p.img), false);
+    const hits = ray.intersectObjects(prints.filter((p) => p.hang.visible).map((p) => p.img), false);
     return hits.length ? hits[0].object.userData.index : -1;
   }
   function screenRect(i) {
@@ -1206,7 +1106,7 @@ export function start(o) {
   });
 
   /* ---------- Loop ---------- */
-  let running = true, last = performance.now(), raf = 0;
+  let running = true, last = performance.now(), raf = 0, now = 0;
   // If frames run slow, render fewer pixels (checked over the first seconds).
   const perf = { n: 0, sum: 0, checks: 0 };
   function adapt(dt) {
@@ -1226,37 +1126,98 @@ export function start(o) {
   const camPos = V(), camLook = V();
   function frame(t) {
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(64, t - last);
+    // Never a negative step: the visibility handlers reset the clock between frames.
+    const dt = clamp(t - last, 0, 64);
     adapt(t - last);
     last = t;
     now += dt;
     // Still liquid and still grain for visitors who ask for less motion.
     U.time.value = reduce ? 40 : now / 1000;
     grain.uniforms.uTime.value = reduce ? 0 : now / 1000;
-    for (let i = tweens.length - 1; i >= 0; i--) {
-      const tw = tweens[i], k = hurryAll ? 1 : clamp((now - tw.t0) / tw.ms, 0, 1);
-      tw.fn(tw.ease(k));
-      if (k >= 1) { tweens.splice(i, 1); tw.res(); }
+
+    // The path position eases after the scroll so scrubbing feels like film, not steps.
+    pos = reduce ? target : pos + (target - pos) * (1 - Math.exp(-dt / 110));
+    if (Math.abs(target - pos) < 0.0005) pos = target;
+    if (intro < 1 && introStart >= 0) intro = clamp((now - introStart) / INTRO_MS, 0, 1);
+    const q = intro;
+
+    // Lights: the mix (what the lamps do) and the move (prints to the wall).
+    if (lightsOn) {
+      if (now < flickerUntil) lightM = FLICKER[Math.min(FLICKER.length - 1, Math.floor((1 - (flickerUntil - now) / 380) * FLICKER.length))];
+      else lightM = 1;
+      if (now > flickerUntil - 100) lightE = reduce ? 1 : Math.min(1, lightE + dt / 1400);
+    } else {
+      lightM = 0;
+      lightE = reduce ? 0 : Math.max(0, lightE - dt / 1200);
     }
-    prints.forEach((p) => {
-      if (p.devTick) p.devTick(dt);
-      if ((p.state === "hung" || p.state === "wall") && !reduce) {
-        const age = (now - p.swingT0) / 1000;
-        const a = p.swingAmp * Math.exp(-age * 1.1);
-        const idle = 0.006 * Math.sin(now / 1000 * 0.8 + p.i * 1.7);
-        p.hang.rotation.z = a * Math.sin(age * 5.2) + idle;
-        p.hang.rotation.x = 0.5 * a * Math.sin(age * 4.1 + 1.2);
+    if (Math.abs(lightM - appliedM) > 0.001) { setLightMix(lightM); appliedM = lightM; }
+    if (lightWaiters.length && lightE === (lightsOn ? 1 : 0)) lightWaiters.splice(0).forEach((f) => f());
+    const eAll = E.inOut(lightE);
+
+    // Every print: where the path puts it, pulled towards the wall by the light.
+    const { i, f } = split(pos);
+    let inTray = null;
+    const stagger = Math.min(0.06, 0.4 / Math.max(1, N));
+    prints.forEach((pr, k) => {
+      const st = pathState(k, pos, q);
+      const ek = lightE > 0 ? smooth(clamp((lightE - k * stagger) / (1 - (N - 1) * stagger), 0, 1)) : 0;
+      let pz = st.pose, vis = st.vis, dev = st.dev;
+      if (ek > 0) {
+        pz = blendPose(st.vis ? st.pose : pose.easel(pr), wallPose(pr), ek, 0.1);
+        vis = true;
+        dev = Math.max(dev, smooth(clamp(ek * 1.6, 0, 1)));
       }
+      pr.hang.visible = vis && !!pr.ready;
+      if (!pr.hang.visible) return;
+      setPose(pr, pz);
+      const hung = (st.hung && ek < 0.02) || ek > 0.98;
+      if (hung && !pr.wasHung) { pr.swingT0 = now; pr.swingAmp = ek > 0.98 ? 0.07 : 0.2; }
+      pr.wasHung = hung;
+      pr.clips.forEach((c) => (c.visible = hung));
+      if (hung && !reduce) {
+        const age = (now - pr.swingT0) / 1000;
+        const a = pr.swingAmp * Math.exp(-age * 1.1);
+        pr.hang.rotation.z += a * Math.sin(age * 5.2) + 0.006 * Math.sin(now / 1000 * 0.8 + k * 1.7);
+        pr.hang.rotation.x += 0.5 * a * Math.sin(age * 4.1 + 1.2);
+      }
+      if (Math.abs(pr.devK - dev) > 0.0005 || appliedM !== pr.mAt) { pr.devK = dev; pr.mAt = appliedM; applyDev(pr); }
+      if (st.inTray && ek < 0.5) inTray = pr;
     });
-    devTray.u.uAgit.value = lerp(devTray.u.uAgit.value, prints.some((p) => p.devTick) ? 1 : 0.12, 1 - Math.exp(-dt / 600));
-    // Once the picture is up, the liquid calms and its glare steps off the print.
-    const inTray = shown >= 0 && prints[shown].state === "tray" ? prints[shown] : null;
-    const glare = inTray && inTray.developed ? 0.12 : 1;
-    devTray.liquid.specularIntensity = lerp(devTray.liquid.specularIntensity, glare, 1 - Math.exp(-dt / 500));
-    devTray.liquid.envMapIntensity = lerp(devTray.liquid.envMapIntensity, 1.6 * glare, 1 - Math.exp(-dt / 500));
-    const k = reduce ? 1 : 1 - Math.exp(-(dt / 1000) * goal.k);
-    view.pos.lerp(goal.pos, k);
-    view.look.lerp(goal.look, k);
+
+    // Splashes where paper meets the developer, in the direction of travel.
+    if (i === prevI) {
+      if (prevF < PH.drop1 && f >= PH.drop1 && i + 1 < N) { const t2 = pose.tray(prints[i + 1]); splash(devTray, t2.pos.x, t2.pos.z + prints[i + 1].ph / 2); }
+      if (prevF < PH.lift0 && f >= PH.lift0) { const t1 = pose.tray(prints[i]); splash(devTray, t1.pos.x, t1.pos.z + prints[i].ph / 2); }
+    }
+    if (prevQ < 0.45 && q >= 0.45) { const t0 = pose.tray(prints[0]); splash(devTray, t0.pos.x, t0.pos.z + prints[0].ph / 2); }
+    prevI = i; prevF = f; prevQ = q;
+
+    // The developer: rocked while a print comes up, calm and out of the way once it has.
+    const developing = inTray && inTray.devK > 0.001 && inTray.devK < 0.999;
+    devTray.u.uAgit.value = lerp(devTray.u.uAgit.value, developing ? 1 : 0.12, 1 - Math.exp(-dt / 400));
+    const glare = inTray ? lerp(1, 0.12, smooth(clamp((inTray.devK - 0.85) / 0.15, 0, 1))) : 1;
+    devTray.liquid.specularIntensity = lerp(devTray.liquid.specularIntensity, glare, 1 - Math.exp(-dt / 300));
+    devTray.liquid.envMapIntensity = lerp(devTray.liquid.envMapIntensity, 1.6 * glare, 1 - Math.exp(-dt / 300));
+
+    // The print in the tray: full-size texture, the caption, the timer.
+    const showIdx = inTray ? inTray.i : (f >= PH.drop1 && i + 1 < N ? i + 1 : i);
+    if (showIdx !== shown) {
+      if (shown >= 0 && prints[shown]) dropFull(prints[shown]);
+      shown = showIdx;
+      useFull(prints[shown]);
+    }
+    const sec = Math.round((prints[shown] ? prints[shown].devK : 1) * DEV_SHOWN);
+    setHands(sec);
+    const phase = sec < DEV_SHOWN ? "developing" : "developed";
+    const key = shown + "|" + sec + "|" + phase;
+    if (key !== hudKey && o.onState) { hudKey = key; o.onState({ index: shown, phase, seconds: sec }); }
+
+    // Camera: the path, pulled to the wall by the light.
+    const pc = pathCam(pos, q);
+    const goalView = eAll > 0 ? mixView(pc, wallView(), eAll) : pc;
+    const k = reduce ? 1 : 1 - Math.exp(-(dt / 1000) * 5);
+    view.pos.lerp(goalView.pos, k);
+    view.look.lerp(goalView.look, k);
     camPos.copy(view.pos);
     camLook.copy(view.look);
     if (!reduce) {
@@ -1290,22 +1251,22 @@ export function start(o) {
   const r0 = roomView();
   view.pos.copy(r0.pos);
   view.look.copy(r0.look);
-  camTo(r0, 99);
-  // Open on the room, then move in to the tray as the first sheet goes in.
+  // Open on the room; once the first photograph has loaded, the opening plays.
   const opening = (async () => {
     await whenReady(prints[0]);
-    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, wait(600)]);
-    await wait(reduce ? 0 : 500);
-    camTo(trayView(), 0.9);
-    pump();
+    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 600))]);
+    if (intro < 1) introStart = now + (reduce ? 0 : 400);
   })();
+  setLightMix(0);
+  appliedM = 0;
   raf = requestAnimationFrame(frame);
 
   return {
-    setIndex(i) {
-      target = clamp(i, 0, N - 1);
-      pump();
+    setProgress(v) {
+      target = clamp(+v || 0, 0, N - 1);
+      if (target > 0.02 && intro < 1) intro = 1;
     },
+    setIndex(i) { this.setProgress(i); },
     setLights,
     get index() { return shown; },
     rectFor: screenRect,
