@@ -423,7 +423,7 @@
     // the focus patch: a small rectangle well inside the frame lines, as a Leica's, about a
     // sixth of the frame's long side whatever the zoom; it eases with the frame lines' own
     // pace rather than jumping there
-    var pkGoal = clamp(fL * 0.17 / (pw0 || 1), 0.25, 1);
+    var pkGoal = clamp(fL * 0.17 / (pw0 || 1), 0.08, 1);
     patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
     if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
     var pk = patchNow;
