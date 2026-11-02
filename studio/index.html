@@ -31,7 +31,7 @@ permalink: /studio/
   <main id="studio" class="studio wrap"
         data-author="{{ me.name }}" data-owner="WtSg" data-repo="WtSg.github.io" data-branch="main">
     <h1 class="studio__title">Gallery Studio</h1>
-    <p class="studio__lede" id="studio-lede" data-gallery="{{ base }}/photography/">Add photographs to <a href="{{ base }}/photography/">your gallery</a>. In this browser, each photo is resized on its long edge, cleared of location and camera data, stamped with your copyright, and optionally watermarked. Only those copies are published; your originals never leave this device.</p>
+    <p class="studio__lede" id="studio-lede" data-gallery="{{ base }}/photography/">Add photographs to <a href="{{ base }}/photography/">your gallery</a>. In this browser, each photo is resized on its long edge, cleared of location and camera data, stamped with your copyright, and optionally watermarked. HDR photos keep their HDR. Only those copies are published; your originals never leave this device.</p>
 
     <noscript><p class="studio__alert">The studio needs JavaScript. Turn it on and reload the page.</p></noscript>
 
@@ -144,7 +144,7 @@ permalink: /studio/
       <label class="drop" id="drop" for="files">
         <input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,.avif" multiple>
         <span class="drop__main">Choose photos, or drop them here</span>
-        <span class="drop__sub">JPEG, HEIC, AVIF, PNG or WebP, HDR photos included. HEIC opens best in Safari.</span>
+        <span class="drop__sub">JPEG, HEIC, AVIF, PNG or WebP. HDR photos stay HDR. HEIC opens best in Safari.</span>
       </label>
       <ol id="queue" class="queue" aria-label="Photos to publish"></ol>
       <div class="studio__actions">
@@ -160,6 +160,7 @@ permalink: /studio/
     </section>
   </main>
 
+  <script src="{{ base }}/assets/js/studio-hdr.js"></script>
   <script src="{{ base }}/assets/js/studio.js"></script>
 </body>
 </html>

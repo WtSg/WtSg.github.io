@@ -6,6 +6,8 @@
  *   - decode (EXIF orientation applied) and resize to <= 2000px on the long edge,
  *     plus a <= 900px thumbnail;
  *   - re-encode as JPEG, which drops every original metadata block (GPS included);
+ *   - keep HDR: when the photo carries an HDR gain map (iPhone HEIC, Ultra HDR JPEG),
+ *     resize the gain map with it and write it into the JPEG (studio-hdr.js);
  *   - embed a small EXIF block holding only Artist and Copyright;
  *   - optionally draw a subtle "© year name" watermark in the bottom-right corner.
  * Publishing writes the images to img/gallery/ and prepends one line per photo to
@@ -27,6 +29,7 @@
   var YEAR = new Date().getFullYear();
   var THUMB_EDGE = 900;
   var THUMB_QUALITY = 0.82;
+  var GAIN_QUALITY = 0.9;
   var SETTINGS_KEY = "gallery-studio-settings";
   var OWNER_KEY = "gallery-studio-owner";
   var DEFAULTS = {
@@ -275,11 +278,14 @@
   }
 
   // ---------- image processing ----------
+  var HDR = window.StudioHDR || null;
   function decode(file) {
-    if (window.createImageBitmap) {
-      return createImageBitmap(file, { imageOrientation: "from-image" }).catch(function () { return decodeWithImg(file); });
-    }
-    return decodeWithImg(file);
+    var p = window.createImageBitmap
+      ? createImageBitmap(file, { imageOrientation: "from-image" }).catch(function () { return decodeWithImg(file); })
+      : decodeWithImg(file);
+    // A browser that cannot open HEIC may still decode HEVC: draw the photo from its tiles.
+    if (HDR && HDR.decodeHeif) p = p.catch(function (err) { return HDR.decodeHeif(file, COLOR_SPACE).catch(function () { throw err; }); });
+    return p;
   }
   function decodeWithImg(file) {
     return new Promise(function (resolve, reject) {
@@ -298,17 +304,18 @@
     } catch (e) { return "srgb"; }
   })();
   function canvas(w, h) { var c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
-  function ctx2d(c) { return c.getContext("2d", { colorSpace: COLOR_SPACE }) || c.getContext("2d"); }
+  function ctx2d(c, plain) { return plain ? c.getContext("2d") : (c.getContext("2d", { colorSpace: COLOR_SPACE }) || c.getContext("2d")); }
   // Halve repeatedly, then do the final step, for clean downscaling in every browser.
-  function scaleTo(src, sw, sh, w, h) {
+  // A gain map is scaled "plain": its values are data, never colour-converted.
+  function scaleTo(src, sw, sh, w, h, plain) {
     var cur = src, cw = sw, ch = sh;
     while (cw / 2 >= w && ch / 2 >= h) {
-      var half = canvas(Math.round(cw / 2), Math.round(ch / 2)), hc = ctx2d(half);
+      var half = canvas(Math.round(cw / 2), Math.round(ch / 2)), hc = ctx2d(half, plain);
       hc.imageSmoothingEnabled = true; hc.imageSmoothingQuality = "high";
       hc.drawImage(cur, 0, 0, half.width, half.height);
       cur = half; cw = half.width; ch = half.height;
     }
-    var out = canvas(w, h), ctx = ctx2d(out);
+    var out = canvas(w, h), ctx = ctx2d(out, plain);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
     ctx.drawImage(cur, 0, 0, w, h);
     return out;
@@ -352,18 +359,41 @@
     return Promise.all([decode(item.file), fontReady]).then(function (res) {
       var bmp = res[0];
       var sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
-      var k = Math.min(1, s.edge / Math.max(sw, sh));
-      var w = Math.round(sw * k), h = Math.round(sh * k);
-      var full = scaleTo(bmp, sw, sh, w, h);
-      if (bmp.close) bmp.close();
-      if (s.wmOn) drawWatermark(full, s);
-      var t = Math.min(1, THUMB_EDGE / Math.max(w, h));
-      var thumb = scaleTo(full, w, h, Math.round(w * t), Math.round(h * t));
-      return Promise.all([toJpegBytes(full, s.quality / 100), toJpegBytes(thumb, THUMB_QUALITY)]).then(function (out) {
-        item.full = insertSegment(out[0], seg);
-        item.thumb = insertSegment(out[1], seg);
-        item.w = w; item.h = h;
-        item.preview = URL.createObjectURL(new Blob([item.thumb], { type: "image/jpeg" }));
+      // The HDR gain map, if the photo has one this browser can read.
+      var gmP = HDR ? HDR.read(item.file, sw / sh).catch(function (e) {
+        item.hdrProblem = (e && e.message) || "unreadable";
+        if (window.console) console.warn("Gallery Studio: the HDR gain map of " + item.name + " was not kept (" + item.hdrProblem + ").");
+        return null;
+      }) : Promise.resolve(null);
+      return gmP.then(function (gm) {
+        var k = Math.min(1, s.edge / Math.max(sw, sh));
+        var w = Math.round(sw * k), h = Math.round(sh * k);
+        var full = scaleTo(bmp, sw, sh, w, h);
+        if (bmp.close) bmp.close();
+        if (s.wmOn) drawWatermark(full, s);
+        var t = Math.min(1, THUMB_EDGE / Math.max(w, h));
+        var tw = Math.round(w * t), th = Math.round(h * t);
+        var thumb = scaleTo(full, w, h, tw, th);
+        var jobs = [toJpegBytes(full, s.quality / 100), toJpegBytes(thumb, THUMB_QUALITY)];
+        if (gm) {
+          // The gain map keeps its share of the photo's resolution (an iPhone's is half).
+          var r = Math.min(1, Math.max(0.25, gm.canvas.width / sw));
+          var gFull = scaleTo(gm.canvas, gm.canvas.width, gm.canvas.height, Math.max(1, Math.round(w * r)), Math.max(1, Math.round(h * r)), true);
+          var gThumb = scaleTo(gFull, gFull.width, gFull.height, Math.max(1, Math.round(tw * r)), Math.max(1, Math.round(th * r)), true);
+          jobs.push(toJpegBytes(gFull, GAIN_QUALITY), toJpegBytes(gThumb, GAIN_QUALITY));
+        }
+        return Promise.all(jobs).then(function (out) {
+          if (gm) {
+            item.full = HDR.join(out[0], out[2], gm.meta, [seg]);
+            item.thumb = HDR.join(out[1], out[3], gm.meta, [seg]);
+          } else {
+            item.full = insertSegment(out[0], seg);
+            item.thumb = insertSegment(out[1], seg);
+          }
+          item.hdrKept = !!gm;
+          item.w = w; item.h = h;
+          item.preview = URL.createObjectURL(new Blob([item.thumb], { type: "image/jpeg" }));
+        });
       });
     });
   }
@@ -466,9 +496,8 @@
       meta.classList.add("is-error");
     } else if (item.status === "ready") {
       meta.textContent = item.name + " → " + item.w + " × " + item.h + ", " + kb(item.full.length) + " (from " + kb(item.file.size) + "). Location and camera data removed." +
-        (item.hdr ? (COLOR_SPACE === "display-p3"
-          ? " HDR photo: published as a standard web image that keeps its wide colour."
-          : " HDR photo: published as a standard web image.") : "") +
+        (item.hdrKept ? " HDR photo: kept in HDR, with its gain map. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere."
+          : item.hdr ? " HDR photo: this browser couldn't read its HDR gain map, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + ". Safari on a Mac or iPhone keeps HDR." : "") +
         (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "");
     } else {
       meta.textContent = item.name + " · preparing…";
@@ -745,7 +774,7 @@
     F.lede.appendChild(a);
     F.lede.appendChild(document.createTextNode(". In this browser, each photo is resized to " + settings.edge +
       " px on its long edge, cleared of location and camera data, stamped with your copyright" +
-      (hasWm ? ", and watermarked" : "") + ". Only those copies are published; your originals never leave this device."));
+      (hasWm ? ", and watermarked" : "") + ". HDR photos keep their HDR. Only those copies are published; your originals never leave this device."));
   }
   var reprocessTimer = 0;
   function reprocessQueued() {
