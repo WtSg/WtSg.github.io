@@ -104,8 +104,8 @@
   // round it show too, a wall rather than one picture (the close-up is there for the detail).
   function shown(p) {
     var land = p.ar >= 1;
-    var maxW = land && !narrow ? vw * 0.34 : vw * 0.68;
-    var maxH = vh * (land ? (narrow ? 0.34 : 0.3) : (narrow ? 0.42 : 0.38));
+    var maxW = land && !narrow ? vw * 0.34 : vw * 0.49;
+    var maxH = vh * (land ? (narrow ? 0.25 : 0.3) : (narrow ? 0.3 : 0.38));
     var w = Math.min(maxW, maxH * p.ar);
     return { w: w, h: w / p.ar };
   }
