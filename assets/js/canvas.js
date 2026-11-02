@@ -421,9 +421,10 @@
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
     // the focus patch: a small rectangle well inside the frame lines, as a Leica's, about a
-    // sixth of the frame's long side whatever the zoom; it eases with the frame lines' own
+    // sixth of the frame's long side whatever the zoom, and never more than about a seventh of
+    // its short side (a panorama's frame is long but low); it eases with the frame lines' own
     // pace rather than jumping there
-    var pkGoal = clamp(fL * 0.17 / (pw0 || 1), 0.08, 1);
+    var pkGoal = clamp(Math.min(fL * 0.17, fS * 0.15 * (pw0 / (ph0 || 1))) / (pw0 || 1), 0.08, 1);
     patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
     if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
     // a portrait photograph turns the camera, the patch with it: it stands upright as the
