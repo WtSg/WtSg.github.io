@@ -642,6 +642,35 @@
   }
   G.onClose = function (i, moved) { if (moved) lockPhoto(i); };
 
+  /* ---------- The close-up: the same LED readout, under the photograph ---------- */
+  var glLed = document.querySelector(".gl__led"), glRoll = 0;
+  G.onFill = function (i) {
+    if (!glLed) return;
+    var v = ledText(photos[i]);
+    var cells = [["f", "<em>F</em>", ""], ["s", "<em>" + v.sl + "</em>", ""], ["iso", "<em>ISO</em>", ""], ["mm", "", "<em>MM</em>"]]
+      .filter(function (c) { return v[c[0]]; });
+    glLed.innerHTML = '<div class="vf-led">' +
+      (cells.length ? '<span class="vf-led__exif">' + cells.map(function (c) {
+        return '<span class="vf-led__cell">' + c[1] + '<b data-k="' + c[0] + '"></b>' + c[2] + "</span>";
+      }).join("") + "</span>" : "") +
+      '<span class="vf-led__cell vf-led__cell--n"><b data-k="n"></b></span></div>';
+    var bs = Array.prototype.slice.call(glLed.querySelectorAll("b[data-k]"));
+    var put = function (b, t) { b.textContent = t; b.setAttribute("data-off", t.replace(/\d/g, "8")); };
+    clearInterval(glRoll);
+    if (still()) { bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")]); }); return; }
+    // every segment lit for a moment, then the digits roll and settle
+    var ticks = 0;
+    bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")].replace(/\d/g, "8")); });
+    glRoll = setInterval(function () {
+      ticks++;
+      bs.forEach(function (b) {
+        var t = v[b.getAttribute("data-k")];
+        put(b, ticks >= 9 ? t : ticks < 4 ? t.replace(/\d/g, "8") : t.replace(/\d/g, function () { return String(Math.floor(Math.random() * 10)); }));
+      });
+      if (ticks >= 9) clearInterval(glRoll);
+    }, 45);
+  };
+
   /* ---------- Start: the camera wakes ---------- */
   function startAt(i, offX, offY) {
     var t = nearest(0, 0, i) || nearest(0, 0);
