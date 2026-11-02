@@ -4,8 +4,8 @@
  * viewfinder sits over it: the bright-line frame, the yellowish focus patch
  * with its double image, and a red LED readout. Move fast and the lens pulls
  * back over the whole wall; slow down and the nearest photograph is framed,
- * focused and counted. Click and a focal-plane shutter fires. Photographs stay
- * plain <img> elements: true colour, HDR-ready.
+ * focused and counted. Click and the photograph opens large, growing out of its
+ * place. Photographs stay plain <img> elements: true colour, HDR-ready.
  */
 
 @font-face {
@@ -107,7 +107,7 @@ p { margin: 0; }
 
 /* ---------- Without JavaScript: justified rows ---------- */
 .cv-room { padding: 0 var(--gut) 2rem; }
-.cv-plane, .vf, .vf-shutter { display: none; }
+.cv-plane, .vf { display: none; }
 .cv-list { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .cv-list::after { content: ""; flex: 999 1 0; }
 .cv-list li { flex: var(--ar) 1 calc(var(--ar) * 13rem); }
@@ -305,17 +305,6 @@ p { margin: 0; }
 .cv-zoom__btn:disabled { color: var(--muted); opacity: .45; cursor: default; }
 @media (pointer: coarse) {
   .cv-zoom__btn { width: 2.75rem; height: 2.75rem; }
-}
-
-/* ---------- The shutter: two curtains crossing the frame ---------- */
-.cv-on .vf-shutter {
-  display: block;
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: #000;
-  clip-path: inset(0 100% 0 0);
-  pointer-events: none;
 }
 
 /* The list becomes the keyboard path: off-screen until a key lands on it. */
