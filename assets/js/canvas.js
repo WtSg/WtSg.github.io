@@ -74,7 +74,7 @@
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
   var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
-  var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false;
+  var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false, patchOn = true, wakeSet = 1;
   function measure() {
     vw = window.innerWidth;
     vh = window.innerHeight;
@@ -453,11 +453,21 @@
     // outside the frame the wall darkens as it comes to rest
     var mGoal = 0.58 - 0.44 * pull;
     maskA += (mGoal - maskA) * (calm ? 1 : ease(dt, 160));
-    maskEl.style.opacity = maskA.toFixed(3);
+    // As the camera wakes, the frame lines and the darkening come up only as the first
+    // photograph glides into them, so for a moment they never cut across the wall at random.
+    var wake = opening ? clamp(1.25 - (dist * s) / (vw * 0.28), 0, 1) : 1;
+    if (Math.abs(wake - wakeSet) > 0.01 || (wake === 1 && wakeSet !== 1)) {
+      wakeSet = wake;
+      frameEl.style.opacity = wake < 1 ? wake.toFixed(3) : "";
+    }
+    maskEl.style.opacity = (maskA * wake).toFixed(3);
 
     // the focus patch: the picture's ghost, offset by the focus error
     if (!calm) {
       var sx = vw / 2 + (nb.x - vw / 2) * s, sy = vh / 2 + (nb.y - vh / 2) * s;
+      // nothing under the patch (the lens between photographs, as when the camera wakes): no empty box
+      var under = wake > 0.6 && vw / 2 > sx && vw / 2 < sx + subject.w * s && vh / 2 > sy && vh / 2 < sy + subject.h * s;
+      if (under !== patchOn) { patchOn = under; patch.classList.toggle("is-empty", !under); }
       var src = subject.img.getAttribute("src");
       if (ghost.getAttribute("src") !== src) { ghost.src = src; ghost.hidden = false; }
       ghost.style.width = (subject.w * s).toFixed(1) + "px";
