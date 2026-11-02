@@ -2,7 +2,6 @@
 # Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
 # Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.
 # You can edit a title, place or year here by hand; keep each photo on one line.
-- {"id":"20261102-b-4092-461w","src":"/img/gallery/20261102-b-4092-461w.jpg","thumb":"/img/gallery/20261102-b-4092-461w-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-b-4095-a96r","src":"/img/gallery/20261102-b-4095-a96r.jpg","thumb":"/img/gallery/20261102-b-4095-a96r-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-b-4106-dyep","src":"/img/gallery/20261102-b-4106-dyep.jpg","thumb":"/img/gallery/20261102-b-4106-dyep-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-b-4098-6dha","src":"/img/gallery/20261102-b-4098-6dha.jpg","thumb":"/img/gallery/20261102-b-4098-6dha-thumb.jpg","w":1500,"h":2000,"title":"","place":"","year":"","added":"2026-11-02"}
