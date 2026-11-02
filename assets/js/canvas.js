@@ -499,6 +499,10 @@
   }
   plane.addEventListener("pointerdown", function (e) {
     if (root.classList.contains("gl-open") || e.button > 0) return;
+    // a press on the wall starts a drag, never a selection
+    if (e.pointerType === "mouse") e.preventDefault();
+    var sel = window.getSelection && window.getSelection();
+    if (sel && sel.rangeCount) sel.removeAllRanges();
     ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
     plane.setPointerCapture(e.pointerId);
     var two = twoPoints();
@@ -715,7 +719,8 @@
     ], { duration: 300, easing: "cubic-bezier(.6,0,.4,1)" });
     setTimeout(open, 135);
   }
-  G.onClose = function (i, moved) { if (moved) lockPhoto(i); };
+  // Closing goes back to the wall as it was before the close-up opened, wherever the roll was turned to.
+  G.onClose = function () {};
 
   /* ---------- The close-up: the same LED readout, under the photograph ---------- */
   var glLed = document.querySelector(".gl__led"), glRoll = 0;
