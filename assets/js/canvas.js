@@ -438,7 +438,7 @@
       patch.style.width = pw.toFixed(1) + "px";
       patch.style.height = ph.toFixed(1) + "px";
       // its corners rounded in proportion to it, so it keeps the same look at any zoom
-      patch.style.borderRadius = (Math.min(pw, ph) * 0.15).toFixed(1) + "px";
+      patch.style.borderRadius = (Math.min(pw, ph) * 0.1).toFixed(1) + "px";
     }
     var frErr = Math.abs(fL - fr.L) + Math.abs(fS - fr.S) + Math.abs(frTo.rot - fr.rot);
     if (frErr > 0.02 || frDirty) {
@@ -742,19 +742,16 @@
   });
 
   /* ---------- Opening a photograph ---------- */
-  // Zoomed out, a click zooms back in on the photograph clicked; at the framed size or
-  // closer, a click on the framed photograph opens the close-up straight from where it is,
-  // and a click on one beside it brings that one into the frame.
+  // Zoomed out, a click opens the photograph clicked; at the framed size or closer, a click
+  // on the framed photograph opens the close-up straight from where it is, and a click on
+  // one beside it brings that one into the frame.
   function shoot(it, back) {
     hideHint();
     hold = 0;
     opening = false;
     pendingShot = null;
-    if (zr() < 0.97) {
-      setZoom(1);
-      lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
-      return;
-    }
+    // zoomed out, a click opens the photograph clicked straight away
+    if (zr() < 0.97) { fire({ it: it, back: back }); return; }
     // a photograph beside the framed one is only brought into the frame; the framed one opens
     if (lockOn !== it && subject !== it) { lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy }); return; }
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
