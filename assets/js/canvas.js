@@ -426,11 +426,14 @@
     var pkGoal = clamp(fL * 0.17 / (pw0 || 1), 0.08, 1);
     patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
     if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
-    var pk = patchNow;
-    if (Math.abs(pk - patchK) > 0.0005) {
+    // a portrait photograph turns the camera, the patch with it: it stands upright as the
+    // frame lines turn (the double image in it stays the right way up)
+    var pk = patchNow, turn = clamp(fr.rot / 90, 0, 1), bw = pw0 * pk, bh = ph0 * pk;
+    var nw = bw + (bh - bw) * turn, nh = bh + (bw - bh) * turn;
+    if (Math.abs(nw - pw) > 0.05 || Math.abs(nh - ph) > 0.05 || patchK < 0) {
       patchK = pk;
-      pw = pw0 * pk;
-      ph = ph0 * pk;
+      pw = nw;
+      ph = nh;
       patch.style.width = pw.toFixed(1) + "px";
       patch.style.height = ph.toFixed(1) + "px";
     }
