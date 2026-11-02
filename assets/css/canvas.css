@@ -419,6 +419,25 @@ p { margin: 0; }
 /* a glimpse of the photographs either side, dimmed; none while zoomed in */
 .gl .gl__img--peek { opacity: .3; pointer-events: auto; cursor: pointer; }
 .gl .gl__stage.is-zoomed .gl__img--peek { opacity: 0; }
+/* Full screen (two clicks or taps on the photograph): the photograph alone, as large as the
+   window or the screen allows, the readout, roll, keys and frame lines put away; two more,
+   or Escape, bring them back (gallery-loupe.js) */
+.gl[open].is-full {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "stage";
+  align-content: stretch;
+  gap: 0;
+  padding: 0;
+}
+.gl.is-full .gl__info, .gl.is-full .gl__controls, .gl.is-full .gl__frame { display: none; }
+.gl.is-full .gl__img { width: min(100vw, 100vh * var(--ar, 1.5)); width: min(100vw, 100svh * var(--ar, 1.5)); }
+@supports (container-type: size) {
+  .gl.is-full .gl__stage { container-type: size; }
+  .gl.is-full .gl__img { width: min(100cqw, 100cqh * var(--ar, 1.5)); }
+}
+.gl__stage:fullscreen { background: #000; }
+.gl__stage:-webkit-full-screen { background: #000; }
 /* pulled down to close, only the photograph goes with the finger (gallery-loupe.js) */
 .gl .gl__stage.is-pulled .gl__img--peek { opacity: 0; pointer-events: none; transition-duration: .15s; }
 .gl .gl__img {
