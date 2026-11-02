@@ -218,8 +218,8 @@ p { margin: 0; }
   transform: translate(-50%, -50%);
   overflow: hidden;
   border: 1px solid var(--patch-edge);
-  /* a Leica's focus patch has the slightest rounding at its corners; the frame lines stay square */
-  border-radius: 2.5px;
+  /* "a bright, sharply defined rectangle" (Leica): its corners barely softened */
+  border-radius: 1px;
   background: var(--patch-tint);
   transition: opacity .45s ease-out;
 }

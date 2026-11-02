@@ -420,9 +420,10 @@
     // they close round it; zoomed in, they stay and the photograph grows past them)
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
-    // the focus patch keeps its size against the frame lines (never smaller than a third),
-    // and eases to it at the frame lines' own pace rather than jumping there
-    var pkGoal = Math.max(0.35, fz);
+    // the focus patch: a small rectangle well inside the frame lines, as a Leica's, about a
+    // sixth of the frame's long side whatever the zoom; it eases with the frame lines' own
+    // pace rather than jumping there
+    var pkGoal = clamp(fL * 0.17 / (pw0 || 1), 0.25, 1);
     patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
     if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
     var pk = patchNow;
