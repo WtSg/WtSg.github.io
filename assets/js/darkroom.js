@@ -625,16 +625,26 @@
     root.classList.add("has-3d");
     root.classList.remove("dr-ready");
     stageWrap.hidden = false;
-    var url = new URL("darkroom3d.js", scriptSrc).href;
-    // Through Function so that older parsers never see the import() syntax.
-    var load;
-    try { load = new Function("u", "return import(u)"); } catch (e) { load = null; }
-    if (!load) { fallBack(); }
-    else {
-      load(url).then(function (m) {
+    // The module script in the page (type="module") hands the scene over here,
+    // or reports that it could not load; with no word at all, stay flat.
+    var settled = false;
+    var giveUp = setTimeout(function () { if (!settled) { settled = true; fallBack(new Error("3D scene did not load")); } }, 10000);
+    window.__dr3d = {
+      init: function (m) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
         try { init3D(m); } catch (err) { fallBack(err); }
-      }, fallBack);
-    }
+      },
+      fail: function (err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
+        fallBack(err);
+      }
+    };
+    if (window.__dr3dModule) window.__dr3d.init(window.__dr3dModule);
+    else if (window.__dr3dError) window.__dr3d.fail(window.__dr3dError);
   } else {
     initFlat();
   }

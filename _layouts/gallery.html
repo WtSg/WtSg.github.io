@@ -198,5 +198,14 @@
 
   <script src="{{ base }}/assets/js/site.js" defer></script>
   <script src="{{ base }}/assets/js/darkroom.js" defer></script>
+  {%- unless page.flat %}
+  <script type="module">
+    // Loads the 3D scene only where modules and import maps work; darkroom.js decides whether to use it.
+    if (document.documentElement.classList.contains("has-3d")) import("{{ base }}/assets/js/darkroom3d.js").then(
+      function (m) { if (window.__dr3d) window.__dr3d.init(m); else window.__dr3dModule = m; },
+      function (e) { if (window.__dr3d) window.__dr3d.fail(e); else window.__dr3dError = e; }
+    );
+  </script>
+  {%- endunless %}
 </body>
 </html>
