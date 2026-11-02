@@ -477,10 +477,26 @@
     if (!t || t === "none" || !Matrix) return 0;
     try { return new Matrix(t).m41; } catch (e) { return 0; }
   }
-  function lines(on) {
+  // The frame lines stay up while the photographs move, as a viewfinder's do: the frame
+  // eases from the size of the photograph leaving to the size of the one arriving, with the
+  // finger while dragging and with the glide after.
+  var frameAnim = null;
+  function sizeOf(el) { var r = el.getBoundingClientRect(); return [r.width, r.height]; }
+  function box(z) { return { width: z[0].toFixed(1) + "px", height: z[1].toFixed(1) + "px" }; }
+  // the frame held at size z, or (no z) back to the size its photograph gives it
+  function frameSize(z) {
     if (!frameEl) return;
-    frameEl.style.transition = "opacity " + (on ? ".25s" : ".1s") + " ease-out";
-    frameEl.style.opacity = on ? "" : "0";
+    if (frameAnim) { frameAnim.cancel(); frameAnim = null; }
+    frameEl.style.width = z ? box(z).width : "";
+    frameEl.style.height = z ? box(z).height : "";
+  }
+  // the frame easing from wherever it is to size z
+  function frameTo(z, opt, then) {
+    if (!frameEl || !frameEl.animate) { if (then) then(); return; }
+    var from = sizeOf(frameEl);
+    frameSize(z);
+    frameAnim = frameEl.animate([box(from), box(z)], opt);
+    if (then) frameAnim.onfinish = then;
   }
   // the slide under way, finished at once: its photograph shown, nothing left over
   function endSlide() { if (slide) slide.done(); }
@@ -491,7 +507,7 @@
     var tx = function (x) { return { transform: "translateX(" + x.toFixed(1) + "px)" }; };
     var moving = [img, el].concat(others);
     if (slide) slide.drop();
-    lines(false);
+    frameTo(sizeOf(el), { duration: dur, easing: EASE });
     var anims = moving.map(function (m, k) { return m.animate([tx(from[k]), tx(from[k] + shift)], { duration: dur, easing: EASE, fill: "forwards" }); });
     var s = { n: n, el: el, others: others, over: false };
     // let go of this slide without finishing it: the next one takes its pictures over
@@ -505,11 +521,12 @@
       s.over = true;
       if (slide === s) slide = null;
       fill(n, el._src);
+      frameSize();
       at(el, 0);
       img.style.transform = "";
       anims.forEach(function (a) { a.cancel(); });
       others.forEach(function (o) { o.remove(); });
-      var drop = function () { el.remove(); lines(true); };
+      var drop = function () { el.remove(); };
       if (img.decode) img.decode().then(drop, drop); else drop();
     };
     slide = s;
@@ -620,9 +637,8 @@
       warmAround(index);
       prev._off = offsetOf(prev, -1);
       next._off = offsetOf(next, 1);
-      g.pages = { prev: prev, next: next, w: img.getBoundingClientRect().width };
+      g.pages = { prev: prev, next: next, w: img.getBoundingClientRect().width, f0: sizeOf(img), fp: sizeOf(prev), fn: sizeOf(next) };
       g.vx = 0; g.lx = e.clientX; g.lt = now;
-      lines(false);
     }
     g.vx = g.vx * 0.4 + 0.6 * ((e.clientX - g.lx) / Math.max(1, now - g.lt));
     g.lx = e.clientX;
@@ -631,6 +647,9 @@
     img.style.transform = "translateX(" + dx.toFixed(1) + "px)";
     at(g.pages.prev, g.pages.prev._off + dx);
     at(g.pages.next, g.pages.next._off + dx);
+    // the frame takes on the shape of the photograph coming in, as far as it has come
+    var P = g.pages, side = dx < 0 ? P.next : P.prev, f1 = dx < 0 ? P.fn : P.fp, t = Math.min(1, Math.abs(dx) / Math.max(1, Math.abs(side._off)));
+    frameSize([P.f0[0] + (f1[0] - P.f0[0]) * t, P.f0[1] + (f1[1] - P.f0[1]) * t]);
   }
   // Let go: on to the neighbour when dragged a fifth of the way or flicked, else back.
   function pageEnd(t, cancelled) {
@@ -656,7 +675,7 @@
       var a = o.animate([tx(o._off + dx), tx(o._off)], opt);
       a.onfinish = function () { o.remove(); };
     });
-    lines(true);
+    frameTo(P.f0, opt, function () { frameSize(); });
   }
   function release(e, cancelled) {
     if (!g || e.pointerId !== g.id) return;
@@ -691,7 +710,7 @@
     markedI = -1;
     Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
     img.style.transform = "";
-    lines(true);
+    frameSize();
     settleClosed();
     closing = false;
     root.classList.remove("gl-open");
