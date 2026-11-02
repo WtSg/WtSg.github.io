@@ -1,5 +1,8 @@
 /*
  * Photography: the darkroom.
+ * Where WebGL works, the page is a 3D darkroom (darkroom3d.js): scrolling
+ * develops one print after another in the developer tray. Elsewhere, and if
+ * the 3D scene cannot load, it is the flat darkroom below:
  * - Each print develops in its tray when you reach it (blank paper, shadows
  *   first, then full tones, with ripples through the developer), then a copy
  *   flies up to the drying line and swings on its clothespin.
@@ -31,7 +34,7 @@
   // Light friction against casual saving; the real protection is that only
   // 2000 px watermarked copies are ever published.
   document.addEventListener("contextmenu", function (e) {
-    if (e.target.closest && e.target.closest(".print, .pin__print, .loupe__img, .flyer")) e.preventDefault();
+    if (e.target.closest && e.target.closest(".print, .pin__print, .loupe__img, .flyer, .dr-canvas")) e.preventDefault();
   });
   document.addEventListener("dragstart", function (e) {
     if (e.target.tagName === "IMG") e.preventDefault();
@@ -40,287 +43,312 @@
   var trays = Array.prototype.slice.call(document.querySelectorAll(".tray[data-index]"));
   if (!trays.length) { root.classList.remove("dr-ready"); return; }
 
-  var line = document.querySelector(".dr-line");
-  var pinList = line ? line.querySelector(".dr-line__pins") : null;
-  var pins = pinList ? Array.prototype.slice.call(pinList.children) : [];
-  var agitate = document.getElementById("agitate-run");
   var DEV_MS = 2800;
   var DEV_SHOWN = 90; // the tray timer reads 1:30 when a print is done
-
   function lightsOn() { return body.getAttribute("data-lights") === "on"; }
-  function ms(n) { return still() ? 0 : n; }
 
-  /* ---------- The drying line sags: hang each pin on the curve ---------- */
-  // The wire is the quadratic M0 8 Q500 34 1000 8 drawn 40 px tall, so at a
-  // fraction f along it the wire sits 52 f (1 - f) px below its ends.
-  var sagQueued = false;
-  // Size the clothespinned prints so every one fits on the visible line.
-  function fitPins() {
-    if (!pinList || !pins.length) return;
-    var cs = getComputedStyle(pinList);
-    var avail = pinList.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    if (avail <= 0) return;
-    var gap = parseFloat(cs.columnGap) || 0;
-    var sum = 0;
-    pins.forEach(function (p) { sum += parseFloat(p.style.getPropertyValue("--ar")) || 1; });
-    var h = (avail - pins.length * 6 - (pins.length - 1) * gap - 2) / sum;
-    line.style.setProperty("--pin-fit", Math.max(16, Math.floor(h)) + "px");
-    line.classList.toggle("is-crowded", h < 16);
+  /* ---------- Which darkroom: 3D where WebGL and import maps work ---------- */
+  var stageWrap = document.querySelector(".dr-stage-wrap");
+  var scriptSrc = document.currentScript ? document.currentScript.src : "";
+  function webgl() {
+    try {
+      var c = document.createElement("canvas");
+      return !!(window.WebGL2RenderingContext && c.getContext("webgl2"));
+    } catch (e) { return false; }
   }
-  function sag() {
-    sagQueued = false;
-    if (!line) return;
-    fitPins();
-    var lr = line.getBoundingClientRect();
-    if (!lr.width) return;
-    pins.forEach(function (p) {
-      var r = p.getBoundingClientRect();
-      var f = Math.min(1, Math.max(0, (r.left + r.width / 2 - lr.left) / lr.width));
-      p.style.setProperty("--sag", (52 * f * (1 - f)).toFixed(1) + "px");
-    });
-  }
-  function queueSag() {
-    if (sagQueued) return;
-    sagQueued = true;
-    requestAnimationFrame(sag);
-  }
-  sag();
-  window.addEventListener("resize", queueSag);
-  if (pinList) pinList.addEventListener("scroll", queueSag, { passive: true });
+  var want3d = !!(stageWrap && scriptSrc && window.HTMLScriptElement && HTMLScriptElement.supports &&
+    HTMLScriptElement.supports("importmap") && webgl() && !/[?&]flat\b/.test(location.search));
+  var mode = null; // { toggle(), afterLoupe(i) }
 
-  /* ---------- Developing ---------- */
-  function whenLoaded(img, cb) {
-    if (!img || (img.complete && img.naturalWidth)) { cb(); return; }
-    var done = false;
-    function go() { if (!done) { done = true; cb(); } }
-    img.addEventListener("load", go);
-    img.addEventListener("error", go);
-    if (img.loading === "lazy") img.loading = "eager";
-  }
-
-  function setTimer(t, s) {
-    var el = t.querySelector("[data-timer]");
-    if (el) el.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
-  }
-  function runTimer(t) {
-    var start = null;
-    function f(now) {
-      if (start === null) start = now;
-      var p = Math.min(1, (now - start) / DEV_MS);
-      setTimer(t, Math.round(p * DEV_SHOWN));
-      if (p < 1 && t.classList.contains("is-developing")) requestAnimationFrame(f);
-      else setTimer(t, DEV_SHOWN);
-    }
-    requestAnimationFrame(f);
-  }
-
-  function finish(t, fly) {
-    if (t.classList.contains("is-developed")) return;
-    t.classList.remove("is-developing");
-    t.classList.add("is-developed");
-    setTimer(t, DEV_SHOWN);
-    hang(+t.getAttribute("data-index"), fly);
-  }
-
-  function develop(t) {
-    if (t._dev) return;
-    t._dev = true;
-    var img = t.querySelector(".print__img");
-    whenLoaded(img, function () {
-      if (t.classList.contains("is-developed")) return;
-      if (still() || lightsOn()) { finish(t, false); return; }
-      // A beat of blank paper in the tray before the image starts to come up.
-      setTimeout(function () { if (!t.classList.contains("is-developed")) start(t, img); }, 450);
-    });
-  }
-
-  function start(t, img) {
-    t.classList.add("is-developing");
-    if (fine.matches && agitate && agitate.beginElement) {
-      try { agitate.beginElement(); } catch (e) {}
-    }
-    runTimer(t);
-    var over = false;
-    function end() { if (!over) { over = true; finish(t, true); } }
-    img.addEventListener("animationend", function h(e) {
-      if (e.animationName === "develop") { img.removeEventListener("animationend", h); end(); }
-    });
-    setTimeout(end, DEV_MS + 900);
-  }
-
-  /* ---------- Hanging on the line ---------- */
-  function revealPin(pin) {
-    pin.classList.add("has-print");
-    var b = pin.querySelector(".pin__print");
-    if (b) b.tabIndex = 0;
-  }
-
-  function hang(i, fly) {
-    var pin = pins[i];
-    if (!pin || pin.classList.contains("has-print")) return;
-    var target = pin.querySelector(".pin__print");
-    var print = trays[i].querySelector(".print");
-    if (!fly || still() || lightsOn() || !target || !print || !target.animate) { revealPin(pin); return; }
-
-    // Bring the pin into the visible part of the line first.
-    if (pinList && pinList.scrollWidth > pinList.clientWidth) {
-      var pl = pinList.getBoundingClientRect(), pr = pin.getBoundingClientRect();
-      if (pr.left < pl.left || pr.right > pl.right) {
-        pinList.scrollLeft += pr.left - pl.left - (pl.width - pr.width) / 2;
-        sag();
-      }
-    }
-
-    var from = print.getBoundingClientRect();
-    var to = target.getBoundingClientRect();
-    if (!to.width || !from.width || from.bottom < 0 || from.top > window.innerHeight) { revealPin(pin); return; }
-
-    var flyer = document.createElement("div");
-    flyer.className = "flyer";
-    flyer.setAttribute("aria-hidden", "true");
-    var im = target.querySelector("img").cloneNode(false);
-    im.removeAttribute("loading");
-    im.alt = "";
-    flyer.appendChild(im);
-    flyer.style.width = to.width + "px";
-    flyer.style.height = to.height + "px";
-    body.appendChild(flyer);
-
-    var sx = from.width / to.width, sy = from.height / to.height;
-    function at(x, y, scx, scy, rot) {
-      return "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) scale(" + scx.toFixed(4) + "," + scy.toFixed(4) + ") rotate(" + rot + "deg)";
-    }
-    // Peel up out of the tray, arc towards the pin, overshoot, settle.
-    var midS = Math.sqrt(sx), midSy = Math.sqrt(sy);
-    var mx = from.left + (to.left - from.left) * 0.55 - 30;
-    var my = Math.min(from.top, to.top) + (from.top - to.top) * 0.25 - 40;
-    var anim = flyer.animate([
-      { transform: at(from.left, from.top, sx, sy, 0), opacity: 1 },
-      { transform: at(from.left - from.width * 0.012, from.top - 14, sx * 1.025, sy * 1.025, -1.5), offset: 0.14 },
-      { transform: at(mx, my, midS, midSy, -9), offset: 0.55 },
-      { transform: at(to.left, to.top + 6, 1, 1, 7), offset: 0.88 },
-      { transform: at(to.left, to.top, 1, 1, 0) }
-    ], { duration: 1150, easing: "cubic-bezier(.45,0,.2,1)" });
-    var landed = false;
-    function land() {
-      if (landed) return;
-      landed = true;
-      flyer.remove();
-      revealPin(pin);
-      pin.classList.add("is-swinging");
-      setTimeout(function () { pin.classList.remove("is-swinging"); }, 2000);
-    }
-    anim.onfinish = land;
-    anim.oncancel = land;
-  }
-
-  /* ---------- Reaching a tray develops it ---------- */
-  var io = null;
-  function settleAll() {
-    trays.forEach(function (t) {
-      t._dev = true;
-      t.classList.remove("is-developing");
-      t.classList.add("is-developed");
-      setTimer(t, DEV_SHOWN);
-    });
-    pins.forEach(revealPin);
-    if (io) { io.disconnect(); io = null; }
-  }
-
-  if (still() || !("IntersectionObserver" in window)) {
-    settleAll();
-  } else {
-    io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        var t = e.target.closest(".tray");
-        if (io) io.unobserve(e.target);
-        if (document.hidden) {
-          document.addEventListener("visibilitychange", function v() {
-            if (document.hidden) return;
-            document.removeEventListener("visibilitychange", v);
-            develop(t);
-          });
-        } else {
-          develop(t);
-        }
-      });
-    }, { threshold: 0.45 });
-    trays.forEach(function (t) { io.observe(t.querySelector(".print")); });
-  }
-  if (reduce.addEventListener) {
-    reduce.addEventListener("change", function () { if (still()) settleAll(); });
-  }
-
-  /* ---------- Pins: go to the tray (or open the print with the lights on) ---------- */
-  pins.forEach(function (p, i) {
-    var b = p.querySelector(".pin__print");
-    if (!b) return;
-    b.addEventListener("click", function () {
-      if (lightsOn()) { openLoupe(i, b); return; }
-      trays[i].scrollIntoView({ behavior: still() ? "auto" : "smooth", block: "center" });
-      var o = trays[i].querySelector(".print__open");
-      if (o) o.focus({ preventScroll: true });
-    });
-  });
-
-  /* ---------- The light switch ---------- */
   var toggle = document.querySelector("[data-lights-toggle]");
   var hint = toggle ? toggle.querySelector("[data-sign-hint]") : null;
   var themeMeta = document.querySelector('meta[name="theme-color"]');
   var flicker = document.querySelector(".dr-flicker");
-  var staggerSheet = document.createElement("style");
-  document.head.appendChild(staggerSheet);
-  var switching = false;
-
-  function setLights(on) {
+  function setLightsAttr(on) {
     body.setAttribute("data-lights", on ? "on" : "safe");
     if (hint) hint.textContent = on ? "Safelight" : "Lights on";
     if (themeMeta) themeMeta.setAttribute("content", on ? "#a3a4a0" : "#170605");
-    settleAll();
-    if (flicker) flicker.classList.remove("is-on");
-    window.scrollTo(0, 0);
-    sag();
   }
 
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      if (switching) return;
-      var on = !lightsOn();
-      // Start fetching every print now so the bench is full when the light comes up.
-      trays.forEach(function (t) {
-        var im = t.querySelector(".print__img");
-        if (im && im.loading === "lazy") im.loading = "eager";
+  /* ================= The flat darkroom ================= */
+  function initFlat() {
+    var line = document.querySelector(".dr-line");
+    var pinList = line ? line.querySelector(".dr-line__pins") : null;
+    var pins = pinList ? Array.prototype.slice.call(pinList.children) : [];
+    var agitate = document.getElementById("agitate-run");
+
+    /* ---------- The drying line sags: hang each pin on the curve ---------- */
+    // The wire is the quadratic M0 8 Q500 34 1000 8 drawn 40 px tall, so at a
+    // fraction f along it the wire sits 52 f (1 - f) px below its ends.
+    var sagQueued = false;
+    // Size the clothespinned prints so every one fits on the visible line.
+    function fitPins() {
+      if (!pinList || !pins.length) return;
+      var cs = getComputedStyle(pinList);
+      var avail = pinList.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (avail <= 0) return;
+      var gap = parseFloat(cs.columnGap) || 0;
+      var sum = 0;
+      pins.forEach(function (p) { sum += parseFloat(p.style.getPropertyValue("--ar")) || 1; });
+      var h = (avail - pins.length * 6 - (pins.length - 1) * gap - 2) / sum;
+      line.style.setProperty("--pin-fit", Math.max(16, Math.floor(h)) + "px");
+      line.classList.toggle("is-crowded", h < 16);
+    }
+    function sag() {
+      sagQueued = false;
+      if (!line) return;
+      fitPins();
+      var lr = line.getBoundingClientRect();
+      if (!lr.width) return;
+      pins.forEach(function (p) {
+        var r = p.getBoundingClientRect();
+        var f = Math.min(1, Math.max(0, (r.left + r.width / 2 - lr.left) / lr.width));
+        p.style.setProperty("--sag", (52 * f * (1 - f)).toFixed(1) + "px");
       });
-      if (still()) { setLights(on); return; }
+    }
+    function queueSag() {
+      if (sagQueued) return;
+      sagQueued = true;
+      requestAnimationFrame(sag);
+    }
+    sag();
+    window.addEventListener("resize", queueSag);
+    if (pinList) pinList.addEventListener("scroll", queueSag, { passive: true });
 
-      switching = true;
-      function go() {
-        if (!document.startViewTransition) {
-          setLights(on);
-          switching = false;
-          return;
+    /* ---------- Developing ---------- */
+    function whenLoaded(img, cb) {
+      if (!img || (img.complete && img.naturalWidth)) { cb(); return; }
+      var done = false;
+      function go() { if (!done) { done = true; cb(); } }
+      img.addEventListener("load", go);
+      img.addEventListener("error", go);
+      if (img.loading === "lazy") img.loading = "eager";
+    }
+
+    function setTimer(t, s) {
+      var el = t.querySelector("[data-timer]");
+      if (el) el.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+    }
+    function runTimer(t) {
+      var start = null;
+      function f(now) {
+        if (start === null) start = now;
+        var p = Math.min(1, (now - start) / DEV_MS);
+        setTimer(t, Math.round(p * DEV_SHOWN));
+        if (p < 1 && t.classList.contains("is-developing")) requestAnimationFrame(f);
+        else setTimer(t, DEV_SHOWN);
+      }
+      requestAnimationFrame(f);
+    }
+
+    function finish(t, fly) {
+      if (t.classList.contains("is-developed")) return;
+      t.classList.remove("is-developing");
+      t.classList.add("is-developed");
+      setTimer(t, DEV_SHOWN);
+      hang(+t.getAttribute("data-index"), fly);
+    }
+
+    function develop(t) {
+      if (t._dev) return;
+      t._dev = true;
+      var img = t.querySelector(".print__img");
+      whenLoaded(img, function () {
+        if (t.classList.contains("is-developed")) return;
+        if (still() || lightsOn()) { finish(t, false); return; }
+        // A beat of blank paper in the tray before the image starts to come up.
+        setTimeout(function () { if (!t.classList.contains("is-developed")) start(t, img); }, 450);
+      });
+    }
+
+    function start(t, img) {
+      t.classList.add("is-developing");
+      if (fine.matches && agitate && agitate.beginElement) {
+        try { agitate.beginElement(); } catch (e) {}
+      }
+      runTimer(t);
+      var over = false;
+      function end() { if (!over) { over = true; finish(t, true); } }
+      img.addEventListener("animationend", function h(e) {
+        if (e.animationName === "develop") { img.removeEventListener("animationend", h); end(); }
+      });
+      setTimeout(end, DEV_MS + 900);
+    }
+
+    /* ---------- Hanging on the line ---------- */
+    function revealPin(pin) {
+      pin.classList.add("has-print");
+      var b = pin.querySelector(".pin__print");
+      if (b) b.tabIndex = 0;
+    }
+
+    function hang(i, fly) {
+      var pin = pins[i];
+      if (!pin || pin.classList.contains("has-print")) return;
+      var target = pin.querySelector(".pin__print");
+      var print = trays[i].querySelector(".print");
+      if (!fly || still() || lightsOn() || !target || !print || !target.animate) { revealPin(pin); return; }
+
+      // Bring the pin into the visible part of the line first.
+      if (pinList && pinList.scrollWidth > pinList.clientWidth) {
+        var pl = pinList.getBoundingClientRect(), pr = pin.getBoundingClientRect();
+        if (pr.left < pl.left || pr.right > pl.right) {
+          pinList.scrollLeft += pr.left - pl.left - (pl.width - pr.width) / 2;
+          sag();
         }
-        // Prints leave their trays one after another.
-        var css = "";
-        trays.forEach(function (t, i) {
-          css += "::view-transition-group(print-" + (i + 1) + "){animation-delay:" + Math.min(i * 45, 540) + "ms}";
+      }
+
+      var from = print.getBoundingClientRect();
+      var to = target.getBoundingClientRect();
+      if (!to.width || !from.width || from.bottom < 0 || from.top > window.innerHeight) { revealPin(pin); return; }
+
+      var flyer = document.createElement("div");
+      flyer.className = "flyer";
+      flyer.setAttribute("aria-hidden", "true");
+      var im = target.querySelector("img").cloneNode(false);
+      im.removeAttribute("loading");
+      im.alt = "";
+      flyer.appendChild(im);
+      flyer.style.width = to.width + "px";
+      flyer.style.height = to.height + "px";
+      body.appendChild(flyer);
+
+      var sx = from.width / to.width, sy = from.height / to.height;
+      function at(x, y, scx, scy, rot) {
+        return "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) scale(" + scx.toFixed(4) + "," + scy.toFixed(4) + ") rotate(" + rot + "deg)";
+      }
+      // Peel up out of the tray, arc towards the pin, overshoot, settle.
+      var midS = Math.sqrt(sx), midSy = Math.sqrt(sy);
+      var mx = from.left + (to.left - from.left) * 0.55 - 30;
+      var my = Math.min(from.top, to.top) + (from.top - to.top) * 0.25 - 40;
+      var anim = flyer.animate([
+        { transform: at(from.left, from.top, sx, sy, 0), opacity: 1 },
+        { transform: at(from.left - from.width * 0.012, from.top - 14, sx * 1.025, sy * 1.025, -1.5), offset: 0.14 },
+        { transform: at(mx, my, midS, midSy, -9), offset: 0.55 },
+        { transform: at(to.left, to.top + 6, 1, 1, 7), offset: 0.88 },
+        { transform: at(to.left, to.top, 1, 1, 0) }
+      ], { duration: 1150, easing: "cubic-bezier(.45,0,.2,1)" });
+      var landed = false;
+      function land() {
+        if (landed) return;
+        landed = true;
+        flyer.remove();
+        revealPin(pin);
+        pin.classList.add("is-swinging");
+        setTimeout(function () { pin.classList.remove("is-swinging"); }, 2000);
+      }
+      anim.onfinish = land;
+      anim.oncancel = land;
+    }
+
+    /* ---------- Reaching a tray develops it ---------- */
+    var io = null;
+    function settleAll() {
+      trays.forEach(function (t) {
+        t._dev = true;
+        t.classList.remove("is-developing");
+        t.classList.add("is-developed");
+        setTimer(t, DEV_SHOWN);
+      });
+      pins.forEach(revealPin);
+      if (io) { io.disconnect(); io = null; }
+    }
+
+    if (still() || !("IntersectionObserver" in window)) {
+      settleAll();
+    } else {
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var t = e.target.closest(".tray");
+          if (io) io.unobserve(e.target);
+          if (document.hidden) {
+            document.addEventListener("visibilitychange", function v() {
+              if (document.hidden) return;
+              document.removeEventListener("visibilitychange", v);
+              develop(t);
+            });
+          } else {
+            develop(t);
+          }
         });
-        staggerSheet.textContent = css;
-        var vt = document.startViewTransition(function () { setLights(on); });
-        var clear = function () { staggerSheet.textContent = ""; switching = false; };
-        vt.finished.then(clear, clear);
-      }
-      if (on && flicker) {
-        flicker.classList.add("is-on");
-        setTimeout(go, 560);
-      } else {
-        go();
-      }
+      }, { threshold: 0.45 });
+      trays.forEach(function (t) { io.observe(t.querySelector(".print")); });
+    }
+    if (reduce.addEventListener) {
+      reduce.addEventListener("change", function () { if (still()) settleAll(); });
+    }
+
+    /* ---------- Pins: go to the tray (or open the print with the lights on) ---------- */
+    pins.forEach(function (p, i) {
+      var b = p.querySelector(".pin__print");
+      if (!b) return;
+      b.addEventListener("click", function () {
+        if (lightsOn()) { openLoupe(i, b); return; }
+        trays[i].scrollIntoView({ behavior: still() ? "auto" : "smooth", block: "center" });
+        var o = trays[i].querySelector(".print__open");
+        if (o) o.focus({ preventScroll: true });
+      });
     });
+
+    /* ---------- The light switch ---------- */
+    var staggerSheet = document.createElement("style");
+    document.head.appendChild(staggerSheet);
+    var switching = false;
+
+    function setLights(on) {
+      setLightsAttr(on);
+      settleAll();
+      if (flicker) flicker.classList.remove("is-on");
+      window.scrollTo(0, 0);
+      sag();
+    }
+
+    mode = {
+      toggle: function () {
+        if (switching) return;
+        var on = !lightsOn();
+        // Start fetching every print now so the bench is full when the light comes up.
+        trays.forEach(function (t) {
+          var im = t.querySelector(".print__img");
+          if (im && im.loading === "lazy") im.loading = "eager";
+        });
+        if (still()) { setLights(on); return; }
+
+        switching = true;
+        function go() {
+          if (!document.startViewTransition) {
+            setLights(on);
+            switching = false;
+            return;
+          }
+          // Prints leave their trays one after another.
+          var css = "";
+          trays.forEach(function (t, i) {
+            css += "::view-transition-group(print-" + (i + 1) + "){animation-delay:" + Math.min(i * 45, 540) + "ms}";
+          });
+          staggerSheet.textContent = css;
+          var vt = document.startViewTransition(function () { setLights(on); });
+          var clear = function () { staggerSheet.textContent = ""; switching = false; };
+          vt.finished.then(clear, clear);
+        }
+        if (on && flicker) {
+          flicker.classList.add("is-on");
+          setTimeout(go, 560);
+        } else {
+          go();
+        }
+      },
+      afterLoupe: function (i) {
+        var t = trays[i];
+        if (!lightsOn()) t.scrollIntoView({ block: "center" });
+        var o = t.querySelector(".print__open");
+        if (o) o.focus({ preventScroll: true });
+      }
+    };
   }
 
-  /* ---------- The loupe ---------- */
+  /* ---------- The loupe (both darkrooms) ---------- */
   var dialog = document.querySelector(".loupe");
   var openLoupe = function () {};
   if (dialog && typeof dialog.showModal === "function") {
@@ -357,15 +385,16 @@
       });
     };
 
-    openLoupe = function (i, from) {
+    openLoupe = function (i, from, focusBack) {
       index = openedAt = i;
-      opener = from;
+      opener = focusBack || (from && from.focus ? from : null);
       closing = false;
       fill(i);
       dialog.showModal();
       if (still() || !lImg.animate) return;
-      var srcEl = (from && from.querySelector("img")) || from;
-      var r0 = srcEl ? srcEl.getBoundingClientRect() : null;
+      var r0 = null;
+      if (from && from.getBoundingClientRect) r0 = ((from.querySelector && from.querySelector("img")) || from).getBoundingClientRect();
+      else if (from && from.width) r0 = from;
       lImg.style.opacity = "0";
       requestAnimationFrame(function () {
         lImg.style.opacity = "";
@@ -445,14 +474,158 @@
     dialog.addEventListener("close", function () {
       closing = false;
       // If you browsed to another print, come back to its tray.
-      if (index !== openedAt) {
-        var t = trays[index];
-        if (!lightsOn()) t.scrollIntoView({ block: "center" });
-        var o = t.querySelector(".print__open");
-        if (o) o.focus({ preventScroll: true });
+      if (index !== openedAt && mode && mode.afterLoupe) {
+        mode.afterLoupe(index);
       } else if (opener && opener.focus) {
         opener.focus({ preventScroll: true });
       }
     });
+  }
+
+  /* ================= The 3D darkroom ================= */
+  function init3D(m) {
+    var stage = stageWrap.querySelector(".dr-stage");
+    var canvas = stage.querySelector(".dr-canvas");
+    var hudTape = stage.querySelector(".dr-hud__tape");
+    var hudTimer = stage.querySelector("[data-hud-timer]");
+    var hudCount = stage.querySelector("[data-hud-count]");
+    var hudHint = stage.querySelector("[data-hud-hint]");
+    var lookBtn = stage.querySelector('[data-hud="look"]');
+    var N = trays.length;
+    var photos = trays.map(function (t) {
+      return {
+        full: t.getAttribute("data-full"),
+        thumb: t.getAttribute("data-thumb"),
+        ar: parseFloat(t.style.getPropertyValue("--ar")) || 1.5
+      };
+    });
+    var shownIdx = -1, wanted = 0;
+    function fmt(s) { return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+    function showTape(i) {
+      var tape = trays[i].querySelector(".tape");
+      var html = tape ? tape.innerHTML : "";
+      if (still() || !hudTape.animate || !hudTape.innerHTML) { hudTape.innerHTML = html; return; }
+      var out = hudTape.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(.6rem)" }],
+        { duration: 160, easing: "ease-in", fill: "forwards" });
+      out.onfinish = function () {
+        hudTape.innerHTML = html;
+        out.cancel();
+        // A fresh strip of tape, pressed on.
+        hudTape.animate([{ opacity: 0, transform: "translateY(-.5rem) rotate(-4deg) scale(1.04)" }, { opacity: 1, transform: "none" }],
+          { duration: 460, easing: "cubic-bezier(.2,.8,.2,1)" });
+      };
+    }
+
+    var ctrl = m.start({
+      canvas: canvas,
+      stage: stage,
+      photos: photos,
+      reduce: still(),
+      onState: function (s) {
+        if (s.index >= 0 && s.index !== shownIdx) {
+          shownIdx = s.index;
+          showTape(s.index);
+          hudCount.textContent = (s.index + 1) + " / " + N;
+        }
+        hudTimer.textContent = fmt(s.seconds || 0);
+      },
+      onPick: function (i, rect) { openLoupe(i, rect, lookBtn); }
+    });
+
+    // Scrolling moves through the prints: one step of the page per print.
+    var wrapTop = 0, stepPx = 1, queued = false;
+    function measure() {
+      wrapTop = stageWrap.getBoundingClientRect().top + window.pageYOffset;
+      stepPx = N > 1 ? Math.max(1, (stageWrap.offsetHeight - window.innerHeight) / (N - 1)) : 1;
+    }
+    function indexFromScroll() {
+      if (N < 2) return 0;
+      return Math.max(0, Math.min(N - 1, Math.round((window.pageYOffset - wrapTop) / stepPx)));
+    }
+    function onScroll() {
+      queued = false;
+      if (lit) return;
+      var i = indexFromScroll();
+      if (i !== wanted) { wanted = i; ctrl.setIndex(i); }
+      if (window.pageYOffset - wrapTop > stepPx * 0.25) hudHint.classList.add("is-gone");
+    }
+    window.addEventListener("scroll", function () {
+      if (!queued) { queued = true; requestAnimationFrame(onScroll); }
+    }, { passive: true });
+    window.addEventListener("resize", measure);
+    measure();
+    wanted = indexFromScroll();
+    if (wanted > 0) ctrl.setIndex(wanted);
+
+    function go(i) {
+      i = Math.max(0, Math.min(N - 1, i));
+      window.scrollTo({ top: wrapTop + i * stepPx + 1, behavior: still() ? "auto" : "smooth" });
+    }
+    stage.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-hud]");
+      if (!b) return;
+      var a = b.getAttribute("data-hud");
+      if (a === "prev") go(wanted - 1);
+      else if (a === "next") go(wanted + 1);
+      else if (a === "look" && shownIdx >= 0) openLoupe(shownIdx, ctrl.rectFor(shownIdx), lookBtn);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (lightsOn() || (dialog && dialog.open) || e.altKey || e.ctrlKey || e.metaKey) return;
+      var tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      var r = stage.getBoundingClientRect();
+      if (r.bottom < 120 || r.top > 120) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); go(wanted + 1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(wanted - 1); }
+    });
+
+    // Nothing to draw behind the loupe.
+    if (dialog) {
+      new MutationObserver(function () { ctrl.setPaused(dialog.open); }).observe(dialog, { attributes: true, attributeFilter: ["open"] });
+    }
+
+    var lit = false;
+    mode = {
+      toggle: function () {
+        lit = !lit;
+        var on = lit;
+        // The page's colours follow once the room light has actually changed.
+        setTimeout(function () { setLightsAttr(on); }, on && !still() ? 380 : 0);
+        ctrl.setLights(on).then(function () {
+          if (!on) { wanted = indexFromScroll(); ctrl.setIndex(wanted); }
+        });
+      },
+      afterLoupe: function (i) {
+        if (!lightsOn()) go(i);
+        if (lookBtn) lookBtn.focus({ preventScroll: true });
+      }
+    };
+  }
+
+  /* ---------- Start ---------- */
+  if (toggle) toggle.addEventListener("click", function () { if (mode) mode.toggle(); });
+  function fallBack(err) {
+    if (err && window.console) console.warn("Darkroom: 3D scene unavailable, using the flat darkroom.", err);
+    root.classList.remove("has-3d");
+    if (stageWrap) stageWrap.hidden = true;
+    root.classList.add("dr-ready");
+    initFlat();
+  }
+  if (want3d) {
+    root.classList.add("has-3d");
+    root.classList.remove("dr-ready");
+    stageWrap.hidden = false;
+    var url = new URL("darkroom3d.js", scriptSrc).href;
+    // Through Function so that older parsers never see the import() syntax.
+    var load;
+    try { load = new Function("u", "return import(u)"); } catch (e) { load = null; }
+    if (!load) { fallBack(); }
+    else {
+      load(url).then(function (m) {
+        try { init3D(m); } catch (err) { fallBack(err); }
+      }, fallBack);
+    }
+  } else {
+    initFlat();
   }
 })();

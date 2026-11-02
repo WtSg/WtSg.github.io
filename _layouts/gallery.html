@@ -23,6 +23,7 @@
   <link rel="preload" href="{{ base }}/assets/fonts/barlow-condensed-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ base }}/assets/fonts/permanent-marker-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ base }}/assets/css/darkroom.css">
+  <script type="importmap">{"imports": {"three": "{{ base }}/assets/three/three.module.min.js", "three/addons/": "{{ base }}/assets/three/addons/"}}</script>
 
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
@@ -85,11 +86,29 @@
 
   <main id="main" class="dr-room">
     {%- if photos and photos.size > 0 %}
+    <!-- The 3D darkroom (darkroom3d.js); shown only where WebGL works -->
+    <div class="dr-stage-wrap" style="--n: {{ photos.size }}" hidden>
+      <div class="dr-stage">
+        <canvas class="dr-canvas" aria-hidden="true"></canvas>
+        <div class="dr-hud">
+          <div class="dr-hud__tape tape" aria-live="polite"></div>
+          <p class="dr-hud__timer" aria-hidden="true">Dev <b data-hud-timer>0:00</b></p>
+          <div class="dr-hud__nav">
+            <button class="dr-hud__btn" type="button" data-hud="prev" aria-label="Previous print"><span aria-hidden="true">←</span></button>
+            <span class="dr-hud__count" data-hud-count>1 / {{ photos.size }}</span>
+            <button class="dr-hud__btn" type="button" data-hud="next" aria-label="Next print"><span aria-hidden="true">→</span></button>
+            <button class="dr-hud__btn dr-hud__btn--look" type="button" data-hud="look">Look closely</button>
+          </div>
+          <p class="dr-hud__hint" data-hud-hint>Scroll to develop the next print</p>
+        </div>
+      </div>
+    </div>
+
     <div class="dr-trays">
       {%- for ph in photos %}
       {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}{% assign ex = ph.exif %}
       {%- assign ar = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
-      <article class="tray" id="p-{{ ph.id }}" data-index="{{ forloop.index0 }}" data-full="{{ base }}{{ ph.src }}" style="--ar: {{ ar }}">
+      <article class="tray" id="p-{{ ph.id }}" data-index="{{ forloop.index0 }}" data-full="{{ base }}{{ ph.src }}" data-thumb="{{ base }}{{ ph.thumb }}" style="--ar: {{ ar }}">
         <div class="tray__basin">
           <span class="tray__timer" aria-hidden="true">Dev <b data-timer>0:00</b></span>
           <div class="print" style="view-transition-name: print-{{ forloop.index }}">

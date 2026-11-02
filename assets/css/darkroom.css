@@ -807,6 +807,132 @@ body[data-lights="on"] .dr-bench {
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(.8rem); } }
 
+/* ---------- The 3D darkroom (where WebGL works) ---------- */
+.dr-stage-wrap {
+  --step: 72svh;
+  position: relative;
+  height: calc(100vh + (var(--n) - 1) * 72vh);
+  height: calc(100svh + (var(--n) - 1) * var(--step));
+}
+.dr-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: #070202;
+}
+.dr-canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+
+.has-3d .dr-trays,
+.has-3d .dr-bench { display: none; }
+.has-3d .dr-head {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.has-3d .dr-head a { pointer-events: auto; }
+.has-3d .dr-bar {
+  position: fixed;
+  inset: 0 0 auto auto;
+  height: auto;
+  background: none;
+  pointer-events: none;
+}
+.has-3d .dr-line { display: none; }
+.has-3d .dr-sign { pointer-events: auto; margin-top: 1.05rem; }
+.has-3d .dr-foot { position: relative; background: var(--room); }
+/* Over the lit 3D room the wall stays mid-grey, so the header keeps light ink. */
+.has-3d body[data-lights="on"] .dr-head,
+.has-3d body[data-lights="on"] .dr-sign__switch { --text: #f6f3ee; --muted: #e6e1da; color: var(--muted); }
+.has-3d .dr-head, .has-3d .dr-sign__switch { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+
+.dr-hud { position: absolute; inset: 0; pointer-events: none; }
+.dr-hud > * { pointer-events: auto; }
+.dr-hud__tape {
+  position: absolute;
+  left: var(--gut);
+  bottom: calc(var(--gut) + .2rem);
+  margin: 0;
+  max-width: min(30rem, calc(100% - 2 * var(--gut) - 17rem));
+}
+.dr-hud__tape:empty { display: none; }
+.dr-hud__timer {
+  position: absolute;
+  right: var(--gut);
+  bottom: calc(var(--gut) + 3.6rem);
+  margin: 0;
+  font: 500 .78rem/1 var(--label);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dr-hud__timer b { margin-left: .3em; font-weight: 700; color: var(--text); }
+.dr-hud__nav {
+  position: absolute;
+  right: var(--gut);
+  bottom: var(--gut);
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.dr-hud__btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: .5rem .8rem;
+  border: 1.5px solid rgba(242, 215, 208, .55);
+  border-radius: .25rem;
+  background: rgba(12, 3, 2, .55);
+  color: var(--text);
+  font: 700 .85rem/1 var(--label);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.dr-hud__btn:hover { border-color: var(--text); background: rgba(40, 8, 5, .7); }
+.dr-hud__count {
+  min-width: 3.2rem;
+  text-align: center;
+  font: 500 .85rem/1 var(--label);
+  letter-spacing: .1em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dr-hud__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--gut) + 4.4rem);
+  margin: 0;
+  translate: -50% 0;
+  font: 500 .8rem/1 var(--label);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: opacity .6s, translate .6s;
+}
+.dr-hud__hint::after {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 1.6rem;
+  margin: .6rem auto 0;
+  background: linear-gradient(currentColor, transparent);
+}
+.dr-hud__hint.is-gone { opacity: 0; translate: -50% .6rem; pointer-events: none; }
+body[data-lights="on"] .dr-hud > * { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
+@media (prefers-reduced-motion: no-preference) {
+  .dr-hud__hint:not(.is-gone)::after { animation: drip 1.8s ease-in-out infinite; }
+}
+@keyframes drip {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  50%  { transform: scaleY(1); transform-origin: top; }
+  51%  { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
 /* ---------- Footer ---------- */
 .dr-foot {
   display: flex;
@@ -841,6 +967,11 @@ body[data-lights="on"] .dr-bench {
   .dr-sign__switch { font-size: 0; gap: 0; }
   .dr-add { display: none; }
   .dr-bench__tray { font-size: .62rem; letter-spacing: .06em; }
+  .dr-stage-wrap { --step: 62svh; }
+  .dr-hud__tape { max-width: calc(100% - 2 * var(--gut)); bottom: calc(var(--gut) + 3.6rem); }
+  .dr-hud__btn--look { display: none; }
+  .dr-hud__timer { bottom: auto; top: 4.6rem; right: var(--gut); }
+  .dr-hud__hint { bottom: calc(var(--gut) + 9.4rem); }
   .tray { min-height: 72svh; padding-top: 2.2rem; }
   .tray:first-child { min-height: 0; align-content: start; padding-top: 1.6rem; }
   .loupe[open] {
