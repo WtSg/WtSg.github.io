@@ -65,6 +65,7 @@
     pins.forEach(function (p) { sum += parseFloat(p.style.getPropertyValue("--ar")) || 1; });
     var h = (avail - pins.length * 6 - (pins.length - 1) * gap - 2) / sum;
     line.style.setProperty("--pin-fit", Math.max(16, Math.floor(h)) + "px");
+    line.classList.toggle("is-crowded", h < 16);
   }
   function sag() {
     sagQueued = false;

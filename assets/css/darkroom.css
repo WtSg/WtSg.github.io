@@ -267,10 +267,10 @@ body[data-lights="on"] .dr-sign__switch::before {
   margin: 0;
   padding: 0 .5rem 0 var(--gut);
   list-style: none;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
+  overflow: visible;
 }
+/* Past about 30 prints on a phone the pins stop shrinking and the line scrolls. */
+.dr-line.is-crowded .dr-line__pins { overflow-x: auto; scrollbar-width: thin; }
 .pin {
   --sag: 0px;
   position: relative;
@@ -489,8 +489,13 @@ body[data-lights="on"] .dr-sign__switch::before {
     animation: sheen var(--dev) cubic-bezier(.3, .2, .2, 1) both;
   }
   /* Ripples through the developer on precise pointers; a gentle rock on touch. */
+  /* The displaced layer is scaled past its clip by more than the ripple can
+     shift, so the photograph's edge stays square against the paper. */
   @media (hover: hover) and (pointer: fine) {
-    .tray.is-developing .print__liquid { filter: url(#agitate); }
+    .tray.is-developing .print__liquid {
+      filter: url(#agitate);
+      animation: under-liquid var(--dev) linear both;
+    }
   }
   @media (pointer: coarse) {
     .tray.is-developing .print { animation: slosh var(--dev) ease-out both; }
@@ -504,6 +509,13 @@ body[data-lights="on"] .dr-sign__switch::before {
   30%  { filter: contrast(.62) brightness(1.75) saturate(0); }
   62%  { filter: contrast(.98) brightness(1.16) saturate(.45); }
   100% { filter: contrast(1) brightness(1) saturate(1); }
+}
+/* Tracks the ripple strength in the SVG filter (scale 22, 12, 5, 0). */
+@keyframes under-liquid {
+  0%   { transform: scale(1.065); }
+  40%  { transform: scale(1.036); }
+  75%  { transform: scale(1.016); }
+  100% { transform: none; }
 }
 @keyframes settle {
   0%   { transform: scale(.975) translateY(.25rem); }
@@ -656,20 +668,24 @@ body[data-lights="on"] .dr-bench {
   gap: clamp(.8rem, 3vw, 2.4rem);
   padding: 1.6rem var(--gut) 2.6rem;
 }
+/* Deep plastic tubs: a thick rim with a lit lip, inner walls in shadow, and
+   a flat pool of chemistry sitting below the rim. */
 .dr-bench__tray {
   display: grid;
   place-items: end center;
   width: clamp(5.5rem, 15vw, 11rem);
   aspect-ratio: 4 / 3;
   box-sizing: border-box;
-  padding-bottom: .55rem;
-  border: .45rem solid var(--rim);
-  border-top-color: var(--rim-hi);
-  border-radius: .8rem;
-  background:
-    linear-gradient(118deg, transparent 18%, rgba(255, 255, 255, .28) 28%, rgba(255, 255, 255, .06) 36%, transparent 44%),
-    var(--liquid);
-  box-shadow: inset 0 .5rem 1rem rgba(0, 0, 0, .22), 0 1rem 1.6rem -1rem rgba(0, 0, 0, .55);
+  padding-bottom: .85rem;
+  border: .6rem solid #4a4b47;
+  border-top-color: #8e8f8b;
+  border-bottom-color: #3c3d3a;
+  border-radius: .9rem;
+  background: #8f9894;
+  box-shadow:
+    inset 0 0 0 .4rem #686965,
+    inset 0 1.1rem 1rem -.5rem rgba(0, 0, 0, .4),
+    0 1rem 1.6rem -1rem rgba(0, 0, 0, .55);
   font: 700 .78rem/1 var(--label);
   letter-spacing: .16em;
   text-transform: uppercase;
