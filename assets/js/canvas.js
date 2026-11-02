@@ -734,7 +734,8 @@
 
   /* ---------- The close-up: the same LED readout, under the photograph ---------- */
   var glLed = document.querySelector(".gl__led"), glRoll = 0;
-  G.onFill = function (i) {
+  // stepping: the readout just changes; the lamp test and the rolling digits are for the opening
+  G.onFill = function (i, p0, stepping) {
     if (!glLed) return;
     var v = ledText(photos[i]);
     var cells = [["f", "<em>F</em>", ""], ["s", "<em>" + v.sl + "</em>", ""], ["iso", "<em>ISO</em>", ""], ["mm", "", "<em>MM</em>"]]
@@ -747,7 +748,7 @@
     var bs = Array.prototype.slice.call(glLed.querySelectorAll("b[data-k]"));
     var put = function (b, t) { b.textContent = t; b.setAttribute("data-off", t.replace(/\d/g, "8")); };
     clearInterval(glRoll);
-    if (still()) { bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")]); }); return; }
+    if (still() || stepping) { bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")]); }); return; }
     // every segment lit for a moment, then the digits roll and settle
     var ticks = 0;
     bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")].replace(/\d/g, "8")); });
