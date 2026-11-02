@@ -97,8 +97,8 @@
 
   function explain(err, action) {
     var s = err && err.status;
-    if (err && err.readOnly) return "This token can only read. On GitHub, edit the token: under Repository access choose Only select repositories and pick WtSg/WtSg.github.io, then under Permissions add Contents and set it to Read and write. Save, then connect again.";
-    if (s === 401) return "GitHub didn't accept the token. Check that it was copied in full and hasn't expired, then connect again.";
+    if (err && err.readOnly) return "This token can only read. On GitHub, edit the token: under Repository access choose Only select repositories and pick WtSg/WtSg.github.io, then under Permissions add Contents and set it to Read and write. Save, then sign in again.";
+    if (s === 401) return "That password didn't work. Check it was pasted in full and hasn't expired, then try again.";
     if (s === 403 || s === 404) return "The token can't " + action + " WtSg/WtSg.github.io. On GitHub, edit the token: Repository access → Only select repositories → WtSg/WtSg.github.io, and Permissions → Contents → Read and write.";
     if (s === 409 || s === 422) return "The site changed while publishing. Press the button again.";
     if (err instanceof TypeError) return "Couldn't reach GitHub. Check your internet connection and try again.";
@@ -440,6 +440,24 @@
     processPending();
   }
 
+  // A file's camera details and HDR flag: from its head, or its tail where a format keeps EXIF at the end.
+  function readFileExif(f) {
+    var HEAD = 524288, TAIL = 1048576;
+    return f.slice(0, HEAD).arrayBuffer().then(function (buf) {
+      var x = readExifInfo(buf), hdr = detectHdr(buf);
+      if (x.found || f.size <= HEAD) return { exif: x, hdr: hdr };
+      return f.slice(Math.max(HEAD, f.size - TAIL)).arrayBuffer().then(function (tail) {
+        return { exif: readExifInfo(tail), hdr: hdr };
+      });
+    }).catch(function () { return { exif: readExifInfo(new ArrayBuffer(0)), hdr: false }; });
+  }
+  function exifOf(x) {
+    return x.summary ? { camera: x.camera, lens: x.lens, focal: x.focal, aperture: x.aperture, shutter: x.shutter, iso: x.iso } : null;
+  }
+  function exifLine(e) {
+    return e ? [e.camera, e.lens, e.focal, e.aperture, e.shutter, e.iso].filter(Boolean).join(" · ") : "";
+  }
+
   // Prepare one photo at a time to keep memory low with large originals.
   var processing = false;
   function processPending() {
@@ -448,18 +466,11 @@
     if (!item) return;
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
-    var HEAD = 524288, TAIL = 1048576, f = item.file;
-    var headP = f.slice(0, HEAD).arrayBuffer().then(function (buf) {
-      var x = readExifInfo(buf), hdr = detectHdr(buf);
-      if (x.found || f.size <= HEAD) return { exif: x, hdr: hdr };
-      return f.slice(Math.max(HEAD, f.size - TAIL)).arrayBuffer().then(function (tail) {
-        return { exif: readExifInfo(tail), hdr: hdr };
-      });
-    }).catch(function () { return { exif: readExifInfo(new ArrayBuffer(0)), hdr: false }; });
+    var headP = readFileExif(item.file);
     Promise.all([prepare(item), headP]).then(function (r) {
       var x = r[1].exif;
       if (!item.year && x.year) item.year = x.year;
-      item.exif = x.summary ? { camera: x.camera, lens: x.lens, focal: x.focal, aperture: x.aperture, shutter: x.shutter, iso: x.iso } : null;
+      item.exif = exifOf(x);
       item.camera = x.summary;
       item.hdr = r[1].hdr;
       item.status = "ready";
@@ -545,7 +556,7 @@
     var waiting = queue.filter(function (q) { return q.status === "preparing"; }).length;
     publishBtn.disabled = busy || !token || !ready || waiting > 0;
     publishBtn.textContent = ready ? "Publish " + ready + " photo" + (ready === 1 ? "" : "s") : "Publish";
-    if (!token && ready) setStatus(publishStatus, "Connect to GitHub (step 1) to publish.");
+    if (!token && ready) setStatus(publishStatus, "Sign in (step 1) to publish.");
     else if (waiting) setStatus(publishStatus, "Preparing " + waiting + " photo" + (waiting === 1 ? "" : "s") + "…");
     else if (publishStatus.getAttribute("data-kind") !== "done" && publishStatus.getAttribute("data-kind") !== "error") setStatus(publishStatus, "");
   }
@@ -654,10 +665,51 @@
     });
   }
 
+  // Camera details for a photo already published (one added before the studio read them):
+  // its original is read here, on this device; only the details go into the gallery list.
+  function addCameraDetails(entry, li, file) {
+    if (busy) return;
+    busy = true; updatePublish();
+    li.classList.add("is-busy");
+    setStatus(publishStatus, "Reading the camera details…");
+    var details = null, year = "", next = null;
+    readFileExif(file).then(function (r) {
+      details = exifOf(r.exif);
+      year = r.exif.year || "";
+      if (!details) {
+        var e0 = new Error("no camera details"); e0.noDetails = true; throw e0;
+      }
+      setStatus(publishStatus, "Saving the camera details…");
+      return commitChanges("Add camera details to a photo", function () {
+        return fetchGallery().then(function (g) {
+          next = g.entries.map(function (e) {
+            if (e.id !== entry.id) return e;
+            var u = Object.assign({}, e, { exif: details });
+            if (!/^\d{4}$/.test(u.year || "") && /^\d{4}$/.test(year)) u.year = year;
+            return u;
+          });
+          return [{ path: DATA_PATH, mode: "100644", type: "blob", content: serializeGallery(g.header, next) }];
+        });
+      });
+    }).then(function () {
+      busy = false;
+      published = next;
+      renderPublished();
+      setStatus(publishStatus, "Camera details added: " + exifLine(details) + ". Your gallery updates in about a minute.", "done");
+      updatePublish();
+    }).catch(function (err) {
+      busy = false;
+      li.classList.remove("is-busy");
+      if (err && err.noDetails) setStatus(publishStatus, "That file has no camera details. Choose the original from the camera or from Photos (not an exported or shared copy).", "error");
+      else setStatus(publishStatus, explain(err, "change"), "error");
+      updatePublish();
+    });
+  }
+
   function renderPublished() {
     pubList.innerHTML = "";
     pubEmpty.hidden = published.length > 0;
-    if (!published.length) pubEmpty.textContent = token ? "No photos yet. Add some above." : "Connect to see the photos already in your gallery.";
+    if (!published.length) pubEmpty.textContent = token ? "No photos yet. Add some above." : "Sign in to see the photos already in your gallery.";
     published.forEach(function (e) {
       var li = document.createElement("li");
       li.className = "pubs__item";
@@ -671,6 +723,27 @@
       var text = document.createElement("p");
       text.className = "pubs__text";
       text.textContent = (e.title || "Untitled") + (e.place || e.year ? " · " + [e.place, e.year].filter(Boolean).join(", ") : "");
+      if (e.exif) {
+        var spec = document.createElement("span");
+        spec.className = "pubs__spec";
+        spec.textContent = exifLine(e.exif);
+        text.appendChild(spec);
+      }
+      // the original, to read its camera details from
+      var pick = document.createElement("input");
+      pick.type = "file";
+      pick.accept = "image/*,.heic,.heif,.avif,.dng";
+      pick.hidden = true;
+      var cam = document.createElement("button");
+      cam.type = "button"; cam.className = "btn btn--line btn--small";
+      cam.textContent = e.exif ? "Update camera details" : "Add camera details";
+      cam.title = "Choose this photo's original; its camera, lens and settings are read on this device";
+      cam.addEventListener("click", function () { if (!busy) pick.click(); });
+      pick.addEventListener("change", function () {
+        var f = pick.files && pick.files[0];
+        pick.value = "";
+        if (f) addCameraDetails(e, li, f);
+      });
       var del = document.createElement("button");
       del.type = "button"; del.className = "btn btn--line btn--small"; del.textContent = "Delete";
       var armed = false, timer = 0;
@@ -684,7 +757,7 @@
         clearTimeout(timer);
         removePhoto(e, li);
       });
-      li.appendChild(frame); li.appendChild(text); li.appendChild(del);
+      li.appendChild(frame); li.appendChild(text); li.appendChild(cam); li.appendChild(pick); li.appendChild(del);
       pubList.appendChild(li);
     });
   }
@@ -692,7 +765,7 @@
   // ---------- connect ----------
   function connect(t, remember, quiet) {
     token = t;
-    if (!quiet) setStatus(connectStatus, "Checking the token…");
+    if (!quiet) setStatus(connectStatus, "Checking…");
     return gh(repoPath()).then(function (repo) {
       if (repo && repo.permissions && repo.permissions.push === false) {
         var e = new Error("read-only"); e.status = 403; e.readOnly = true; throw e;
@@ -708,7 +781,7 @@
       try { localStorage.setItem(OWNER_KEY, "1"); } catch (e) {}
       published = g.entries;
       connectForm.hidden = true; connectedBox.hidden = false;
-      connectedText.textContent = "Connected to " + OWNER + "/" + REPO + ".";
+      connectedText.textContent = "Signed in.";
       setStatus(connectStatus, "");
       tokenInput.value = "";
       renderPublished(); updatePublish();
@@ -722,7 +795,7 @@
 
   connectBtn.addEventListener("click", function () {
     var t = tokenInput.value.trim();
-    if (!t) { setStatus(connectStatus, "Paste your token first.", "error"); tokenInput.focus(); return; }
+    if (!t) { setStatus(connectStatus, "Enter your password first.", "error"); tokenInput.focus(); return; }
     connect(t, rememberBox.checked, false);
   });
   tokenInput.addEventListener("keydown", function (e) { if (e.key === "Enter") connectBtn.click(); });
@@ -731,7 +804,7 @@
     try { localStorage.removeItem(OWNER_KEY); } catch (e) {}
     connectForm.hidden = false; connectedBox.hidden = true;
     renderPublished(); updatePublish();
-    setStatus(connectStatus, "Disconnected. The token was removed from this browser.");
+    setStatus(connectStatus, "Signed out. The password was removed from this browser.");
   });
 
   // ---------- file input and drag-and-drop ----------

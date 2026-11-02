@@ -868,6 +868,7 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 }
 
 .pubs__text { font: 400 var(--text-sm)/1.4 var(--label); overflow-wrap: anywhere; }
+.pubs__spec { display: block; margin-top: 0.15rem; color: var(--ink-3); font: 400 var(--text-xs)/1.35 var(--label); }
 .btn.is-armed { background: #b3261e; border-color: #b3261e; color: var(--ground); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 

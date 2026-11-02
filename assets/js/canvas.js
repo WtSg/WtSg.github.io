@@ -72,15 +72,18 @@
 
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
-  var pw = 0, ph = 0, ledH = 30, capH = 16, hintH = 16, footH = 40;
+  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
   function measure() {
     vw = window.innerWidth;
     vh = window.innerHeight;
     narrow = vw < 700;
     // the long side of a photograph on the wall, fully pulled back
     Lb = clamp(Math.min(vw, vh * 1.6) * 0.21, 112, 330);
-    pw = patch.offsetWidth;
-    ph = patch.offsetHeight;
+    // the focus patch at its own size; zoomed out it shrinks with the frame lines
+    patch.style.width = patch.style.height = "";
+    pw = pw0 = patch.offsetWidth;
+    ph = ph0 = patch.offsetHeight;
+    patchK = -1;
     ledH = below.firstElementChild.offsetHeight || ledH;
     capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
@@ -349,6 +352,15 @@
     // they close round it; zoomed in, they stay and the photograph grows past them)
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
+    // the focus patch keeps its size against the frame lines (never smaller than a third)
+    var pk = Math.max(0.35, fz);
+    if (Math.abs(pk - patchK) > 0.002) {
+      patchK = pk;
+      pw = pw0 * pk;
+      ph = ph0 * pk;
+      patch.style.width = pw.toFixed(1) + "px";
+      patch.style.height = ph.toFixed(1) + "px";
+    }
     var frErr = Math.abs(fL - fr.L) + Math.abs(fS - fr.S) + Math.abs(frTo.rot - fr.rot);
     if (frErr > 0.02 || frDirty) {
       frDirty = false;
