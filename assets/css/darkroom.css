@@ -58,7 +58,7 @@
   --basin-pad: clamp(1.1rem, 3vw, 2.3rem);
   --paper-pad: clamp(.5rem, 1.3vw, .85rem);
   --chrome: calc(2 * (var(--gut) + var(--rim-w) + var(--basin-pad) + var(--paper-pad)) + 1.2rem);
-  --row: 13rem;
+  --row: 15rem;
   --hang-gap: clamp(1rem, 2.2vw, 1.8rem);
   --dev: 2.8s;
 }
@@ -672,11 +672,10 @@ body[data-lights="on"] .dr-bench {
    a flat pool of chemistry sitting below the rim. */
 .dr-bench__tray {
   display: grid;
-  place-items: end center;
+  place-items: center;
   width: clamp(5.5rem, 15vw, 11rem);
   aspect-ratio: 4 / 3;
   box-sizing: border-box;
-  padding-bottom: .85rem;
   border: .6rem solid #4a4b47;
   border-top-color: #8e8f8b;
   border-bottom-color: #3c3d3a;
@@ -839,6 +838,7 @@ body[data-lights="on"] .dr-bench {
   /* The switch glyph stays; its words remain the button's name for screen readers. */
   .dr-sign__switch { font-size: 0; gap: 0; }
   .dr-add { display: none; }
+  .dr-bench__tray { font-size: .62rem; letter-spacing: .06em; }
   .tray { min-height: 72svh; padding-top: 2.2rem; }
   .tray:first-child { min-height: 0; align-content: start; padding-top: 1.6rem; }
   .loupe[open] {
