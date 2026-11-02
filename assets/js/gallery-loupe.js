@@ -229,7 +229,6 @@
     ? "linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1)"
     : "cubic-bezier(.3, 1.12, .4, 1)";
   var home = null;   // where the photograph came from on the wall
-  var PHOTO_R = 10;  // its rounded corners (--photo-r in canvas.css): the window opens from the same shape
   function rectOf(from) {
     var r = from && from.getBoundingClientRect ? from.getBoundingClientRect() : from && from.width ? from : null;
     return r && r.width ? { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height, width: r.width, height: r.height } : null;
@@ -263,7 +262,7 @@
       if (!r0 || !r1) return;
       var D = 560;
       img.animate([{ transform: flip(r0, r1) }, { transform: "none" }], { duration: D, easing: SPRING });
-      try { dialog.animate([{ clipPath: window_(r0, PHOTO_R) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: D, easing: SPRING }); } catch (e) {}
+      try { dialog.animate([{ clipPath: window_(r0, 14) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: D, easing: SPRING }); } catch (e) {}
       if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1 }], { duration: D, easing: "ease-out" });
     });
   };
@@ -423,7 +422,7 @@
       rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: "forwards" }); });
       if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: "forwards" });
       try {
-        last = dialog.animate([{ clipPath: "inset(0px 0px 0px 0px round 0px)" }, { clipPath: window_(r0, PHOTO_R) }], { duration: D, easing: E, fill: "forwards" });
+        last = dialog.animate([{ clipPath: "inset(0px 0px 0px 0px round 0px)" }, { clipPath: window_(r0, 14) }], { duration: D, easing: E, fill: "forwards" });
         dialog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: D, easing: E, fill: "forwards", pseudoElement: "::backdrop" });
       } catch (e) {}
     }
