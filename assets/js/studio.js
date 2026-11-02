@@ -25,10 +25,16 @@
   var AUTHOR = root.getAttribute("data-author") || "";
   var API = "https://api.github.com";
   var YEAR = new Date().getFullYear();
-  var MAX_EDGE = 2000;
   var THUMB_EDGE = 900;
-  var QUALITY = 0.86;
   var THUMB_QUALITY = 0.82;
+  var SETTINGS_KEY = "gallery-studio-settings";
+  var OWNER_KEY = "gallery-studio-owner";
+  var DEFAULTS = {
+    edge: 2000, quality: 86,
+    wmOn: true, wmText: "\u00A9 " + YEAR + " " + AUTHOR, wmPos: "br", wmSize: "s", wmOpacity: 60,
+    copyright: "Copyright " + YEAR + " " + AUTHOR + ". All rights reserved.", artist: AUTHOR,
+    camera: false
+  };
   var DATA_PATH = "_data/gallery.yml";
   var IMG_DIR = "img/gallery/";
   var TOKEN_KEY = "gallery-studio-token";
@@ -42,6 +48,7 @@
   var pubList = $("pub-list"), pubEmpty = $("pub-empty");
 
   var token = null;
+  var settings = loadSettings();
   var queue = [];        // { id, file, name, title, place, year, status, full, thumb, w, h, preview }
   var published = [];    // entries parsed from gallery.yml
   var busy = false;
@@ -86,8 +93,9 @@
 
   function explain(err, action) {
     var s = err && err.status;
+    if (err && err.readOnly) return "This token can only read. On GitHub, edit the token: under Repository access choose Only select repositories and pick WtSg/WtSg.github.io, then under Permissions add Contents and set it to Read and write. Save, then connect again.";
     if (s === 401) return "GitHub didn't accept the token. Check that it was copied in full and hasn't expired, then connect again.";
-    if (s === 403 || s === 404) return "The token can't " + action + " WtSg/WtSg.github.io. Give it access to that repository with Contents set to Read and write.";
+    if (s === 403 || s === 404) return "The token can't " + action + " WtSg/WtSg.github.io. On GitHub, edit the token: Repository access → Only select repositories → WtSg/WtSg.github.io, and Permissions → Contents → Read and write.";
     if (s === 409 || s === 422) return "The site changed while publishing. Press the button again.";
     if (err instanceof TypeError) return "Couldn't reach GitHub. Check your internet connection and try again.";
     return "Something went wrong (" + (err && err.message ? err.message : "unknown error") + "). Try again.";
@@ -110,7 +118,7 @@
   var DEFAULT_HEADER = [
     "# Photography gallery, newest first.",
     "# Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.",
-    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, added.",
+    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, camera, added.",
     "# You can edit a title, place or year here by hand; keep each photo on one line."
   ];
   function parseGallery(text) {
@@ -127,7 +135,7 @@
     entries.forEach(function (e) {
       lines.push("- " + JSON.stringify({
         id: e.id, src: e.src, thumb: e.thumb, w: e.w, h: e.h,
-        title: e.title || "", place: e.place || "", year: e.year || "", added: e.added || ""
+        title: e.title || "", place: e.place || "", year: e.year || "", camera: e.camera || "", added: e.added || ""
       }));
     });
     return lines.join("\n") + "\n";
@@ -141,38 +149,71 @@
       });
   }
 
-  // ---------- EXIF: read the capture year; write Artist + Copyright ----------
-  function readExifYear(buf) {
+  // ---------- EXIF: read the year and camera details; write Artist + Copyright ----------
+  // Reads a JPEG's EXIF for the capture year and a one-line camera summary
+  // ("ILCE-7M4 · FE 35mm F1.8 · 35 mm · f/2 · 1/250 s · ISO 100"). Only these
+  // values are kept, for captions; the published file never carries them.
+  function readExifInfo(buf) {
+    var info = { year: "", camera: "" };
     try {
       var v = new DataView(buf);
-      if (v.getUint16(0) !== 0xFFD8) return "";
+      if (v.getUint16(0) !== 0xFFD8) return info;
       var off = 2;
       while (off + 4 < v.byteLength) {
         var marker = v.getUint16(off), len = v.getUint16(off + 2);
         if (marker === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) { // "Exif"
           var t = off + 10, little = v.getUint16(t) === 0x4949;
-          var u16 = function (p) { return v.getUint16(t + p, little); };
-          var u32 = function (p) { return v.getUint32(t + p, little); };
-          var findTag = function (ifd, tag) {
-            var n = u16(ifd);
-            for (var i = 0; i < n; i++) { var e = ifd + 2 + i * 12; if (u16(e) === tag) return e; }
-            return -1;
+          var u16 = function (q) { return v.getUint16(t + q, little); };
+          var u32 = function (q) { return v.getUint32(t + q, little); };
+          var entries = function (ifd) {
+            var map = {}, n = u16(ifd);
+            for (var i = 0; i < n; i++) { var e = ifd + 2 + i * 12; map[u16(e)] = e; }
+            return map;
           };
-          var ifd0 = u32(4), exifPtr = findTag(ifd0, 0x8769);
-          var ifd = exifPtr >= 0 ? u32(exifPtr + 8) : -1;
-          var e = ifd >= 0 ? findTag(ifd, 0x9003) : -1;          // DateTimeOriginal
-          if (e < 0) e = findTag(ifd0, 0x0132);                   // DateTime
-          if (e < 0) return "";
-          var p = t + u32(e + 8), s = "";
-          for (var k = 0; k < 4; k++) s += String.fromCharCode(v.getUint8(p + k));
-          return /^\d{4}$/.test(s) && s !== "0000" ? s : "";
+          var value = function (e) {
+            var type = u16(e + 2), count = u32(e + 4);
+            var size = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8, 11: 4, 12: 8 }[type] || 1;
+            var q = size * count <= 4 ? e + 8 : u32(e + 8);
+            if (type === 2) {
+              var str = "";
+              for (var k = 0; k < count; k++) { var c = v.getUint8(t + q + k); if (!c) break; str += String.fromCharCode(c); }
+              return str.trim();
+            }
+            if (type === 3) return u16(q);
+            if (type === 4) return u32(q);
+            if (type === 5) { var den = u32(q + 4); return den ? u32(q) / den : 0; }
+            if (type === 10) { var d2 = v.getInt32(t + q + 4, little); return d2 ? v.getInt32(t + q, little) / d2 : 0; }
+            if (type === 11) return v.getFloat32(t + q, little);
+            if (type === 12) return v.getFloat64(t + q, little);
+            return null;
+          };
+          var ifd0 = entries(u32(4));
+          var exif = ifd0[0x8769] !== undefined ? entries(u32(ifd0[0x8769] + 8)) : {};
+          var get = function (map, tag) { return map[tag] !== undefined ? value(map[tag]) : null; };
+          var date = String(get(exif, 0x9003) || get(ifd0, 0x0132) || "");
+          if (/^\d{4}/.test(date) && date.slice(0, 4) !== "0000") info.year = date.slice(0, 4);
+          var make = String(get(ifd0, 0x010F) || ""), model = String(get(ifd0, 0x0110) || "");
+          var brand = make.split(" ")[0].toLowerCase();
+          var body = model && brand && model.toLowerCase().indexOf(brand) === 0 ? model : [make, model].filter(Boolean).join(" ");
+          var lens = String(get(exif, 0xA434) || "");
+          var focal = get(exif, 0x920A), fnum = get(exif, 0x829D), exp = get(exif, 0x829A), iso = get(exif, 0x8827);
+          var parts = [];
+          if (body) parts.push(body);
+          if (lens && lens !== body) parts.push(lens);
+          if (focal) parts.push(Math.round(focal) + " mm");
+          if (fnum) parts.push("f/" + Math.round(fnum * 10) / 10);
+          if (exp) parts.push(exp >= 1 ? Math.round(exp * 10) / 10 + " s" : "1/" + Math.round(1 / exp) + " s");
+          if (iso) parts.push("ISO " + iso);
+          info.camera = parts.join(" · ");
+          return info;
         }
         if ((marker & 0xFF00) !== 0xFF00) break;
         off += 2 + len;
       }
     } catch (e) {}
-    return "";
+    return info;
   }
+  function readExifYear(buf) { return readExifInfo(buf).year; }
   // True when the file is an HDR photo: a gain-map image (Ultra HDR / Adobe gain map
   // JPEG, Apple HEIC with an HDR gain map) or a PQ / HLG encoded AVIF or HEIC.
   function detectHdr(buf) {
@@ -191,10 +232,10 @@
   }
   function exifSegment(artist, copyright) {
     var enc = function (s) {
-      var ascii = s.replace(/[^\x20-\x7E]/g, "");
-      var b = new Uint8Array(ascii.length + 1);
-      for (var i = 0; i < ascii.length; i++) b[i] = ascii.charCodeAt(i);
-      return b;                                                    // NUL-terminated ASCII
+      var utf8 = new TextEncoder().encode(String(s || "").replace(/[\x00-\x1F]/g, ""));
+      var b = new Uint8Array(utf8.length + 1);
+      b.set(utf8);
+      return b;                                                    // NUL-terminated (UTF-8, read by common tools)
     };
     var a = enc(artist), c = enc(copyright);
     var ifdSize = 2 + 2 * 12 + 4, aOff = 8 + ifdSize, cOff = aOff + a.length + (a.length % 2);
@@ -264,17 +305,25 @@
     ctx.drawImage(cur, 0, 0, w, h);
     return out;
   }
-  function drawWatermark(c) {
+  function drawWatermark(c, st) {
+    var text = (st.wmText || "").trim();
+    if (!text) return;
     var ctx = ctx2d(c), L = Math.max(c.width, c.height);
-    var size = Math.max(11, Math.round(L * 0.0125)), pad = Math.round(L * 0.018);
+    var factor = { s: 0.0125, m: 0.02, l: 0.03 }[st.wmSize] || 0.0125;
+    var size = Math.max(11, Math.round(L * factor)), pad = Math.round(L * 0.018);
+    var a = Math.min(0.9, Math.max(0.2, (st.wmOpacity || 60) / 100));
+    var pos = st.wmPos || "br";
     ctx.save();
     ctx.font = "400 " + size + "px \"DejaVu Sans\", Verdana, sans-serif";
-    ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
+    ctx.textAlign = pos === "c" ? "center" : (pos.charAt(1) === "l" ? "left" : "right");
+    ctx.textBaseline = pos === "c" ? "middle" : (pos.charAt(0) === "t" ? "top" : "alphabetic");
+    ctx.shadowColor = "rgba(0, 0, 0, " + (0.58 * a).toFixed(3) + ")";
     ctx.shadowBlur = Math.max(2, Math.round(size * 0.3));
     ctx.shadowOffsetY = Math.max(1, Math.round(size * 0.06));
-    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText("© " + YEAR + " " + AUTHOR, c.width - pad, c.height - pad);
+    ctx.fillStyle = "rgba(255, 255, 255, " + a.toFixed(3) + ")";
+    var x = pos === "c" ? c.width / 2 : (pos.charAt(1) === "l" ? pad : c.width - pad);
+    var y = pos === "c" ? c.height / 2 : (pos.charAt(0) === "t" ? pad : c.height - pad);
+    ctx.fillText(text, x, y);
     ctx.restore();
   }
   function toJpegBytes(c, q) {
@@ -290,18 +339,19 @@
     : Promise.resolve();
 
   function prepare(item) {
-    var seg = exifSegment(AUTHOR, "Copyright " + YEAR + " " + AUTHOR + ". All rights reserved.");
+    var s = settings;
+    var seg = exifSegment(s.artist, s.copyright);
     return Promise.all([decode(item.file), fontReady]).then(function (res) {
       var bmp = res[0];
       var sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
-      var k = Math.min(1, MAX_EDGE / Math.max(sw, sh));
+      var k = Math.min(1, s.edge / Math.max(sw, sh));
       var w = Math.round(sw * k), h = Math.round(sh * k);
       var full = scaleTo(bmp, sw, sh, w, h);
       if (bmp.close) bmp.close();
-      if (watermarkBox.checked) drawWatermark(full);
+      if (s.wmOn) drawWatermark(full, s);
       var t = Math.min(1, THUMB_EDGE / Math.max(w, h));
       var thumb = scaleTo(full, w, h, Math.round(w * t), Math.round(h * t));
-      return Promise.all([toJpegBytes(full, QUALITY), toJpegBytes(thumb, THUMB_QUALITY)]).then(function (out) {
+      return Promise.all([toJpegBytes(full, s.quality / 100), toJpegBytes(thumb, THUMB_QUALITY)]).then(function (out) {
         item.full = insertSegment(out[0], seg);
         item.thumb = insertSegment(out[1], seg);
         item.w = w; item.h = h;
@@ -350,10 +400,12 @@
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
     var headP = item.file.slice(0, 524288).arrayBuffer().then(function (buf) {
-      return { year: readExifYear(buf), hdr: detectHdr(buf) };
-    }).catch(function () { return { year: "", hdr: false }; });
+      var x = readExifInfo(buf);
+      return { year: x.year, camera: x.camera, hdr: detectHdr(buf) };
+    }).catch(function () { return { year: "", camera: "", hdr: false }; });
     Promise.all([prepare(item), headP]).then(function (r) {
       if (!item.year && r[1].year) item.year = r[1].year;
+      item.camera = r[1].camera;
       item.hdr = r[1].hdr;
       item.status = "ready";
     }, function () {
@@ -397,7 +449,8 @@
       meta.textContent = item.name + " → " + item.w + " × " + item.h + ", " + kb(item.full.length) + " (from " + kb(item.file.size) + "). Location and camera data removed." +
         (item.hdr ? (COLOR_SPACE === "display-p3"
           ? " HDR photo: published as a standard web image that keeps its wide colour."
-          : " HDR photo: published as a standard web image.") : "");
+          : " HDR photo: published as a standard web image.") : "") +
+        (settings.camera && item.camera ? " Caption: " + item.camera + "." : "");
     } else {
       meta.textContent = item.name + " · preparing…";
     }
@@ -473,7 +526,8 @@
       var id = newId(it.title || it.name.replace(/\.[^.]+$/, ""));
       it.id = id;
       return { id: id, src: "/" + IMG_DIR + id + ".jpg", thumb: "/" + IMG_DIR + id + "-thumb.jpg", w: it.w, h: it.h,
-               title: it.title || "", place: it.place || "", year: /^\d{4}$/.test(it.year || "") ? it.year : "", added: added };
+               title: it.title || "", place: it.place || "", year: /^\d{4}$/.test(it.year || "") ? it.year : "",
+               camera: settings.camera ? (it.camera || "") : "", added: added };
     });
     var n = items.length, nextPublished = null;
     commitChanges("Add " + n + " photo" + (n === 1 ? "" : "s") + " to the gallery", function () {
@@ -584,11 +638,17 @@
     if (!quiet) setStatus(connectStatus, "Checking the token…");
     return gh(repoPath()).then(function (repo) {
       if (repo && repo.permissions && repo.permissions.push === false) {
-        var e = new Error("read-only"); e.status = 403; throw e;
+        var e = new Error("read-only"); e.status = 403; e.readOnly = true; throw e;
       }
-      return fetchGallery();
-    }).then(function (g) {
+      // Prove the token can write: a tiny unreferenced blob changes nothing on the site.
+      return gh(repoPath() + "/git/blobs", { method: "POST", body: JSON.stringify({ content: "gallery-studio write check", encoding: "utf-8" }) })
+        .catch(function (err) {
+          if (err.status === 403 || err.status === 404) { var e2 = new Error("read-only"); e2.status = 403; e2.readOnly = true; throw e2; }
+          throw err;
+        });
+    }).then(fetchGallery).then(function (g) {
       if (remember !== null) writeToken(t, remember);
+      try { localStorage.setItem(OWNER_KEY, "1"); } catch (e) {}
       published = g.entries;
       connectForm.hidden = true; connectedBox.hidden = false;
       connectedText.textContent = "Connected to " + OWNER + "/" + REPO + ".";
@@ -611,6 +671,7 @@
   tokenInput.addEventListener("keydown", function (e) { if (e.key === "Enter") connectBtn.click(); });
   disconnectBtn.addEventListener("click", function () {
     token = null; forgetToken(); published = [];
+    try { localStorage.removeItem(OWNER_KEY); } catch (e) {}
     connectForm.hidden = false; connectedBox.hidden = true;
     renderPublished(); updatePublish();
     setStatus(connectStatus, "Disconnected. The token was removed from this browser.");
@@ -626,19 +687,91 @@
   });
   drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
   publishBtn.addEventListener("click", publish);
-  watermarkBox.addEventListener("change", function () {
-    queue.forEach(function (q) { if (q.status === "ready") { q.status = "preparing"; renderItem(q); } });
-    updatePublish();
-    processPending();
+  // ---------- settings ----------
+  function loadSettings() {
+    var out = {}, k;
+    for (k in DEFAULTS) out[k] = DEFAULTS[k];
+    try {
+      var saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+      for (k in DEFAULTS) if (saved[k] !== undefined && typeof saved[k] === typeof DEFAULTS[k]) out[k] = saved[k];
+    } catch (e) {}
+    return out;
+  }
+  function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }
+  var F = {
+    edge: $("s-edge"), quality: $("s-quality"), qualityOut: $("s-quality-out"),
+    wmText: $("s-wm-text"), wmPos: $("s-wm-pos"), wmSize: $("s-wm-size"), wmOpacity: $("s-wm-op"), wmOpacityOut: $("s-wm-op-out"),
+    copyright: $("s-copyright"), artist: $("s-artist"), camera: $("s-camera"), reset: $("s-reset"),
+    summary: $("settings-summary"), lede: $("studio-lede")
+  };
+  var POS = { br: "bottom right", bl: "bottom left", tr: "top right", tl: "top left", c: "centre" };
+  var SIZE = { s: "small", m: "medium", l: "large" };
+  function fillForm() {
+    F.edge.value = String(settings.edge);
+    F.quality.value = settings.quality; F.qualityOut.textContent = settings.quality;
+    watermarkBox.checked = settings.wmOn;
+    F.wmText.value = settings.wmText; F.wmPos.value = settings.wmPos; F.wmSize.value = settings.wmSize;
+    F.wmOpacity.value = settings.wmOpacity; F.wmOpacityOut.textContent = settings.wmOpacity + "%";
+    F.copyright.value = settings.copyright; F.artist.value = settings.artist; F.camera.checked = settings.camera;
+    [F.wmText, F.wmPos, F.wmSize, F.wmOpacity].forEach(function (el) { el.disabled = !settings.wmOn; });
+  }
+  function describe() {
+    var hasWm = settings.wmOn && settings.wmText.trim();
+    var wm = hasWm ? "a " + SIZE[settings.wmSize] + " watermark at the " + POS[settings.wmPos] + " (" + settings.wmOpacity + "% opacity)" : "no watermark";
+    F.summary.textContent = "Publishing at " + settings.edge + " px, JPEG quality " + settings.quality + ", with " + wm + ". " +
+      "Location and camera data are always removed from the files" + (settings.camera ? "; camera and lens appear in captions." : ".");
+    F.lede.textContent = "";
+    F.lede.appendChild(document.createTextNode("Add photographs to "));
+    var a = document.createElement("a"); a.href = F.lede.getAttribute("data-gallery"); a.textContent = "your gallery";
+    F.lede.appendChild(a);
+    F.lede.appendChild(document.createTextNode(". In this browser, each photo is resized to " + settings.edge +
+      " px on its long edge, cleared of location and camera data, stamped with your copyright" +
+      (hasWm ? ", and watermarked" : "") + ". Only those copies are published; your originals never leave this device."));
+  }
+  var reprocessTimer = 0;
+  function reprocessQueued() {
+    clearTimeout(reprocessTimer);
+    reprocessTimer = setTimeout(function () {
+      queue.forEach(function (q) { if (q.status === "ready") { q.status = "preparing"; renderItem(q); } });
+      updatePublish();
+      processPending();
+    }, 350);
+  }
+  function readForm(affectsImages) {
+    var edge = parseInt(F.edge.value, 10);
+    settings.edge = [1600, 2000, 2400, 3000, 4000].indexOf(edge) >= 0 ? edge : DEFAULTS.edge;
+    settings.quality = Math.min(95, Math.max(70, parseInt(F.quality.value, 10) || DEFAULTS.quality));
+    settings.wmOn = watermarkBox.checked;
+    settings.wmText = F.wmText.value.slice(0, 80);
+    settings.wmPos = POS[F.wmPos.value] ? F.wmPos.value : "br";
+    settings.wmSize = SIZE[F.wmSize.value] ? F.wmSize.value : "s";
+    settings.wmOpacity = Math.min(90, Math.max(20, parseInt(F.wmOpacity.value, 10) || DEFAULTS.wmOpacity));
+    settings.copyright = F.copyright.value.slice(0, 200);
+    settings.artist = F.artist.value.slice(0, 120);
+    settings.camera = F.camera.checked;
+    F.qualityOut.textContent = settings.quality;
+    F.wmOpacityOut.textContent = settings.wmOpacity + "%";
+    [F.wmText, F.wmPos, F.wmSize, F.wmOpacity].forEach(function (el) { el.disabled = !settings.wmOn; });
+    saveSettings(); describe();
+    if (affectsImages) reprocessQueued();
+    else queue.forEach(function (q) { if (q.status === "ready") renderItem(q); });
+  }
+  [watermarkBox, F.edge, F.wmPos, F.wmSize].forEach(function (el) { el.addEventListener("change", function () { readForm(true); }); });
+  [F.quality, F.wmOpacity, F.wmText, F.copyright, F.artist].forEach(function (el) { el.addEventListener("input", function () { readForm(true); }); });
+  F.camera.addEventListener("change", function () { readForm(false); });
+  F.reset.addEventListener("click", function () {
+    var k; for (k in DEFAULTS) settings[k] = DEFAULTS[k];
+    fillForm(); saveSettings(); describe(); reprocessQueued();
   });
   window.addEventListener("beforeunload", function (e) {
     if (busy) { e.preventDefault(); e.returnValue = ""; }
   });
 
   // Exposed for automated checks only; does nothing on its own.
-  window.__galleryStudio = { colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, parseGallery: parseGallery, serializeGallery: serializeGallery };
+  window.__galleryStudio = { colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
 
   // ---------- start ----------
+  fillForm(); describe();
   var saved = readToken();
   if (saved) connect(saved, null, true); else { renderPublished(); updatePublish(); }
 })();
