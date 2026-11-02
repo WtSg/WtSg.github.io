@@ -379,10 +379,11 @@
   }
   function step(d) { go((index + d + photos.length) % photos.length, d); }
   api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
-  // Stepping to another photograph: it is decoded first, so the swap never shows a blank
-  // frame, then a quick, quiet cross-fade (the opening's focus pull and frame lines are for
-  // the opening only), so turning the roll quickly stays calm.
-  var goSeq = 0;
+  // Stepping to another photograph: it is decoded first, so nothing is ever blank; then one
+  // continuous movement: the photograph shown stays on top as a copy and slides away as it
+  // fades, the next slides in under it, and the frame lines glide to the new shape. The
+  // opening's focus pull and lamp test are for the opening only.
+  var goSeq = 0, EASE = "cubic-bezier(.22,.8,.2,1)";
   function go(n, d) {
     if (api.onStep) api.onStep(n);
     index = n;
@@ -393,16 +394,35 @@
     var ready = pre.decode ? pre.decode().catch(function () {}) : new Promise(function (r) { pre.onload = pre.onerror = r; });
     ready.then(function () {
       if (want !== goSeq || !dialog.open) return;
-      var out = img.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: "ease-in", fill: "forwards" });
-      out.onfinish = function () {
-        if (want !== goSeq) { out.cancel(); return; }
-        fill(n);
-        out.cancel();
-        img.animate([
-          { opacity: 0, transform: "translateX(" + (d * 1.5) + "%)" },
-          { opacity: 1, transform: "none" }
-        ], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" });
-      };
+      Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--old"), function (g) { g.remove(); });
+      var r0 = img.getBoundingClientRect(), f0 = frameEl ? frameEl.getBoundingClientRect() : null;
+      var old = img.cloneNode(false);
+      old.classList.add("gl__img--old");
+      old.alt = "";
+      old.setAttribute("aria-hidden", "true");
+      old.style.width = r0.width + "px";
+      old.style.height = r0.height + "px";
+      stage.insertBefore(old, img.nextSibling);
+      fill(n);
+      var D = 520, X = 8;
+      var a = old.animate([
+        { transform: "none", opacity: 1 },
+        { transform: "translateX(" + (-d * X) + "%) scale(.965)", opacity: 0 }
+      ], { duration: D, easing: EASE, fill: "forwards" });
+      a.onfinish = a.oncancel = function () { old.remove(); };
+      img.animate([
+        { transform: "translateX(" + (d * X) + "%) scale(.965)", opacity: 0 },
+        { transform: "none", opacity: 1 }
+      ], { duration: D, easing: EASE });
+      if (f0 && frameEl.animate) {
+        var f1 = frameEl.getBoundingClientRect();
+        if (Math.abs(f0.width - f1.width) > 1 || Math.abs(f0.height - f1.height) > 1) {
+          frameEl.animate([
+            { width: f0.width + "px", height: f0.height + "px" },
+            { width: f1.width + "px", height: f1.height + "px" }
+          ], { duration: D, easing: EASE });
+        }
+      }
     });
   }
 

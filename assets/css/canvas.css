@@ -366,6 +366,8 @@ p { margin: 0; }
   padding: clamp(1.4rem, 3.5vw, 2.6rem) clamp(1rem, 3vw, 2.2rem) clamp(.8rem, 2vw, 1.2rem);
 }
 .gl__stage > * { grid-area: 1 / 1; }
+/* the photograph being left, sliding away on top of the next */
+.gl .gl__img--old { pointer-events: none; max-width: none; }
 .gl .gl__img {
   width: min(100% - 2.4rem, calc((100vh - 18.5rem) * var(--ar, 1.5)));
   width: min(100% - 2.4rem, calc((100svh - 18.5rem) * var(--ar, 1.5)));
