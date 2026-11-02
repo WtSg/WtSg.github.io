@@ -61,6 +61,11 @@
       </div>
     </div>
     <div class="vf-shutter" aria-hidden="true"></div>
+    <!-- Zoom by hand: out to see more of the wall, in to look closer (also pinch, Ctrl + scroll, - and +) -->
+    <div class="cv-zoom" role="group" aria-label="Zoom">
+      <button class="cv-zoom__btn" type="button" data-cv-zoom="out" aria-label="Zoom out" title="Zoom out (-)"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10"/></svg></button>
+      <button class="cv-zoom__btn" type="button" data-cv-zoom="in" aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10M8 3v10"/></svg></button>
+    </div>
 
     <!-- Every photograph once: the gallery without JavaScript, and the keyboard path with it -->
     <ol class="cv-list" aria-label="Photographs">

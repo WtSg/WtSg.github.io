@@ -504,7 +504,7 @@
         ar: parseFloat(t.style.getPropertyValue("--ar")) || 1.5
       };
     });
-    var shownIdx = -1, wanted = 0, tried = false;
+    var shownIdx = -1, wanted = 0, tried = false, ended = false;
     function fmt(s) { return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
     function showTape(i) {
       var tape = trays[i].querySelector(".tape");
@@ -547,6 +547,14 @@
           hudTry.hidden = false;
           setTimeout(function () { hudTry.classList.add("is-gone"); }, 7000);
         }
+        // The last print on the line: the roll is done, and the lights can come on.
+        if (!ended && hudTry && s.index === N - 1 && s.label === "Dry" && !lit) {
+          ended = true;
+          hudTry.textContent = "Every print is on the line · switch the lights on to see the whole room";
+          hudTry.hidden = false;
+          hudTry.classList.remove("is-gone");
+          setTimeout(function () { hudTry.classList.add("is-gone"); }, 7000);
+        }
       },
       onUse: function (what) {
         if (what === "wander" && hallHint) hallHint.classList.add("is-gone");
@@ -557,7 +565,8 @@
 
     // Scrolling moves through the prints: one step of the page per print.
     var wrapTop = 0, stepPx = 1, queued = false;
-    // One print per snap point, so the page comes to rest exactly on a finished print.
+    // One print per snap point, so the page comes to rest exactly on a finished print,
+    // and one more at the end, where the last print has gone to the line too.
     // The spacing is in svh, so it holds still while a phone's toolbar slides in and out.
     var snaps = stageWrap.querySelectorAll(".dr-snap");
     function measure() {
@@ -565,14 +574,14 @@
       stepPx = snaps.length > 1 ? Math.max(1, snaps[1].offsetTop - snaps[0].offsetTop) : 1;
     }
     function indexFromScroll() {
-      if (N < 2) return 0;
-      return Math.max(0, Math.min(N - 1, Math.round((window.pageYOffset - wrapTop) / stepPx)));
+      if (snaps.length < 2) return 0;
+      return Math.max(0, Math.min(N, Math.round((window.pageYOffset - wrapTop) / stepPx)));
     }
     // The scroll position is the darkroom's timeline: it is handed over as a
     // continuous number, and the scene follows it both ways.
     function progress() {
-      if (N < 2) return 0;
-      return Math.max(0, Math.min(N - 1, (window.pageYOffset - wrapTop) / stepPx));
+      if (snaps.length < 2) return 0;
+      return Math.max(0, Math.min(N, (window.pageYOffset - wrapTop) / stepPx));
     }
     function onScroll() {
       queued = false;
@@ -589,7 +598,7 @@
     if (progress() > 0.02) ctrl.setProgress(progress());
 
     function go(i) {
-      i = Math.max(0, Math.min(N - 1, i));
+      i = Math.max(0, Math.min(N, i));
       window.scrollTo({ top: wrapTop + i * stepPx + 1, behavior: still() ? "auto" : "smooth" });
     }
     // The keyboard list: focusing a print brings it to the tray; pressing opens it.

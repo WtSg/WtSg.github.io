@@ -13,7 +13,11 @@
  * - The LED readout counts the frame and shows the photograph's real settings
  *   when it has them; its digits roll as the frame changes.
  * - Click (or Enter) fires a focal-plane shutter and opens the photograph.
- * - Reduced motion: no inertia, zoom, turn or shutter; frames change at once.
+ * - Zoom: pinch with two fingers, pinch a trackpad, Ctrl + scroll, the - and +
+ *   buttons or keys (0 resets). Out, more of the wall shows and the frame lines
+ *   close round the photograph; in, the photograph grows past them. It still
+ *   comes to rest on the nearest photograph.
+ * - Reduced motion: no inertia, speed zoom, turn or shutter; frames change at once.
  */
 (function () {
   "use strict";
@@ -48,7 +52,9 @@
   ghost.draggable = false;
   ghost.hidden = true;
   patch.appendChild(ghost);
-  if (hint && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) hint.textContent = "Drag to look around · tap to open";
+  var touchy = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  var zoomBtns = Array.prototype.slice.call(room.querySelectorAll("[data-cv-zoom]"));
+  if (hint && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) hint.textContent = "Drag to look around · pinch to zoom · tap to open";
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
   function mod(a, n) { return ((a % n) + n) % n; }
@@ -64,7 +70,7 @@
   }
 
   /* ---------- Sizes ---------- */
-  var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [];
+  var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
   var pw = 0, ph = 0, ledH = 30, capH = 16, hintH = 16, footH = 40;
   function measure() {
     vw = window.innerWidth;
@@ -78,6 +84,7 @@
     capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
     footH = foot ? foot.offsetHeight : 0;
+    room.style.setProperty("--foot-h", footH + "px");
   }
   // A photograph's size on screen when it is framed.
   function shown(p) {
@@ -92,11 +99,16 @@
   function build() {
     measure();
     plane.textContent = "";
+    // the wall scales inside the plane, which stays the size of the window: it keeps
+    // the clipping at the window's edges and takes the drags wherever they start
+    wall = document.createElement("div");
+    wall.className = "cv-wall";
+    plane.appendChild(wall);
     items = [];
     cw = Lb * 1.16;
     ch = Lb * 0.97;
-    // the wall is wider and taller than the window by a few cells, so copies never pop
-    var cols = Math.ceil(vw / cw) + 3, rows = Math.ceil(vh / ch) + 3;
+    // the wall is wider and taller than the window, zoomed right out, by a few cells, so copies never pop
+    var cols = Math.ceil(vw / (cw * S_MIN)) + 3, rows = Math.ceil(vh / (ch * S_MIN)) + 3;
     if (rows % 2) rows++;
     W = cols * cw;
     H = rows * ch;
@@ -141,7 +153,7 @@
       img.decoding = "async";
       img.draggable = false;
       el.appendChild(img);
-      plane.appendChild(el);
+      wall.appendChild(el);
       items.push({ el: el, img: img, bx: bx, by: by, w: w, h: h, i: i, x: 0, y: 0, px: 1e9, py: 1e9 });
     }
     sharp = null;
@@ -168,6 +180,37 @@
 
   /* ---------- State ---------- */
   var ox = 0, oy = 0, tx = 0, ty = 0, vx = 0, vy = 0, s = 1, sTo = 1;
+  // Zoom by hand: a factor on the framed scale. Out as far as the wall at S_MIN of its
+  // pulled-back size, in to Z_MAX times the framed photograph.
+  var S_MIN = 0.6, Z_MAX = 2.6, zoom = 1, pinch = null;
+  function zr() { return clamp(zoom, S_MIN / sTo, Z_MAX); }
+  function restScale() { return Math.max(S_MIN, sTo * zr()); }
+  // Zoom about a point on the screen (the fingers, the pointer), or the centre.
+  function setZoom(z, mx, my) {
+    var s0 = restScale();
+    zoom = clamp(z, S_MIN / sTo, Z_MAX);
+    var s1 = restScale();
+    if (mx != null) {
+      tx += (mx - vw / 2) * (1 / s1 - 1 / s0);
+      ty += (my - vh / 2) * (1 / s1 - 1 / s0);
+    }
+    hold = 0;
+    opening = false;
+    hideHint();
+    pendingShot = null;
+    vx = vy = 0;
+    zoomState();
+  }
+  function zoomState() {
+    zoomBtns.forEach(function (b) {
+      var out = b.getAttribute("data-cv-zoom") === "out";
+      b.disabled = out ? zr() <= S_MIN / sTo + 1e-3 : zr() >= Z_MAX - 1e-3;
+    });
+  }
+  function zoomStep(dir) {
+    setZoom(zr() * (dir > 0 ? 1.4 : 1 / 1.4));
+    lockNearest();
+  }
   var fr = { L: 1, S: 1, rot: 0 }, frTo = { L: 1, S: 1, rot: 0 }, frDirty = true;
   var dragging = false, wheeling = false, hold = 0, subject = null, lockOn = null;
   var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null;
@@ -185,6 +228,7 @@
     var m = clamp(Math.min(d.w, d.h) * 0.035, 9, 20);
     frTo = p.ar >= 1 ? { L: d.w + 2 * m, S: d.h + 2 * m, rot: 0 } : { L: d.h + 2 * m, S: d.w + 2 * m, rot: 90 };
     vx = vy = 0;
+    zoomState();
   }
   function lockNearest() { lock(nearest(tx, ty)); }
   function lockPhoto(i) { lock(nearest(tx, ty, i)); }
@@ -266,13 +310,13 @@
       vy *= decay;
       if (Math.abs(vx) + Math.abs(vy) <= 0.012) { vx = vy = 0; lockNearest(); }
     }
-    var moving = dragging || wheeling || coasting;
+    var moving = dragging || wheeling || coasting || !!pinch;
     // how hard the wall is moving, in screen pixels per frame
     var inst = dragging || wheeling ? moved * (16 / Math.max(dt, 1)) : Math.hypot(vx, vy) * s * 16;
     moved = 0;
     spd += (inst - spd) * ease(dt, 90);
 
-    if (calm) { ox = tx; oy = ty; }
+    if (calm || pinch) { ox = tx; oy = ty; }
     else if (!waking) {
       var a = ease(dt, dragging ? 22 : opening ? 300 : 120);
       ox += (tx - ox) * a;
@@ -284,10 +328,11 @@
     var pull = clamp((spd - 1.5) / 20, 0, 1);
     if (dragging) pull = Math.max(pull, 0.28);
     if (!moving) pull = Math.max(pull, clamp((dist * s) / (vw * 0.5), 0, 1) * 0.7);
-    var sGoal = sTo + (1 - sTo) * pull;
-    if (calm) s = sTo;
+    var z = zr(), sRest = restScale();
+    var sGoal = Math.max(S_MIN, (sTo + (1 - sTo) * pull) * z);
+    if (calm || pinch) s = sGoal;
     else if (!waking) s += (sGoal - s) * ease(dt, opening ? 380 : 140);
-    plane.style.transform = "scale(" + s.toFixed(4) + ")";
+    wall.style.transform = "scale(" + s.toFixed(4) + ")";
     for (var k = 0; k < items.length; k++) {
       var it = items[k], q = posOf(it, ox, oy);
       it.x = q.x;
@@ -299,13 +344,15 @@
       }
     }
 
-    // the frame lines: resized and turned toward the framed photograph
-    var fa = calm ? 1 : ease(dt, 150);
-    var frErr = Math.abs(frTo.L - fr.L) + Math.abs(frTo.S - fr.S) + Math.abs(frTo.rot - fr.rot);
+    // the frame lines: resized and turned toward the framed photograph (zoomed out,
+    // they close round it; zoomed in, they stay and the photograph grows past them)
+    var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
+    var fL = frTo.L * fz, fS = frTo.S * fz;
+    var frErr = Math.abs(fL - fr.L) + Math.abs(fS - fr.S) + Math.abs(frTo.rot - fr.rot);
     if (frErr > 0.02 || frDirty) {
       frDirty = false;
-      fr.L += (frTo.L - fr.L) * fa;
-      fr.S += (frTo.S - fr.S) * fa;
+      fr.L += (fL - fr.L) * fa;
+      fr.S += (fS - fr.S) * fa;
       fr.rot += (frTo.rot - fr.rot) * fa;
       frameEl.style.width = fr.L.toFixed(1) + "px";
       frameEl.style.height = fr.S.toFixed(1) + "px";
@@ -326,9 +373,9 @@
     if (!subject) return;
     if (!lampTest && subject.i !== shownPhoto) showReadout(subject.i);
     var off = (nb.x + subject.w / 2 - vw / 2) * s;
-    var goal = moving || waking ? 22 : clamp(dist * s * 0.08 + Math.abs(s - sTo) * 60 + frErr * 0.04, 0, 22);
+    var goal = moving || waking ? 22 : clamp(dist * s * 0.08 + Math.abs(s - sRest) * 60 + frErr * 0.04, 0, 22);
     fe += (goal - fe) * (calm ? 1 : ease(dt, 150));
-    var focused = !moving && !waking && fe < 0.5 && dist * s < 1 && Math.abs(s - sTo) < 0.004 && frErr < 0.6;
+    var focused = !moving && !waking && fe < 0.5 && dist * s < 1 && Math.abs(s - sRest) < 0.004 && frErr < 0.6;
     if (focused && !focusedAt) { focusedAt = now; opening = false; }
     if (!focused) focusedAt = 0;
     var sharpNow = focused && now - focusedAt > 120;
@@ -364,13 +411,45 @@
     pendingShot = null;
     vx = vy = 0;
   }
+  // Every finger or pointer on the wall; two make a pinch, which zooms and pans at once.
+  var ptrs = {};
+  function twoPoints() {
+    var k = Object.keys(ptrs);
+    if (k.length < 2) return null;
+    var a = ptrs[k[0]], b = ptrs[k[1]];
+    return { d: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
   plane.addEventListener("pointerdown", function (e) {
     if (root.classList.contains("gl-open") || e.button > 0) return;
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    plane.setPointerCapture(e.pointerId);
+    var two = twoPoints();
+    if (two) {
+      // a drag already going hands over to the pinch
+      dragging = false;
+      down = null;
+      plane.classList.remove("is-dragging");
+      takeOver();
+      pinch = two;
+      return;
+    }
+    if (pinch) return;
     down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
     samples = [{ x: e.clientX, y: e.clientY, t: down.t }];
     plane.setPointerCapture(e.pointerId);
   });
   plane.addEventListener("pointermove", function (e) {
+    if (ptrs[e.pointerId]) ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (pinch) {
+      var two = twoPoints();
+      if (!two) return;
+      setZoom(zr() * (two.d / pinch.d), two.x, two.y);
+      var sNow = restScale();
+      tx += (two.x - pinch.x) / sNow;
+      ty += (two.y - pinch.y) / sNow;
+      pinch = two;
+      return;
+    }
     if (!down || e.pointerId !== down.id) return;
     var lastS = samples[samples.length - 1];
     var dx = e.clientX - lastS.x, dy = e.clientY - lastS.y;
@@ -414,11 +493,28 @@
     }
     if (Math.abs(vx) + Math.abs(vy) <= 0.012) { vx = vy = 0; lockNearest(); }
   }
-  plane.addEventListener("pointerup", endDrag);
-  plane.addEventListener("pointercancel", endDrag);
+  function pointerEnd(e) {
+    delete ptrs[e.pointerId];
+    if (pinch) {
+      if (!twoPoints()) { pinch = null; lockNearest(); }
+      return;
+    }
+    endDrag(e);
+  }
+  plane.addEventListener("pointerup", pointerEnd);
+  plane.addEventListener("pointercancel", pointerEnd);
   window.addEventListener("wheel", function (e) {
-    if (root.classList.contains("gl-open") || e.ctrlKey) return;
+    if (root.classList.contains("gl-open")) return;
     e.preventDefault();
+    if (e.ctrlKey) {
+      // Ctrl + scroll, and a trackpad pinch (which browsers send as Ctrl + scroll), zoom
+      var zu = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 300 : 1;
+      setZoom(zr() * Math.exp(-clamp(e.deltaY * zu, -60, 60) * 0.005), e.clientX, e.clientY);
+      wheeling = true;
+      clearTimeout(wheelT);
+      wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 220);
+      return;
+    }
     takeOver();
     var unit = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? vh : 1;
     var dx = e.deltaX * unit, dy = e.deltaY * unit;
@@ -430,6 +526,30 @@
     clearTimeout(wheelT);
     wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 170);
   }, { passive: false });
+  // Safari on a Mac sends a trackpad pinch as gesture events. On touch screens the
+  // pointers above do the pinch; there these only keep the page itself from zooming.
+  var gz = 1;
+  room.addEventListener("gesturestart", function (e) {
+    e.preventDefault();
+    if (touchy) return;
+    gz = zr();
+    takeOver();
+  });
+  room.addEventListener("gesturechange", function (e) {
+    e.preventDefault();
+    if (touchy || root.classList.contains("gl-open")) return;
+    setZoom(gz * e.scale, e.clientX, e.clientY);
+    wheeling = true;
+  });
+  room.addEventListener("gestureend", function (e) {
+    e.preventDefault();
+    if (touchy) return;
+    wheeling = false;
+    lockNearest();
+  });
+  zoomBtns.forEach(function (b) {
+    b.addEventListener("click", function () { zoomStep(b.getAttribute("data-cv-zoom") === "out" ? -1 : 1); });
+  });
 
   // Arrow keys: to the neighbouring photograph in that direction.
   function neighbour(dx, dy) {
@@ -447,6 +567,9 @@
   document.addEventListener("keydown", function (e) {
     if (root.classList.contains("gl-open") || e.altKey || e.ctrlKey || e.metaKey) return;
     var tag = e.target.tagName;
+    var zk = { "+": 1, "=": 1, "-": -1, "_": -1 }[e.key];
+    if (zk && tag !== "INPUT") { e.preventDefault(); zoomStep(zk); return; }
+    if (e.key === "0" && tag !== "INPUT") { e.preventDefault(); setZoom(1); lockNearest(); return; }
     var dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[e.key];
     if (dir) {
       e.preventDefault();
@@ -497,7 +620,8 @@
     ox = tx = vw / 2 - (t.it.bx + t.it.w / 2);
     oy = ty = vh / 2 - (t.it.by + t.it.h / 2);
     lock(nearest(tx, ty, i));
-    fr = { L: frTo.L, S: frTo.S, rot: frTo.rot };
+    var fz0 = Math.min(1, restScale() / sTo);
+    fr = { L: frTo.L * fz0, S: frTo.S * fz0, rot: frTo.rot };
     frDirty = true;
     ox += offX;
     oy += offY;
@@ -505,7 +629,7 @@
   build();
   if (still()) {
     startAt(0, 0, 0);
-    s = sTo;
+    s = restScale();
   } else {
     // pulled right back over the wall, the first photograph off to one side
     startAt(0, cw * 1.3, ch * 0.8);
@@ -531,7 +655,7 @@
       var keep = lockOn ? lockOn.i : subject ? subject.i : 0;
       build();
       startAt(keep, 0, 0);
-      s = sTo;
+      s = restScale();
     }, 120);
   });
 })();

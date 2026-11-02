@@ -811,9 +811,10 @@ body[data-lights="on"] .dr-bench {
 .dr-stage-wrap {
   --step: 150svh;
   position: relative;
-  height: calc(100vh + (var(--n) - 1) * 150vh);
-  /* lvh: the last print can still be scrolled to with a phone's toolbar out of the way */
-  height: calc(100lvh + (var(--n) - 1) * var(--step));
+  /* a step per print, and one more at the end, where the last print goes to the line;
+     lvh: the end can still be scrolled to with a phone's toolbar out of the way */
+  height: calc(100vh + var(--n) * 150vh);
+  height: calc(100lvh + var(--n) * var(--step));
 }
 /* The page comes to rest on a finished print: one snap point per print. */
 html.has-3d { scroll-snap-type: y proximity; }

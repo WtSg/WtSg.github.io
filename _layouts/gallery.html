@@ -95,6 +95,7 @@
       {%- for ph in photos %}
       <span class="dr-snap" style="--i: {{ forloop.index0 }}" aria-hidden="true"></span>
       {%- endfor %}
+      <span class="dr-snap" style="--i: {{ photos.size }}" aria-hidden="true"></span>
       <div class="dr-stage">
         <canvas class="dr-canvas" aria-hidden="true"></canvas>
         <div class="dr-hud">

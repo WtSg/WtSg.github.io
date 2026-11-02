@@ -1344,6 +1344,16 @@ export function start(o) {
     const d = fitDist(portrait ? 0.48 : 0.7, portrait ? 0.36 : 0.44);
     return frame0(look, V(portrait ? 0 : 0.03, Math.sin(el) * d, Math.cos(el) * d));
   }
+  // The line full of prints, seen whole: where the last step ends.
+  function wholeLineFrame() {
+    const xs = slots.map((sl, k) => [sl.x - (prints[k].pw * sl.s) / 2, sl.x + (prints[k].pw * sl.s) / 2]);
+    const xa = Math.min(...xs.map((x) => x[0])), xb = Math.max(...xs.map((x) => x[1]));
+    const hMax = Math.max(...prints.map((p, k) => p.ph * slots[k].s));
+    const cx = (xa + xb) / 2;
+    const look = V(cx, lineY(cx) - hMax * 0.5, LINE_Z);
+    const d = fitDist((xb - xa) * (aspect < 0.85 ? 1.02 : 1.12), hMax * 1.9);
+    return frame0(look, V(-cx * 0.12, -0.1, d));
+  }
   function lineFrame(i) {
     const sl = slots[i], p = prints[i];
     const look = V(sl.x * 0.9, lineY(sl.x) - p.ph * sl.s * 0.45, LINE_Z);
@@ -1433,13 +1443,14 @@ export function start(o) {
   }
 
   /* ---------- The darkroom follows the scroll ----------
-     The page gives a position from 0 to N - 1. Between print i and print i + 1
+     The page gives a position from 0 to N. Between print i and print i + 1
      one scroll step plays the whole hand-off, and every part of it follows the
      scroll in both directions: print i goes from the developer through the stop
      bath and the fixer to the line (the camera follows it along the bench and
      up), the next sheet comes out of the paper safe onto the easel, is exposed
      under the enlarger, and is slid into the developer, where it comes up.
-     A whole number is a finished print in the developer. */
+     A whole number is a finished print in the developer; the last step, from
+     N - 1 to N, takes the last print to the line and shows the line full. */
   const PH = {
     grip: 0.03, stopIn: 0.085, stopOut: 0.115, fixIn: 0.17, fixOut: 0.2, hang: 0.33, letGo: 0.37,
     take0: 0.37, take1: 0.42, exp0: 0.45, exp1: 0.57, slide0: 0.59, drop0: 0.64, drop1: 0.675, dev0: 0.69, dev1: 0.97
@@ -1458,9 +1469,12 @@ export function start(o) {
   function mixView(a, b, k) {
     return { pos: a.pos.clone().lerp(b.pos, k), look: a.look.clone().lerp(b.look, k) };
   }
+  // Print i and the step after it: f from 0 to 1. The last print has one more step too,
+  // which only takes it through the stop bath and the fixer to the line (its f runs to letGo).
   function split(pp) {
     const i = Math.min(N - 1, Math.floor(pp));
-    return { i, f: i >= N - 1 ? 0 : pp - i };
+    const f = pp - i;
+    return { i, f: i >= N - 1 ? Math.min(1, f) * PH.letGo : f };
   }
   // The sheet's way from the paper safe to the developer, on a 0 to 1 clock ph.
   function sheetState(pr, t, P) {
@@ -1512,11 +1526,16 @@ export function start(o) {
       return asView(between(enlargerFrame(1), T, seg(q, IN.exp1 + 0.02, IN.drop1), sub));
     }
     const { i, f } = split(pp);
-    if (i >= N - 1) return asView(T);
+    if (i >= N - 1 && f <= 0) return asView(T);
     const mine = () => centerOf(pathState(i, pp, 1).pose, prints[i]);
     const next = () => centerOf(pathState(i + 1, pp, 1).pose, prints[i + 1]);
     if (f < PH.stopIn) return asView(between(T, trayFrame(stopTray), seg(f, PH.grip, PH.stopIn), mine()));
     if (f < PH.fixIn) return asView(between(trayFrame(stopTray), trayFrame(fixTray), seg(f, PH.stopOut, PH.fixIn), mine()));
+    if (i >= N - 1) {
+      // the last print up onto the line, then back to see the whole line of them
+      if (f < PH.hang - 0.02) return asView(between(trayFrame(fixTray), lineFrame(i), seg(f, PH.fixOut, PH.hang - 0.02), mine()));
+      return asView(between(lineFrame(i), wholeLineFrame(), seg(f, PH.hang - 0.02, PH.letGo)));
+    }
     if (f < PH.letGo) return asView(between(trayFrame(fixTray), lineFrame(i), seg(f, PH.fixOut, PH.hang - 0.02), mine()));
     if (f < PH.exp0) return asView(between(lineFrame(i), enlargerFrame(0), seg(f, PH.letGo - 0.01, PH.exp0 - 0.01), next()));
     if (f < PH.exp1) return asView(enlargerFrame(E.inOut(seg(f, PH.exp0, PH.exp1))));
@@ -1525,7 +1544,7 @@ export function start(o) {
   // The tongs: they come to the print in the developer and let go of it on the line.
   function tongPath(pp) {
     const { i, f } = split(pp);
-    if (i >= N - 1 || f <= 0) return 0;
+    if (f <= 0) return 0;
     if (f < PH.grip) return smooth(f / PH.grip);
     if (f < PH.hang) return 1;
     return 1 - smooth(seg(f, PH.hang, PH.letGo));
@@ -1659,14 +1678,22 @@ export function start(o) {
     const h = hitTest(e.clientX, e.clientY);
     drag = { id: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), hit: h, mode: "tap", samples: [] };
     if (h && h.kind === "enlarger") { drag.mode = "lamp"; pressLamp(); }
-    else if (e.pointerType === "mouse" && h && h.kind === "tray") {
-      drag.mode = "rock";
-      h.tray.rk.held = true;
-      canvas.setPointerCapture(e.pointerId);
-      canvas.style.cursor = "grabbing";
-      if (o.onUse) o.onUse("rock");
+    else if (e.pointerType === "mouse" && h && h.kind === "tray") startRock(drag, h.tray);
+    else if (e.pointerType === "mouse" && h && h.kind === "print" && trayOf(h.pr)) {
+      // a print lying in a tray: a click opens it, a drag rocks the tray it lies in
+      drag.mode = "print-in-tray";
+      drag.tray = trayOf(h.pr);
     } else if (lightsOn && e.pointerType === "mouse") canvas.setPointerCapture(e.pointerId);
   });
+  function trayOf(pr) { return trays.find((t) => trayHolds[t.idx] === pr) || null; }
+  function startRock(d, tray) {
+    d.mode = "rock";
+    d.hit = { kind: "tray", tray };
+    tray.rk.held = true;
+    canvas.setPointerCapture(d.id);
+    canvas.style.cursor = "grabbing";
+    if (o.onUse) o.onUse("rock");
+  }
   canvas.addEventListener("pointermove", (e) => {
     const r = canvas.getBoundingClientRect();
     pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
@@ -1681,6 +1708,7 @@ export function start(o) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX;
     drag.y = e.clientY;
+    if (drag.mode === "print-in-tray" && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 6) startRock(drag, drag.tray);
     if (drag.mode === "rock") {
       const t = drag.hit.tray, k = 0.0011;
       t.rk.tz = clamp(-(e.clientX - drag.x0) * k, -0.09, 0.09);
@@ -1885,8 +1913,8 @@ export function start(o) {
     // Splashes where paper meets the liquid or leaves it, whichever way the scroll runs.
     const cross = (a) => (prevF < a && f >= a) || (prevF >= a && f < a);
     const at = (tray, p) => { const tp = pose.tray(p, tray); splash(tray, tp.pos.x, tp.pos.z + p.ph / 2); };
-    if (i === prevI && i + 1 < N) {
-      if (cross(PH.drop1)) at(devTray, prints[i + 1]);
+    if (i === prevI) {
+      if (i + 1 < N && cross(PH.drop1)) at(devTray, prints[i + 1]);
       if (cross(PH.grip)) at(devTray, prints[i]);
       if (cross(PH.stopIn) || cross(PH.stopOut)) at(stopTray, prints[i]);
       if (cross(PH.fixIn) || cross(PH.fixOut)) at(fixTray, prints[i]);
@@ -1969,7 +1997,7 @@ export function start(o) {
     const sp = prints[shown];
     // What the timer reads: the exposure counting down, then the developer, stop and fixer counting up.
     let label = "Dev", value = 0, kind = "time";
-    if (shown === i && !introing && i + 1 <= N - 1 && f > PH.grip) {
+    if (shown === i && !introing && f > PH.grip) {
       if (f <= PH.stopOut) { label = "Stop"; value = Math.round(15 * seg(f, PH.grip, PH.stopOut)); }
       else if (f <= PH.fixOut + 0.02) { label = "Fix"; value = Math.round(120 * seg(f, PH.stopOut, PH.fixOut)); }
       else { label = "Dry"; kind = "none"; }
@@ -2181,7 +2209,7 @@ export function start(o) {
 
   return {
     setProgress(v) {
-      target = clamp(+v || 0, 0, N - 1);
+      target = clamp(+v || 0, 0, N);
       if (target > 0.02 && intro < 1) intro = 1;
     },
     setIndex(i) { this.setProgress(i); },
