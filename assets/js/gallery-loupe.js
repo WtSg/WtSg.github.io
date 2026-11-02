@@ -1,6 +1,6 @@
 /*
- * Shared by the gallery versions (instant prints, slide night, contact sheet):
- * the photo list from the page, the close-up viewer, and light friction against
+ * Shared by the gallery versions that use it (the endless canvas for now): the
+ * photo list from the page, the close-up viewer, and light friction against
  * casual saving. Each version styles the viewer in its own world (.gl tokens).
  */
 (function () {
