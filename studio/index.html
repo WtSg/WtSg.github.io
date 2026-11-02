@@ -31,7 +31,7 @@ permalink: /studio/
   <main id="studio" class="studio wrap"
         data-author="{{ me.name }}" data-owner="WtSg" data-repo="WtSg.github.io" data-branch="main">
     <h1 class="studio__title">Gallery Studio</h1>
-    <p class="studio__lede">Add photographs to <a href="{{ base }}/photography/">your gallery</a>. In this browser, each photo is resized to 2000&nbsp;px on its long edge, cleared of location and camera data, stamped with your copyright, and optionally watermarked. Only those copies are published; your originals never leave this device.</p>
+    <p class="studio__lede" id="studio-lede" data-gallery="{{ base }}/photography/">Add photographs to <a href="{{ base }}/photography/">your gallery</a>. In this browser, each photo is resized on its long edge, cleared of location and camera data, stamped with your copyright, and optionally watermarked. Only those copies are published; your originals never leave this device.</p>
 
     <noscript><p class="studio__alert">The studio needs JavaScript. Turn it on and reload the page.</p></noscript>
 
@@ -42,11 +42,11 @@ permalink: /studio/
         <details class="studio__details">
           <summary>How to create the token</summary>
           <ol class="studio__steps">
-            <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Settings → Fine-grained tokens → Generate new token</a>.</li>
-            <li>Name it “Gallery Studio” and pick an expiration (for example, one year).</li>
-            <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b>WtSg/WtSg.github.io</b>.</li>
-            <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>. Leave everything else as is.</li>
-            <li>Generate the token, copy it, and paste it below. GitHub shows it only once.</li>
+            <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+            <li>Name it “Gallery Studio”. Leave <b>Resource owner</b> as WtSg, and pick an expiration (for example, one year).</li>
+            <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b>WtSg/WtSg.github.io</b>. (“Public repositories” is read-only and won’t work.)</li>
+            <li>Under <b>Permissions</b>, click <b>Add permissions</b> (or open <b>Repository permissions</b>), choose <b>Contents</b>, and set it to <b>Read and write</b>.</li>
+            <li>Generate the token, copy it, and paste it below. GitHub shows it only once. To fix an existing token, open it on the same page and click <b>Edit</b>; the token text stays the same.</li>
           </ol>
         </details>
         <div class="studio__row">
@@ -65,14 +65,87 @@ permalink: /studio/
       <p id="connect-status" class="studio__status" role="status" aria-live="polite"></p>
     </section>
 
+    <section class="studio__step" aria-labelledby="settings-h">
+      <h2 id="settings-h">2. Settings</h2>
+      <p id="settings-summary" class="studio__help"></p>
+      <details class="studio__details">
+        <summary>Change settings</summary>
+        <div class="settings">
+          <fieldset class="settings__group">
+            <legend>Size and quality</legend>
+            <label class="field">
+              <span class="field__label">Long edge</span>
+              <select id="s-edge">
+                <option value="1600">1600 px</option>
+                <option value="2000">2000 px (recommended)</option>
+                <option value="2400">2400 px</option>
+                <option value="3000">3000 px</option>
+                <option value="4000">4000 px</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field__label">JPEG quality: <output id="s-quality-out" for="s-quality">86</output></span>
+              <input id="s-quality" type="range" min="70" max="95" step="1">
+            </label>
+            <p class="field__hint">Larger, higher-quality copies look sharper on big screens but are bigger files and easier to reuse. 2000&nbsp;px at quality 86 is a good balance.</p>
+          </fieldset>
+          <fieldset class="settings__group">
+            <legend>Watermark</legend>
+            <label class="check"><input id="watermark" type="checkbox"> Add a watermark</label>
+            <label class="field">
+              <span class="field__label">Text</span>
+              <input id="s-wm-text" type="text" maxlength="80">
+            </label>
+            <div class="settings__row">
+              <label class="field">
+                <span class="field__label">Position</span>
+                <select id="s-wm-pos">
+                  <option value="br">Bottom right</option>
+                  <option value="bl">Bottom left</option>
+                  <option value="tr">Top right</option>
+                  <option value="tl">Top left</option>
+                  <option value="c">Centre</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field__label">Size</span>
+                <select id="s-wm-size">
+                  <option value="s">Small</option>
+                  <option value="m">Medium</option>
+                  <option value="l">Large</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field__label">Opacity: <output id="s-wm-op-out" for="s-wm-op">60%</output></span>
+              <input id="s-wm-op" type="range" min="20" max="90" step="5">
+            </label>
+          </fieldset>
+          <fieldset class="settings__group">
+            <legend>Copyright and details</legend>
+            <label class="field">
+              <span class="field__label">Copyright written into each file</span>
+              <input id="s-copyright" type="text" maxlength="200">
+            </label>
+            <label class="field">
+              <span class="field__label">Artist</span>
+              <input id="s-artist" type="text" maxlength="120">
+            </label>
+            <label class="check"><input id="s-camera" type="checkbox"> Show camera, lens and exposure in captions</label>
+            <p class="field__hint">Read from each JPEG before it is stripped. Location is always removed and is never shown.</p>
+          </fieldset>
+          <button id="s-reset" class="btn btn--line btn--small" type="button">Reset to defaults</button>
+        </div>
+      </details>
+    </section>
+
     <section class="studio__step" aria-labelledby="add-h">
-      <h2 id="add-h">2. Add photos</h2>
+      <h2 id="add-h">3. Add photos</h2>
       <label class="drop" id="drop" for="files">
         <input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,.avif" multiple>
         <span class="drop__main">Choose photos, or drop them here</span>
         <span class="drop__sub">JPEG, HEIC, AVIF, PNG or WebP, HDR photos included. HEIC opens best in Safari.</span>
       </label>
-      <label class="check"><input id="watermark" type="checkbox" checked> Add a subtle “© {{ site.time | date: "%Y" }} {{ me.name }}” watermark</label>
       <ol id="queue" class="queue" aria-label="Photos to publish"></ol>
       <div class="studio__actions">
         <button id="publish" class="btn" type="button" disabled>Publish</button>
@@ -81,7 +154,7 @@ permalink: /studio/
     </section>
 
     <section class="studio__step" aria-labelledby="pub-h">
-      <h2 id="pub-h">3. Published photos</h2>
+      <h2 id="pub-h">4. Published photos</h2>
       <p id="pub-empty" class="studio__help">Connect to see the photos already in your gallery.</p>
       <ol id="pub-list" class="pubs" aria-label="Published photos"></ol>
     </section>

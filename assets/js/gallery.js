@@ -7,6 +7,15 @@
 (function () {
   "use strict";
 
+  // Owner-only shortcut: on a device that has connected the Gallery Studio, show
+  // "Add photos". The marker holds no secret; visitors never have it.
+  try {
+    if (localStorage.getItem("gallery-studio-owner") === "1") {
+      var studioLink = document.querySelector(".gallery__studio");
+      if (studioLink) studioLink.hidden = false;
+    }
+  } catch (e) {}
+
   var photos = Array.prototype.slice.call(document.querySelectorAll(".photo"));
   var dialog = document.querySelector(".lightbox");
 
