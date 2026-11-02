@@ -141,9 +141,17 @@
     });
     return { header: header.length ? header : DEFAULT_HEADER, entries: entries };
   }
+  // The gallery's order: the newest year first; within a year, the latest added first
+  // (the order they already have, kept: the sort is stable). No year goes last.
+  function byYear(entries) {
+    var yr = function (e) { var y = parseInt(e.year, 10); return isNaN(y) ? -1 : y; };
+    return entries.map(function (e, k) { return { e: e, k: k }; })
+      .sort(function (a, b) { return yr(b.e) - yr(a.e) || a.k - b.k; })
+      .map(function (x) { return x.e; });
+  }
   function serializeGallery(header, entries) {
     var lines = header.slice();
-    entries.forEach(function (e) {
+    byYear(entries).forEach(function (e) {
       lines.push("- " + JSON.stringify({
         id: e.id, src: e.src, thumb: e.thumb, w: e.w, h: e.h,
         title: e.title || "", place: e.place || "", year: e.year || "",
