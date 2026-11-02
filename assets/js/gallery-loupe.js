@@ -77,8 +77,8 @@
   // [maker test, mark file ("" for none), name, mark width / height, the words dropped from
   // the model, the lettering its name is set in, whether the mark is only a symbol].
   // A symbol (Apple's apple, Leica's red dot) is followed by the maker's name; a mark that
-  // spells the name in the maker's own lettering (SONY, FUJIFILM) stands alone; a maker
-  // with no mark has its name alone. Marks: Simple Icons (CC0), in assets/img/brands.
+  // spells the name in the maker's own lettering (SONY, FUJIFILM, HASSELBLAD) stands alone;
+  // a maker with no mark has its name alone. Marks in assets/img/brands (see its NOTICE).
   var MAKERS = [
     [/^leica\b/i, "leica", "Leica", 1, /^leica(\s+camera(\s+ag)?)?\s*/i, "leica", true],
     [/^(apple\b|iphone|ipad)/i, "apple", "Apple", 0.818, /^apple\s*/i, "apple", true],
@@ -91,7 +91,7 @@
     [/^(google\b|pixel\b)/i, "google", "Google", 0.975, /^google\s*/i, "", true],
     [/^samsung\b/i, "samsung", "Samsung", 5.998, /^samsung\s*/i],
     [/^canon\b/i, "", "Canon", 0, /^canon\s*/i],
-    [/^hasselblad\b/i, "", "Hasselblad", 0, /^hasselblad\s*/i, "hasselblad"],
+    [/^hasselblad\b/i, "hasselblad", "Hasselblad", 12.659, /^hasselblad\s*/i],
     [/^(olympus|om\s*system|om\s*digital)\b/i, "", "OM System", 0, /^(olympus(\s+corporation)?|om\s*(system|digital(\s+solutions)?))\s*/i],
     [/^ricoh\b/i, "", "Ricoh", 0, /^ricoh(\s+imaging(\s+company)?)?\s*/i],
     [/^pentax\b/i, "", "Pentax", 0, /^pentax\s*/i],

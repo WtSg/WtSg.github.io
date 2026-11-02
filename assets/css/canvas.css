@@ -26,7 +26,7 @@
   font-weight: 400;
   font-display: swap;
 }
-/* the lettering of a camera maker's name that has no free face of its own (Leica, Hasselblad) */
+/* the lettering of a camera maker's name that has no free face of its own (Leica) */
 @font-face {
   font-family: "Hanken Grotesk";
   src: url("../fonts/hanken-grotesk-latin-300-normal.woff2") format("woff2");
@@ -256,14 +256,15 @@ p { margin: 0; }
   mask: var(--mark) center / contain no-repeat;
 }
 .gl-mark--wide { height: .8em; width: calc(.8em * var(--mark-ar, 1)); vertical-align: -.05em; }
+/* Hasselblad's wordmark is long and thin: a little lower, so it is not longer than the rest */
+.gl-mark[data-maker="hasselblad"] { height: .66em; width: calc(.66em * var(--mark-ar, 1)); vertical-align: 0; }
 /* The maker's name, after a mark that is only a symbol, or alone when there is no mark, in
    lettering close to the maker's own: Apple in Apple's own SF (on its devices); Leica in bold
-   capitals of a sober sans, as its Corporate S; Hasselblad light and widely spaced, as its
-   wordmark. Makers without lettering of their own here get plain spaced capitals. */
+   capitals of a sober sans, as its Corporate S. Makers without lettering of their own here
+   get plain spaced capitals. */
 .gl-brand { font: 600 .82em/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; }
 .gl-brand--apple { font: 600 1.02em/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.01em; text-transform: none; }
 .gl-brand--leica { font: 700 .9em/1 "Hanken Grotesk", var(--ui); letter-spacing: .07em; }
-.gl-brand--hasselblad { font: 300 .9em/1 "Hanken Grotesk", var(--ui); letter-spacing: .28em; }
 .gl .gl__spec [data-k="camera"] dd { color: var(--ink); }
 /* Leica's red dot, its script in silver as on the camera: a silver disc under the red,
    which the mark lets through only where the script is. */
