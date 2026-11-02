@@ -1,0 +1,394 @@
+/*
+ * Photography, version: Slide night.
+ * A dark living room. The projector throws each photograph onto the wall; the
+ * round tray turns one slot per slide, and the slide pops into focus. Below,
+ * every slide lies on a light table.
+ */
+
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("../fonts/barlow-condensed-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("../fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Reenie Beanie";
+  src: url("../fonts/reenie-beanie-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Layout: one sticky room (the wall, the beam, the tray, the remote) that
+   advances a slide per scroll step, then the light table, then the footer. */
+:root {
+  color-scheme: dark;
+  --room: #0b0907;
+  --wall: #120e0b;
+  --text: #efe4d2;
+  --muted: #ab9a80;
+  --lamp: 255 232 192;
+  --mount: #ebe7df;
+  --pencil: #3a3935;
+  --tray: #1c1d20;
+  --tray-rim: #34363a;
+  --table: #f2f4f0;
+  --focus: #ffd28a;
+  --ui: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --hand: "Reenie Beanie", "Bradley Hand", cursive;
+  --gut: clamp(1rem, 4vw, 2.5rem);
+  --tray-d: clamp(14rem, 36vh, 23rem);
+}
+
+[hidden] { display: none !important; }
+html { scrollbar-color: #3a332c var(--room); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--room);
+  color: var(--text);
+  font: 500 1.05rem/1.45 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: #ffd28a; color: #1a130b; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+button { font: inherit; color: inherit; }
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 1rem;
+  z-index: 50;
+  padding: .55rem .9rem;
+  background: var(--text);
+  color: var(--room);
+  font-weight: 700;
+}
+.skip:focus { left: 1rem; }
+
+/* ---------- Header (scrolls away with the page top) ---------- */
+.pj-head {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.1rem var(--gut);
+  pointer-events: none;
+}
+.pj-head a, .pj-head button { pointer-events: auto; }
+.pj-title {
+  margin: 0;
+  font: 700 1.2rem/1.15 var(--ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pj-title a { color: var(--text); text-decoration: none; }
+.pj-title a:hover { text-decoration: underline; text-underline-offset: .22em; text-decoration-thickness: 1px; }
+.pj-sub { margin: .2rem 0 0; font: 400 1.8rem/1 var(--hand); color: var(--muted); }
+.pj-add {
+  padding: .45rem .7rem;
+  border: 1px dashed currentColor;
+  border-radius: .25rem;
+  font: 500 .82rem/1 var(--ui);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+/* ---------- The room ---------- */
+.pj-show {
+  --step: 70svh;
+  position: relative;
+  height: calc(100vh + (var(--n) - 1) * 70vh);
+  height: calc(100svh + (var(--n) - 1) * var(--step));
+}
+.pj-show--empty { height: 100vh; height: 100svh; }
+.pj-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: linear-gradient(var(--wall), var(--room) 82%);
+}
+.pj-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding-bottom: 8vh;
+}
+.pj-frame {
+  --h: min(64vh, calc((100vw - 2 * var(--gut)) / var(--ar)));
+  --h: min(64svh, calc((100vw - 2 * var(--gut)) / var(--ar)));
+  position: relative;
+  width: calc(var(--h) * var(--ar));
+  height: var(--h);
+}
+.js .pj-frame { transition: width .32s cubic-bezier(.6, 0, .3, 1), height .32s cubic-bezier(.6, 0, .3, 1); }
+.pj-frame--blank { background: rgb(var(--lamp) / .9); border-radius: 3px; }
+/* The photograph as the projector throws it: the slide window's soft corners. */
+.pj-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+/* Light bouncing off the wall around the picture: the picture itself, blurred. */
+.pj-spill {
+  position: absolute;
+  inset: -7%;
+  width: 114%;
+  height: 114%;
+  object-fit: cover;
+  filter: blur(46px) saturate(1.15);
+  opacity: .38;
+  pointer-events: none;
+}
+
+/* The beam from the projector behind you to the wall, and the dust in it. */
+/* The cone is clipped to the picture's corners; its parent blurs the edges soft. */
+.pj-beam { position: absolute; inset: 0; pointer-events: none; filter: blur(10px); }
+.pj-beam__cone {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(var(--bx, 50%) 106%, var(--x0, 30%) var(--y1, 70%), var(--x0, 30%) var(--y0, 20%), var(--x1, 70%) var(--y0, 20%), var(--x1, 70%) var(--y1, 70%));
+  background: linear-gradient(to top, rgb(var(--lamp) / .12), rgb(var(--lamp) / .045) 55%, rgb(var(--lamp) / .02));
+}
+.pj-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* ---------- The slide tray, seen from above at the corner of the table ---------- */
+.pj-tray {
+  position: absolute;
+  left: calc(var(--tray-d) * -.16);
+  bottom: calc(var(--tray-d) * -.36);
+  width: var(--tray-d);
+  height: var(--tray-d);
+  perspective: 900px;
+  pointer-events: none;
+}
+.pj-tray__ring {
+  --rot: 0deg;
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: calc(var(--tray-d) * .2) solid var(--tray);
+  box-shadow: inset 0 0 0 2px var(--tray-rim), 0 0 0 2px var(--tray-rim), 0 2.4rem 3rem -1.4rem rgba(0, 0, 0, .9);
+  transform: rotateX(57deg) rotateZ(var(--rot));
+}
+.js .pj-tray__ring { transition: transform .75s cubic-bezier(.7, 0, .18, 1); }
+.pj-slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--a));
+}
+.pj-slot__mount {
+  position: absolute;
+  left: -2px;
+  top: calc(var(--tray-d) * -.48);
+  width: 4px;
+  height: calc(var(--tray-d) * .16);
+  border-radius: 1px;
+  background: #101113;
+}
+.pj-slot.is-loaded .pj-slot__mount { background: var(--mount); }
+.pj-slot.is-out .pj-slot__mount { background: #101113; }
+.pj-slot__no {
+  position: absolute;
+  left: -1rem;
+  top: calc(var(--tray-d) * -.555);
+  width: 2rem;
+  text-align: center;
+  font: 500 .6rem/1 var(--ui);
+  color: #6d6f73;
+}
+
+/* ---------- The slide's label, the remote, the hint ---------- */
+.pj-mount {
+  position: absolute;
+  left: calc(var(--tray-d) * .76);
+  bottom: calc(var(--gut) + .2rem);
+  max-width: min(26rem, calc(100% - var(--tray-d) * .76 - 19rem));
+  margin: 0;
+}
+.pj-mount p { margin: 0; }
+.pj-mount__no { font: 400 2.5rem/1 var(--hand); color: var(--text); }
+.pj-mount__meta { margin-top: .2rem !important; font: 500 .85rem/1.3 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pj-mount__meta:empty { display: none; }
+
+.pj-remote {
+  position: absolute;
+  right: var(--gut);
+  bottom: var(--gut);
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem;
+  border-radius: 1.6rem;
+  background: #18191b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 .7rem 1.4rem -.6rem rgba(0, 0, 0, .85);
+}
+.pj-key {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #2b2d30;
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .06);
+  cursor: pointer;
+  text-decoration: none;
+}
+.pj-key:hover { background: #36383c; }
+.pj-key:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(0, 0, 0, .45); }
+.pj-count {
+  min-width: 3.2rem;
+  text-align: center;
+  font: 500 .9rem/1 var(--ui);
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pj-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--gut) + 4.8rem);
+  margin: 0;
+  translate: -50% 0;
+  font: 500 .78rem/1 var(--ui);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: opacity .5s;
+}
+.pj-hint.is-gone { opacity: 0; }
+
+/* ---------- The light table ---------- */
+.pj-table {
+  padding: clamp(3rem, 8vw, 6rem) var(--gut) clamp(3rem, 7vw, 5rem);
+  background: var(--room);
+}
+.pj-table__h {
+  max-width: 72rem;
+  margin: 0 auto 1.2rem;
+  font: 700 1.2rem/1.1 var(--ui);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pj-table__slides {
+  --m: 10rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--m), 1fr));
+  gap: clamp(1rem, 2.4vw, 2rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(1.4rem, 3vw, 2.6rem);
+  list-style: none;
+  border-radius: .6rem;
+  background: var(--table);
+  box-shadow: 0 2rem 3.4rem -2rem rgba(0, 0, 0, .95);
+}
+.pj-slide {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: .55rem;
+  background: var(--mount);
+  box-shadow: 0 .2rem .4rem rgba(0, 0, 0, .16), 0 .8rem 1.3rem -.8rem rgba(0, 0, 0, .35);
+  text-decoration: none;
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s;
+}
+.pj-slide:hover { transform: translateY(-.25rem) rotate(-.6deg); box-shadow: 0 .3rem .5rem rgba(0, 0, 0, .18), 0 1.2rem 1.8rem -.8rem rgba(0, 0, 0, .4); }
+.pj-slide:focus-visible { outline-color: #1d5c96; }
+.pj-slide.is-current { box-shadow: 0 0 0 2px #1d5c96, 0 .8rem 1.3rem -.8rem rgba(0, 0, 0, .35); }
+.pj-slide__win { position: absolute; inset: 15%; display: grid; place-items: center; }
+.pj-slide__win img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 2px;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.pj-slide__no {
+  position: absolute;
+  top: 3%;
+  left: 7%;
+  font: 400 1.7rem/1 var(--hand);
+  color: var(--pencil);
+}
+
+/* ---------- Footer ---------- */
+.pj-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .8rem 2rem;
+  padding: 2.4rem var(--gut);
+  border-top: 1px solid #2a231d;
+  color: var(--muted);
+  font: 500 .95rem/1.5 var(--ui);
+}
+.pj-foot p { margin: 0; }
+.pj-foot__links { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+.pj-foot a { color: var(--text); text-underline-offset: .22em; }
+
+/* ---------- The close-up, in this room ---------- */
+.gl {
+  --gl-bg: #121010;
+  --gl-fg: #efe4d2;
+  --gl-muted: #ab9a80;
+  --gl-paper: #ebe7df;
+  --gl-line: rgba(239, 228, 210, .45);
+  --gl-focus: #ffd28a;
+  --gl-backdrop: rgba(5, 4, 3, .82);
+  --gl-ui: var(--ui);
+  --gl-hand: var(--hand);
+}
+.gl .gl__title { font-size: 2rem; }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 700px) {
+  :root { --tray-d: 11.5rem; }
+  .pj-show { --step: 62svh; }
+  .pj-screen { padding-bottom: 14vh; }
+  .pj-frame {
+    --h: min(50vh, calc((100vw - 2 * var(--gut)) / var(--ar)));
+    --h: min(50svh, calc((100vw - 2 * var(--gut)) / var(--ar)));
+  }
+  .pj-mount { left: var(--gut); right: var(--gut); bottom: calc(var(--gut) + 4.2rem); max-width: none; text-align: right; }
+  .pj-mount__no { font-size: 2rem; }
+  .pj-remote { left: auto; right: var(--gut); }
+  .pj-count { min-width: 2.6rem; }
+  .pj-hint { bottom: calc(var(--gut) + 8.4rem); }
+  .pj-table__slides { --m: 7.5rem; }
+}
+@media (max-height: 520px) { .pj-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .js .pj-tray__ring, .js .pj-frame, .pj-slide { transition: none; }
+}

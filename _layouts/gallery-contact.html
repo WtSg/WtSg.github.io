@@ -1,0 +1,86 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
+{%- assign photos = site.data.gallery -%}
+{%- if photos and photos.size > 5 %}{% assign frame_h = "8.2rem" %}{% else %}{% assign frame_h = "11.5rem" %}{% endif -%}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
+  <title>Photography · {{ me.name }}</title>
+  {%- if page.noindex %}
+  <meta name="robots" content="noindex">
+  {%- endif %}
+  <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
+  <link rel="canonical" href="https://www.wshangguan.com/photography/">
+  <meta name="theme-color" content="#222527">
+  <link rel="preload" href="{{ base }}/assets/fonts/barlow-condensed-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/rock-salt-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/gallery-loupe.css">
+  <link rel="stylesheet" href="{{ base }}/assets/css/contact.css">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+</head>
+<body class="cs">
+  <a class="skip" href="#main">Skip to the photographs</a>
+
+  <svg class="cs-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <filter id="wax" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="grain"/>
+      <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
+  <main id="main" class="cs-desk">
+    <article class="cs-sheet" style="--fh: {{ frame_h }}">
+      <header class="cs-head">
+        <h1 class="cs-label"><a href="{{ base }}/">{{ me.name }}</a> <span aria-hidden="true">·</span> Photography</h1>
+        <p class="cs-note">Just my life</p>
+        <a class="cs-add" href="{{ base }}/studio/" data-owner-only hidden>Add photos</a>
+      </header>
+
+      {%- if photos and photos.size > 0 %}
+      <div class="cs-strips">
+        {%- for ph in photos %}
+        {%- assign m = forloop.index0 | modulo: 5 %}
+        {%- assign ar = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+        {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}
+        {%- if m == 0 %}
+        <div class="cs-strip">{% endif %}
+          <button class="cs-frame{% if ar < 1 %} cs-frame--tall{% endif %}" type="button" data-index="{{ forloop.index0 }}" style="--ar: {{ ar }}" aria-label="Enlarge frame {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}">
+            <span class="cs-edge cs-edge--top" aria-hidden="true">{% if m == 0 %}<span>SAFETY FILM</span>{% endif %}</span>
+            <span class="cs-win"><img data-photo src="{{ base }}{{ ph.thumb }}" alt="{% if t != "" %}{{ t }}{% else %}Photograph No. {{ forloop.index }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" {% if forloop.index > 5 %}loading="lazy" {% endif %}decoding="async" draggable="false"></span>
+            <span class="cs-edge cs-edge--bottom" aria-hidden="true"><span class="cs-no"><svg viewBox="0 0 6 6" width="6" height="6"><path d="M0 0l6 3-6 3z" fill="currentColor"/></svg>{{ forloop.index }}</span><span class="cs-no">{{ forloop.index }}A</span></span>
+          </button>
+        {%- if m == 4 or forloop.last %}
+        </div>{% endif %}
+        {%- endfor %}
+      </div>
+      <svg class="cs-marks" aria-hidden="true" focusable="false"></svg>
+      {%- else %}
+      <p class="cs-empty">No film on this sheet yet</p>
+      {%- endif %}
+
+      <footer class="cs-foot" id="contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+        <p>All photographs © {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved. Please ask before using any of them.</p>
+        <p class="cs-foot__links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Homepage</a><a href="{{ base }}/studio/" rel="nofollow">Studio (add photos)</a></p>
+      </footer>
+    </article>
+    <div class="cs-lens" aria-hidden="true" hidden><div class="cs-lens__view"></div></div>
+  </main>
+
+  {% include gallery-data.html %}
+  {% include gallery-loupe.html close="Back to the sheet" %}
+  <script src="{{ base }}/assets/js/site.js" defer></script>
+  <script src="{{ base }}/assets/js/gallery-loupe.js" defer></script>
+  <script src="{{ base }}/assets/js/contact.js" defer></script>
+</body>
+</html>

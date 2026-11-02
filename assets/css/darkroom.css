@@ -922,7 +922,27 @@ body[data-lights="on"] .dr-bench {
   background: linear-gradient(currentColor, transparent);
 }
 .dr-hud__hint.is-gone { opacity: 0; translate: -50% .6rem; pointer-events: none; }
+.dr-hud__btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; }
+.dr-hud__btn .gl-ico { display: block; }
+/* The print list is off-screen until a key lands on it; then the focused one shows. */
+.dr-keys { margin: 0; padding: 0; list-style: none; }
+.dr-keys button {
+  position: absolute;
+  left: -9999px;
+  top: 4.6rem;
+  z-index: 6;
+  padding: .55rem .9rem;
+  border: 1.5px solid var(--text);
+  border-radius: .25rem;
+  background: rgba(12, 3, 2, .82);
+  color: var(--text);
+  font: 700 .85rem/1.2 var(--label);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.dr-keys button:focus { left: 50%; translate: -50% 0; }
 body[data-lights="on"] .dr-hud > * { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
+@media (max-height: 500px) { .dr-hud__hint { display: none; } }
 @media (prefers-reduced-motion: no-preference) {
   .dr-hud__hint:not(.is-gone)::after { animation: drip 1.8s ease-in-out infinite; }
 }
@@ -969,7 +989,7 @@ body[data-lights="on"] .dr-hud > * { opacity: 0; visibility: hidden; transition:
   .dr-bench__tray { font-size: .62rem; letter-spacing: .06em; }
   .dr-stage-wrap { --step: 62svh; }
   .dr-hud__tape { max-width: calc(100% - 2 * var(--gut)); bottom: calc(var(--gut) + 3.6rem); }
-  .dr-hud__btn--look { display: none; }
+  .dr-hud__look-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .dr-hud__timer { bottom: auto; top: 4.6rem; right: var(--gut); }
   .dr-hud__hint { bottom: calc(var(--gut) + 9.4rem); }
   .tray { min-height: 72svh; padding-top: 2.2rem; }

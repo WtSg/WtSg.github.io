@@ -1,0 +1,110 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
+{%- assign photos = site.data.gallery -%}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
+  <title>Photography · {{ me.name }}</title>
+  {%- if page.noindex %}
+  <meta name="robots" content="noindex">
+  {%- endif %}
+  <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
+  <link rel="canonical" href="https://www.wshangguan.com/photography/">
+  <meta name="theme-color" content="#0b0907">
+  <link rel="preload" href="{{ base }}/assets/fonts/barlow-condensed-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/reenie-beanie-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/gallery-loupe.css">
+  <link rel="stylesheet" href="{{ base }}/assets/css/projector.css">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+</head>
+<body class="pj">
+  <a class="skip" href="#main">Skip to the photographs</a>
+
+  <header class="pj-head">
+    <div>
+      <h1 class="pj-title"><a href="{{ base }}/">{{ me.name }}</a> <span aria-hidden="true">·</span> Photography</h1>
+      <p class="pj-sub">Just my life{% if photos and photos.size > 0 %} · {{ photos.size }} slide{% if photos.size != 1 %}s{% endif %}{% endif %}</p>
+    </div>
+    <a class="pj-add" href="{{ base }}/studio/" data-owner-only hidden>Add photos</a>
+  </header>
+
+  <main id="main">
+    {%- if photos and photos.size > 0 %}
+    {%- assign first = photos[0] %}
+    {%- assign ar0 = first.w | times: 1.0 | divided_by: first.h | round: 4 %}
+    {%- assign t0 = first.title | strip %}{% assign pl0 = first.place | strip %}{% assign yr0 = first.year | strip %}
+    <section class="pj-show" style="--n: {{ photos.size }}" aria-label="Slide show">
+      <div class="pj-stage">
+        <div class="pj-beam" aria-hidden="true"><div class="pj-beam__cone"></div></div>
+        <canvas class="pj-dust" aria-hidden="true"></canvas>
+        <figure class="pj-screen">
+          <div class="pj-frame" style="--ar: {{ ar0 }}">
+            <img class="pj-spill" src="{{ base }}{{ first.thumb }}" alt="" aria-hidden="true" draggable="false">
+            <img class="pj-img" data-photo src="{{ base }}{{ first.src }}" alt="{% if t0 != "" %}{{ t0 }}{% else %}Photograph No. 1{% endif %}{% if pl0 != "" %}, {{ pl0 }}{% endif %}" width="{{ first.w }}" height="{{ first.h }}" fetchpriority="high" draggable="false">
+          </div>
+        </figure>
+        <div class="pj-tray" aria-hidden="true"><div class="pj-tray__ring"></div></div>
+        <div class="pj-mount" aria-live="polite">
+          <p class="pj-mount__no">No. 1{% if t0 != "" %} · {{ t0 }}{% endif %}</p>
+          <p class="pj-mount__meta">{{ pl0 }}{% if pl0 != "" and yr0 != "" %} · {% endif %}{{ yr0 }}</p>
+        </div>
+        <nav class="pj-remote" aria-label="Projector">
+          <button class="pj-key" type="button" data-pj="prev" aria-label="Previous slide">{% include gl-icon.html name="prev" %}</button>
+          <span class="pj-count" data-pj-count>1 / {{ photos.size }}</span>
+          <button class="pj-key" type="button" data-pj="next" aria-label="Next slide">{% include gl-icon.html name="next" %}</button>
+          <button class="pj-key" type="button" data-pj="look" aria-label="Look closely at this slide">{% include gl-icon.html name="loupe" %}</button>
+          <a class="pj-key" href="#light-table" aria-label="All slides on the light table">{% include gl-icon.html name="grid" %}</a>
+        </nav>
+        <p class="pj-hint" data-pj-hint>Scroll for the next slide</p>
+      </div>
+    </section>
+
+    <section class="pj-table" id="light-table" aria-labelledby="pj-table-h">
+      <h2 class="pj-table__h" id="pj-table-h">Light table</h2>
+      <ol class="pj-table__slides">
+        {%- for ph in photos %}
+        {%- assign ar = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+        {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}
+        <li>
+          <a class="pj-slide" href="{{ base }}{{ ph.src }}" data-index="{{ forloop.index0 }}" style="--ar: {{ ar }}" aria-label="Project slide No. {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}">
+            <span class="pj-slide__no" aria-hidden="true">{{ forloop.index }}</span>
+            <span class="pj-slide__win"><img data-photo src="{{ base }}{{ ph.thumb }}" alt="{% if t != "" %}{{ t }}{% else %}Photograph No. {{ forloop.index }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false"></span>
+          </a>
+        </li>
+        {%- endfor %}
+      </ol>
+    </section>
+    {%- else %}
+    <section class="pj-show pj-show--empty" aria-label="Slide show">
+      <div class="pj-stage">
+        <div class="pj-beam" aria-hidden="true"><div class="pj-beam__cone"></div></div>
+        <figure class="pj-screen"><div class="pj-frame pj-frame--blank" style="--ar: 1.5"></div></figure>
+        <div class="pj-mount"><p class="pj-mount__no">The tray is empty</p></div>
+      </div>
+    </section>
+    {%- endif %}
+  </main>
+
+  <footer class="pj-foot" id="contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <p>All photographs © {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved. Please ask before using any of them.</p>
+    <p class="pj-foot__links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Homepage</a><a href="{{ base }}/studio/" rel="nofollow">Studio (add photos)</a></p>
+  </footer>
+
+  {% include gallery-data.html %}
+  {% include gallery-loupe.html close="Back to the slides" %}
+  <script src="{{ base }}/assets/js/site.js" defer></script>
+  <script src="{{ base }}/assets/js/gallery-loupe.js" defer></script>
+  <script src="{{ base }}/assets/js/projector.js" defer></script>
+</body>
+</html>

@@ -16,6 +16,9 @@
   </script>
 
   <title>Photography · {{ me.name }}</title>
+  {%- if page.noindex %}
+  <meta name="robots" content="noindex">
+  {%- endif %}
   <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
   <link rel="canonical" href="https://www.wshangguan.com/photography/">
   <meta name="theme-color" content="#170605">
@@ -86,6 +89,7 @@
 
   <main id="main" class="dr-room">
     {%- if photos and photos.size > 0 %}
+    {%- unless page.flat %}
     <!-- The 3D darkroom (darkroom3d.js); shown only where WebGL works -->
     <div class="dr-stage-wrap" style="--n: {{ photos.size }}" hidden>
       <div class="dr-stage">
@@ -94,15 +98,23 @@
           <div class="dr-hud__tape tape" aria-live="polite"></div>
           <p class="dr-hud__timer" aria-hidden="true">Dev <b data-hud-timer>0:00</b></p>
           <div class="dr-hud__nav">
-            <button class="dr-hud__btn" type="button" data-hud="prev" aria-label="Previous print"><span aria-hidden="true">←</span></button>
+            <button class="dr-hud__btn" type="button" data-hud="prev" aria-label="Previous print">{% include gl-icon.html name="prev" %}</button>
             <span class="dr-hud__count" data-hud-count>1 / {{ photos.size }}</span>
-            <button class="dr-hud__btn" type="button" data-hud="next" aria-label="Next print"><span aria-hidden="true">→</span></button>
-            <button class="dr-hud__btn dr-hud__btn--look" type="button" data-hud="look">Look closely</button>
+            <button class="dr-hud__btn" type="button" data-hud="next" aria-label="Next print">{% include gl-icon.html name="next" %}</button>
+            <button class="dr-hud__btn dr-hud__btn--look" type="button" data-hud="look">{% include gl-icon.html name="loupe" %}<span class="dr-hud__look-text">Look closely</span></button>
           </div>
           <p class="dr-hud__hint" data-hud-hint>Scroll to develop the next print</p>
         </div>
+        <!-- Every print, for keyboards and screen readers: focusing one brings it to the tray -->
+        <ol class="dr-keys">
+          {%- for ph in photos %}
+          {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}
+          <li><button type="button" data-hud-print="{{ forloop.index0 }}">Look closely at print No. {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}</button></li>
+          {%- endfor %}
+        </ol>
       </div>
     </div>
+    {%- endunless %}
 
     <div class="dr-trays">
       {%- for ph in photos %}

@@ -521,7 +521,10 @@
       stage: stage,
       photos: photos,
       reduce: still(),
+      onLost: function () { fallBack(new Error("WebGL context lost")); },
       onState: function (s) {
+        // The hint has done its job once the first sheet is in the developer.
+        if (s.phase === "developing" && hudHint) hudHint.classList.add("is-gone");
         if (s.index >= 0 && s.index !== shownIdx) {
           shownIdx = s.index;
           showTape(s.index);
@@ -561,6 +564,12 @@
       i = Math.max(0, Math.min(N - 1, i));
       window.scrollTo({ top: wrapTop + i * stepPx + 1, behavior: still() ? "auto" : "smooth" });
     }
+    // The keyboard list: focusing a print brings it to the tray; pressing opens it.
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-hud-print]"), function (b) {
+      var i = +b.getAttribute("data-hud-print");
+      b.addEventListener("focus", function () { if (!lit) go(i); });
+      b.addEventListener("click", function () { openLoupe(i, ctrl.rectFor(i), b); });
+    });
     stage.addEventListener("click", function (e) {
       var b = e.target.closest("[data-hud]");
       if (!b) return;
@@ -597,7 +606,8 @@
       },
       afterLoupe: function (i) {
         if (!lightsOn()) go(i);
-        if (lookBtn) lookBtn.focus({ preventScroll: true });
+        var back = lookBtn && lookBtn.offsetParent && getComputedStyle(lookBtn).visibility !== "hidden" ? lookBtn : toggle;
+        if (back) back.focus({ preventScroll: true });
       }
     };
   }

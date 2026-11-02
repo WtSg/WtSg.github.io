@@ -197,7 +197,7 @@ function tileTextures() {
   const col = makeCanvas(S, S), g = col.getContext("2d");
   const rough = makeCanvas(S, S), rg = rough.getContext("2d");
   const H = new Float32Array(256 * 256);
-  g.fillStyle = "#2f2b28";
+  g.fillStyle = "#2c2c2c";
   g.fillRect(0, 0, S, S);
   rg.fillStyle = "rgb(235,235,235)";
   rg.fillRect(0, 0, S, S);
@@ -206,8 +206,8 @@ function tileTextures() {
       const l = 78 + Math.floor((r() - 0.5) * 12);
       const x = tx * ts + gw / 2, y = ty * ts + gw / 2, s = ts - gw;
       const grd = g.createLinearGradient(x, y, x + s, y + s);
-      grd.addColorStop(0, `rgb(${l + 8},${l + 4},${l - 2})`);
-      grd.addColorStop(1, `rgb(${l - 6},${l - 9},${l - 13})`);
+      grd.addColorStop(0, `rgb(${l + 6},${l + 6},${l + 6})`);
+      grd.addColorStop(1, `rgb(${l - 8},${l - 8},${l - 8})`);
       g.fillStyle = grd;
       g.fillRect(x, y, s, s);
       const rv = 105 + Math.floor(r() * 30);
@@ -279,7 +279,7 @@ export function start(o) {
   const N = photos.length;
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
   let pixelRatio = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 1.75);
   renderer.setPixelRatio(pixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -413,7 +413,7 @@ export function start(o) {
     liquid.position.y = LIQ_Y;
     g.add(liquid);
     scene.add(g);
-    return { group: g, spec, u: lu };
+    return { group: g, spec, u: lu, liquid: liquidMat };
   }
   const trays = TRAYS.map(makeTray);
   const devTray = trays[0];
@@ -503,6 +503,7 @@ export function start(o) {
 
   /* The safelight on the wall */
   const lampGroup = new THREE.Group();
+  let lampCord = null;
   const filterMat = new THREE.MeshStandardMaterial({ color: 0x220302, emissive: new THREE.Color(1, 0.09, 0.03), emissiveIntensity: 4.2, roughness: 0.3 });
   {
     const housing = new THREE.Mesh(new RoundedBoxGeometry(0.27, 0.2, 0.1, 4, 0.016), new THREE.MeshStandardMaterial({ color: 0x1e1f21, roughness: 0.45, metalness: 0.6 }));
@@ -514,8 +515,8 @@ export function start(o) {
     lampGroup.position.copy(LAMP);
     lampGroup.lookAt(0.05, 0, 0.1);
     scene.add(lampGroup);
-    const cord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([LAMP.clone().add(V(0, 0.08, -0.04)), LAMP.clone().add(V(0.01, 0.5, -0.05)), LAMP.clone().add(V(0.02, 1.4, -0.05))]), 20, 0.004, 6), blackMat);
-    scene.add(cord);
+    lampCord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([LAMP.clone().add(V(0, 0.08, -0.04)), LAMP.clone().add(V(0.01, 0.5, -0.05)), LAMP.clone().add(V(0.02, 1.4, -0.05))]), 20, 0.004, 6), blackMat);
+    scene.add(lampCord);
   }
 
   /* Haze in the safelight's beam */
@@ -573,11 +574,11 @@ export function start(o) {
   scene.add(lineWash);
   const hemi = new THREE.HemisphereLight(0x3a0905, 0x050101, 0.22);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff6ea, 0);
+  const sun = new THREE.DirectionalLight(0xf6f9ff, 0);
   sun.position.set(0.6, 3.2, 2.2);
   sun.target.position.set(0, 0.3, -0.3);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = false;
+  sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
   sun.shadow.camera.left = -2;
   sun.shadow.camera.right = 2;
   sun.shadow.camera.top = 2;
@@ -701,7 +702,8 @@ export function start(o) {
     const paper = new THREE.Mesh(new THREE.BoxGeometry(pw, phh, 0.0012), paperMat);
     paper.castShadow = paper.receiveShadow = true;
     const dev = { uC: { value: 0.18 }, uB: { value: 3.2 }, uS: { value: 0 } };
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.48 });
+    // The photograph's own pixels: never tone-mapped, so its colours stay true.
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.48, toneMapped: false });
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, dev);
       sh.fragmentShader = sh.fragmentShader
@@ -859,9 +861,9 @@ export function start(o) {
   let pointer = { x: 0, y: 0 };
 
   /* ---------- Post-processing ---------- */
-  const composer = new EffectComposer(renderer);
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: coarse ? 0 : 4 }));
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.45, 0.92);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.45, 1.05);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const grain = new ShaderPass({
@@ -1078,17 +1080,24 @@ export function start(o) {
     lampFill.intensity = 0.55 * (1 - m);
     lineWash.intensity = 0.75 * (1 - m);
     hemi.intensity = 0.22 * (1 - m);
-    emiLevel = lerp(0.68, 0.04, m);
-    photoDiffuse = lerp(0.4, 1, m);
+    // Under white light the print shows exactly its own pixels.
+    emiLevel = lerp(0.68, 1, m);
+    photoDiffuse = lerp(0.4, 0, m);
     prints.forEach(applyDev);
     filterMat.emissiveIntensity = lerp(4.2, 0.25, m);
     hazeU.uAmt.value = 0.16 * (1 - m);
     sun.intensity = 2.6 * m;
     litHemi.intensity = 1.25 * m;
+    // Only the light that is on casts shadows (one shadow map per frame).
+    sun.castShadow = m > 0.5;
+    spot.castShadow = m <= 0.5;
+    // The safelight is put away for the lit wall so it never hangs over a print.
+    lampGroup.visible = lampCord.visible = m <= 0.5;
     scene.background.copy(SAFE_BG).lerp(LIT_BG, m);
     scene.fog.color.copy(SAFE_BG).lerp(LIT_BG, m);
     bloom.strength = lerp(0.55, 0.1, m);
-    grain.uniforms.uVig.value = lerp(0.42, 0.18, m);
+    grain.uniforms.uVig.value = lerp(0.42, 0.08, m);
+    grain.uniforms.uGrain.value = lerp(0.045, 0.012, m);
     lightLevels.lit = m;
   }
 
@@ -1240,6 +1249,11 @@ export function start(o) {
       }
     });
     devTray.u.uAgit.value = lerp(devTray.u.uAgit.value, prints.some((p) => p.devTick) ? 1 : 0.12, 1 - Math.exp(-dt / 600));
+    // Once the picture is up, the liquid calms and its glare steps off the print.
+    const inTray = shown >= 0 && prints[shown].state === "tray" ? prints[shown] : null;
+    const glare = inTray && inTray.developed ? 0.12 : 1;
+    devTray.liquid.specularIntensity = lerp(devTray.liquid.specularIntensity, glare, 1 - Math.exp(-dt / 500));
+    devTray.liquid.envMapIntensity = lerp(devTray.liquid.envMapIntensity, 1.6 * glare, 1 - Math.exp(-dt / 500));
     const k = reduce ? 1 : 1 - Math.exp(-(dt / 1000) * goal.k);
     view.pos.lerp(goal.pos, k);
     view.look.lerp(goal.look, k);
@@ -1254,6 +1268,14 @@ export function start(o) {
     camera.lookAt(camLook);
     if (running) composer.render();
   }
+
+  /* If the GPU drops the context (a phone backgrounding the tab), hand back to the flat darkroom. */
+  canvas.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    running = false;
+    cancelAnimationFrame(raf);
+    if (o.onLost) o.onLost();
+  });
 
   /* ---------- Start ---------- */
   resize();

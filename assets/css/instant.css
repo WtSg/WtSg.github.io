@@ -1,0 +1,316 @@
+/*
+ * Photography, version: Instant prints on the fridge.
+ * A sea-foam enamel fridge door in daylight. Each photograph is an instant
+ * print held by a magnet; it slaps onto the door as you reach it and develops
+ * from murky chemistry to colour. Letter magnets spell the title.
+ */
+
+@font-face {
+  font-family: "Rubik";
+  src: url("../fonts/rubik-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Rubik";
+  src: url("../fonts/rubik-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kalam";
+  src: url("../fonts/kalam-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kalam";
+  src: url("../fonts/kalam-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Layout: the freezer door (title in letter magnets) over the fridge door,
+   where the newest print hangs large and the rest pin up two by two. */
+:root {
+  color-scheme: light;
+  --enamel: #9fd6c2;
+  --enamel-deep: #86c4ad;
+  --seam: #5e9c86;
+  --ink: #10322a;
+  --ink-2: #24493f;
+  --paper: #f8f9f7;
+  --pen: #1f242a;
+  --pen-2: #4b545b;
+  --tomato: #e0492f;
+  --cobalt: #2453c2;
+  --sun: #f1b92a;
+  --black: #1c1e21;
+  --focus: #10322a;
+  --ui: "Rubik", "Trebuchet MS", sans-serif;
+  --hand: "Kalam", "Marker Felt", cursive;
+  --gut: clamp(1rem, 4vw, 2.5rem);
+}
+
+[hidden] { display: none !important; }
+html { scrollbar-color: var(--seam) var(--enamel); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--enamel);
+  color: var(--ink);
+  font: 500 1rem/1.5 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+/* The enamel's soft sheen stays put while the door scrolls. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(100deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, .12));
+}
+::selection { background: var(--ink); color: var(--enamel); }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
+button { font: inherit; color: inherit; }
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 1rem;
+  z-index: 50;
+  padding: .55rem .9rem;
+  background: var(--ink);
+  color: var(--enamel);
+  font-weight: 700;
+}
+.skip:focus { left: 1rem; }
+
+/* The chrome handle along the door's opening edge. */
+.ip-handle {
+  position: fixed;
+  right: clamp(.8rem, 2vw, 1.6rem);
+  top: 32vh;
+  width: 1.05rem;
+  height: 38vh;
+  border-radius: .6rem;
+  background: linear-gradient(90deg, #8d979c, #f3f6f7 38%, #c7ced1 60%, #7f898e);
+  box-shadow: .3rem .5rem .8rem -.2rem rgba(16, 50, 42, .45);
+  z-index: 3;
+}
+
+/* ---------- The freezer door ---------- */
+.ip-freezer {
+  position: relative;
+  padding: clamp(1.4rem, 4vw, 2.6rem) var(--gut) clamp(1.6rem, 4vw, 2.4rem);
+  border-bottom: 3px solid var(--seam);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .45);
+}
+.ip-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .12em;
+  margin: 0;
+  font: 700 clamp(1.7rem, 5.2vw, 3.6rem)/1 var(--ui);
+}
+/* Plastic letter magnets: a little rounded, a little crooked, casting a shadow. */
+.ip-letter {
+  display: inline-block;
+  min-width: .7em;
+  text-align: center;
+  rotate: var(--r);
+  color: var(--c);
+  text-shadow: 0 .05em 0 rgba(0, 0, 0, .18), .04em .1em .12em rgba(16, 50, 42, .35);
+  -webkit-text-stroke: .02em rgba(0, 0, 0, .08);
+}
+/* Letter colours deep enough to read on the enamel (3:1 and up). */
+.ip-letter--tomato { --c: #c13a21; }
+.ip-letter--cobalt { --c: var(--cobalt); }
+.ip-letter--berry { --c: #b0186e; }
+.ip-letter--ink { --c: var(--black); }
+.ip-sub { margin: .7rem 0 0; font: 400 1.3rem/1.2 var(--hand); color: var(--ink-2); }
+.ip-sub a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: .2em; }
+.ip-add {
+  position: absolute;
+  right: calc(var(--gut) + 2.4rem);
+  top: clamp(1.4rem, 4vw, 2.6rem);
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--enamel);
+  font: 700 .82rem/1 var(--ui);
+  text-decoration: none;
+}
+
+/* ---------- The door and its prints ---------- */
+.ip-door {
+  padding: clamp(2.4rem, 6vw, 4.5rem) calc(var(--gut) + 2.6rem) clamp(3rem, 8vw, 6rem) var(--gut);
+}
+.ip-prints {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: clamp(2.6rem, 6vw, 5rem) clamp(1.6rem, 5vw, 4.5rem);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+.ip-print {
+  position: relative;
+  width: 100%;
+  rotate: var(--rot);
+}
+.ip-print--tall { width: 70%; }
+.ip-print--square { width: 82%; }
+.ip-print:nth-child(even) { margin-top: clamp(2rem, 7vw, 6rem); }
+/* The newest print hangs alone, large, under the freezer door. */
+.ip-print--lead {
+  grid-column: 1 / -1;
+  justify-self: center !important;
+  width: min(100%, calc(62vh * var(--ar) * .84));
+  width: min(100%, calc(62svh * var(--ar) * .84));
+}
+.ip-print--lead.ip-print--tall { width: min(70%, calc(62svh * var(--ar) * .84)); }
+
+.ip-open {
+  display: block;
+  width: 100%;
+  padding: 5.5% 5.5% 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--paper);
+  text-align: left;
+  cursor: zoom-in;
+  box-shadow: .15rem .35rem .45rem rgba(16, 50, 42, .28), .6rem 1.4rem 2rem -1rem rgba(16, 50, 42, .45);
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s;
+}
+.ip-open:hover {
+  transform: translateY(-.35rem) rotate(calc(var(--rot) * -.4));
+  box-shadow: .25rem .6rem .7rem rgba(16, 50, 42, .25), 1rem 2.2rem 2.6rem -1rem rgba(16, 50, 42, .5);
+}
+.ip-photo {
+  display: block;
+  aspect-ratio: var(--ar);
+  overflow: hidden;
+  background: #2b3a36;
+}
+.ip-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+/* The wide bottom margin of an instant print, written on in felt pen. */
+.ip-caption {
+  display: grid;
+  align-content: center;
+  min-height: clamp(3.4rem, 9vw, 5.6rem);
+  padding: .5rem 0 .7rem;
+  color: var(--pen);
+}
+.ip-caption__main { font: 700 clamp(1.15rem, 2.2vw, 1.6rem)/1.15 var(--hand); }
+.ip-caption__meta { font: 400 clamp(.95rem, 1.6vw, 1.15rem)/1.2 var(--hand); color: var(--pen-2); }
+.ip-print--lead .ip-caption__main { font-size: clamp(1.3rem, 2.6vw, 2rem); }
+
+/* Round magnets in four plastic colours. */
+.ip-magnet {
+  position: absolute;
+  left: 50%;
+  top: -.9rem;
+  z-index: 2;
+  width: 1.9rem;
+  height: 1.9rem;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 45%), var(--m);
+  box-shadow: inset 0 -.18rem .2rem rgba(0, 0, 0, .22), .12rem .3rem .35rem rgba(16, 50, 42, .4);
+}
+.ip-magnet--tomato { --m: var(--tomato); }
+.ip-magnet--cobalt { --m: var(--cobalt); }
+.ip-magnet--sun { --m: var(--sun); }
+.ip-magnet--ink { --m: var(--black); }
+.ip-print--lead .ip-magnet { width: 2.4rem; height: 2.4rem; top: -1.15rem; }
+
+.ip-empty { display: grid; justify-items: center; gap: 1rem; padding: 6rem 0; font: 400 1.6rem/1.2 var(--hand); }
+.ip-empty .ip-magnet { position: static; translate: none; }
+
+/* ---------- Arriving and developing ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Before a print is reached: not on the door yet. */
+  .ip-ready .ip-print:not(.is-on) .ip-open,
+  .ip-ready .ip-print:not(.is-on) .ip-magnet { opacity: 0; }
+  .ip-ready .ip-print:not(.is-developed) .ip-photo img {
+    filter: brightness(.3) contrast(.5) saturate(0) sepia(.6) hue-rotate(150deg);
+  }
+  .ip-print.is-arriving .ip-open { animation: slap .62s cubic-bezier(.2, .9, .25, 1) both; }
+  .ip-print.is-arriving .ip-magnet { animation: clack .36s .44s cubic-bezier(.2, .8, .2, 1) both; }
+  .ip-print.is-developing .ip-photo img { animation: emerge 4.2s cubic-bezier(.3, 0, .2, 1) both; }
+}
+@keyframes slap {
+  0%   { opacity: 0; transform: translate(-.6rem, -3rem) rotate(6deg) scale(1.07); box-shadow: 1rem 3rem 3rem -1rem rgba(16, 50, 42, .35); }
+  70%  { opacity: 1; transform: translate(0, .15rem) rotate(-.4deg) scale(.992); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes clack {
+  0%   { opacity: 0; transform: translateY(-1.4rem) scale(1.3); }
+  65%  { opacity: 1; transform: translateY(0) scale(.9); }
+  100% { opacity: 1; transform: none; }
+}
+/* Instant film: a murky blue-green sheet, then the shadows, then colour. */
+@keyframes emerge {
+  0%   { filter: brightness(.3) contrast(.5) saturate(0) sepia(.6) hue-rotate(150deg); }
+  35%  { filter: brightness(.55) contrast(.7) saturate(.2) sepia(.45) hue-rotate(120deg); }
+  70%  { filter: brightness(.86) contrast(.92) saturate(.7) sepia(.15) hue-rotate(30deg); }
+  100% { filter: brightness(1) contrast(1) saturate(1) sepia(0) hue-rotate(0deg); }
+}
+.ip-print.is-lifted .ip-magnet { opacity: 0; transform: translateY(-1rem) scale(1.2); transition: opacity .25s, transform .25s; }
+
+/* ---------- Footer ---------- */
+.ip-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .8rem 2rem;
+  padding: 2.4rem calc(var(--gut) + 2.6rem) 2.6rem var(--gut);
+  border-top: 3px solid var(--seam);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45);
+  font-size: .92rem;
+}
+.ip-foot p { margin: 0; }
+.ip-foot__links { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font-weight: 700; }
+.ip-foot a { text-underline-offset: .22em; }
+
+/* ---------- The close-up: the print in your hand ---------- */
+.gl {
+  --gl-bg: #e7f3ee;
+  --gl-fg: #10322a;
+  --gl-muted: #3c5f55;
+  --gl-paper: #f8f9f7;
+  --gl-line: rgba(16, 50, 42, .5);
+  --gl-focus: #10322a;
+  --gl-backdrop: rgba(16, 50, 42, .6);
+  --gl-ui: var(--ui);
+  --gl-hand: var(--hand);
+  --gl-pad: clamp(.6rem, 1.4vw, 1.1rem);
+}
+.gl .gl__img { padding-bottom: calc(var(--gl-pad) * 3.6); }
+.gl .gl__title { font-weight: 700; font-size: 1.6rem; }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 700px) {
+  .ip-handle { display: none; }
+  .ip-door, .ip-foot { padding-right: var(--gut); }
+  .ip-prints { grid-template-columns: 1fr; }
+  .ip-print { width: 88%; }
+  .ip-print--tall { width: 66%; }
+  .ip-print:nth-child(even) { margin-top: 0; }
+  .ip-print--lead { width: 100%; }
+  .ip-print--lead.ip-print--tall { width: 78%; }
+  .ip-add { right: var(--gut); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-open { transition: none; }
+}
