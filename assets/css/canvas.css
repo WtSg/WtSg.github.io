@@ -416,6 +416,7 @@ p { margin: 0; }
 .gl .gl__meta { font: 400 .76rem/1.4 var(--mono); }
 .gl .gl__spec { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem 1rem; font: 400 .72rem/1.4 var(--mono); color: var(--muted); }
 .gl .gl__spec div { display: inline-flex; gap: .4rem; align-items: baseline; }
+.gl .gl__spec.is-empty { display: none; }
 .gl .gl__spec dt { font-size: .6rem; letter-spacing: .1em; }
 /* the settings the LED shows are still there for screen readers */
 .gl__spec [data-k="aperture"], .gl__spec [data-k="shutter"], .gl__spec [data-k="iso"], .gl__spec [data-k="focal-length"] {
@@ -559,4 +560,24 @@ p { margin: 0; }
     .gl .gl__img, .gl__frame { width: min(100cqw - 16px, (100cqh - 16px) * var(--ar, 1.5)); }
     .gl__frame::before, .gl__frame::after { inset: -7px; }
   }
+}
+
+/* On a phone the camera and the lens sit in one fixed place just above the roll, a line
+   each (a long name ends in an ellipsis rather than running off the screen), and their room
+   is kept for a photograph that has neither, so nothing below the photograph moves from one
+   photograph to the next. */
+@media (max-width: 700px) {
+  .gl__info { justify-self: stretch; min-width: 0; }
+  .gl .gl__spec {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: .15rem;
+    height: calc(2.8em + .15rem);
+    min-width: 0;
+  }
+  .gl .gl__spec.is-empty { display: flex; visibility: hidden; }
+  .gl .gl__spec div { max-width: 100%; min-width: 0; }
+  .gl .gl__spec dt { flex: none; }
+  .gl .gl__spec dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
