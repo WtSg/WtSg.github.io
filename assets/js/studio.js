@@ -584,7 +584,7 @@
             ? " HDR photo (" + item.hdrSource.toUpperCase() + "): kept in HDR as a JPEG with a gain map, made from its full brightness. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere."
             : " HDR photo: kept in HDR, with its gain map. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere.")
           : item.hdrSource ? " HDR photo (" + item.hdrSource.toUpperCase() + "), but nothing in it is brighter than white, so it is published as a standard image."
-          : item.hdr ? " HDR photo: this browser couldn't read its HDR, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + ". Safari on a Mac or iPhone keeps HDR." : "") +
+          : item.hdr ? " HDR photo: this browser couldn't read its HDR, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + "." + (item.hdrProblem ? " (Why: " + item.hdrProblem + ")" : "") : "") +
         (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "") +
         (item.date ? " Taken " + item.date + "." : "") +
         (item.placeAuto ? " Place from where it was taken: " + item.place + "." : "");

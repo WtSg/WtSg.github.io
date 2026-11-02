@@ -12,20 +12,16 @@ permalink: /studio/
   <meta name="robots" content="noindex, nofollow">
   <script>document.documentElement.className = "js";</script>
   <title>Gallery Studio</title>
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0c0c0c">
   <link rel="preload" href="{{ base }}/assets/fonts/dejavu-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/dseg7-classic-bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ base }}/assets/css/site.css">
+  <link rel="stylesheet" href="{{ base }}/assets/css/studio.css">
 </head>
-<body>
-  <header class="masthead">
-    <div class="wrap masthead__inner">
-      <a class="wordmark" href="{{ base }}/">{{ me.name }}</a>
-      <nav aria-label="Studio">
-        <ul>
-          <li><a href="{{ base }}/photography/">Open the gallery</a></li>
-        </ul>
-      </nav>
-    </div>
+<body class="st">
+  <header class="st-head">
+    <p class="st-mark"><a href="{{ base }}/">{{ me.name }}</a><span>Studio</span></p>
+    <a class="st-jump" href="{{ base }}/photography/">Back to the wall</a>
   </header>
 
   <main id="studio" class="studio wrap"
@@ -36,7 +32,7 @@ permalink: /studio/
     <noscript><p class="studio__alert">The studio needs JavaScript. Turn it on and reload the page.</p></noscript>
 
     <section class="studio__step" aria-labelledby="connect-h">
-      <h2 id="connect-h">1. Sign in</h2>
+      <h2 id="connect-h"><span class="st-no" aria-hidden="true">01</span><span class="st-h">Sign in</span></h2>
       <div id="connect-form">
         <div class="studio__row">
           <label class="field">
@@ -66,7 +62,7 @@ permalink: /studio/
     </section>
 
     <section class="studio__step" aria-labelledby="settings-h">
-      <h2 id="settings-h">2. Settings</h2>
+      <h2 id="settings-h"><span class="st-no" aria-hidden="true">02</span><span class="st-h">Settings</span></h2>
       <p id="settings-summary" class="studio__help"></p>
       <details class="studio__details">
         <summary>Change settings</summary>
@@ -141,11 +137,11 @@ permalink: /studio/
     </section>
 
     <section class="studio__step" aria-labelledby="add-h">
-      <h2 id="add-h">3. Add photos</h2>
+      <h2 id="add-h"><span class="st-no" aria-hidden="true">03</span><span class="st-h">Add photos</span></h2>
       <label class="drop" id="drop" for="files">
         <input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,.avif" multiple>
-        <span class="drop__main">Choose photos, or drop them here</span>
-        <span class="drop__sub">JPEG, HEIC, AVIF, PNG or WebP. HDR photos stay HDR. HEIC opens best in Safari.</span>
+        <span class="drop__main">Load photos</span>
+        <span class="drop__sub">Drop them here, or click to choose. JPEG, HEIC, AVIF, PNG or WebP; HDR stays HDR.</span>
       </label>
       <ol id="queue" class="queue" aria-label="Photos to publish"></ol>
       <div class="studio__actions">
@@ -155,7 +151,7 @@ permalink: /studio/
     </section>
 
     <section class="studio__step" aria-labelledby="pub-h">
-      <h2 id="pub-h">4. Published photos</h2>
+      <h2 id="pub-h"><span class="st-no" aria-hidden="true">04</span><span class="st-h">Published photos</span></h2>
       <p id="pub-empty" class="studio__help">Sign in to see the photos already in your gallery.</p>
       <ol id="pub-list" class="pubs" aria-label="Published photos"></ol>
     </section>
