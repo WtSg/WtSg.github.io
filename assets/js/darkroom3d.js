@@ -1328,9 +1328,9 @@ export function start(o) {
   // The enlarger from the front, lens to easel; it closes in a little while the lamp is on.
   function enlargerFrame(push) {
     const portrait = aspect < 0.85;
-    const look = V(ENL_X + 0.03, portrait ? 0.3 : 0.28, -0.05);
-    const el = THREE.MathUtils.degToRad(portrait ? 30 : 26);
-    const d = fitDist(portrait ? 0.56 : 0.86, portrait ? 0.98 : 0.84) * (1 - 0.07 * (push || 0));
+    const look = V(ENL_X + 0.03, portrait ? 0.36 : 0.38, -0.06);
+    const el = THREE.MathUtils.degToRad(portrait ? 28 : 22);
+    const d = fitDist(portrait ? 0.56 : 0.9, portrait ? 1.08 : 1.0) * (1 - 0.07 * (push || 0));
     return frame0(look, V(0.12, Math.sin(el) * d, Math.cos(el) * d));
   }
   // Down the room over the bench: the trays in front, the lines and their lamps going on into the dark.
