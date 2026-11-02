@@ -52,38 +52,35 @@
 
   <header class="dr-head">
     <div class="dr-head__left">
-      <a class="dr-mark" href="{{ base }}/">{{ me.name }}</a>
-      <h1 class="dr-title">Photography</h1>
+      <h1 class="dr-title"><a class="dr-mark" href="{{ base }}/">{{ me.name }}</a> <span aria-hidden="true">·</span> Photography</h1>
       <p class="dr-sub">Just my life{% if photos and photos.size > 0 %} · {{ photos.size }} print{% if photos.size != 1 %}s{% endif %}{% endif %}</p>
     </div>
-    <div class="dr-head__right">
-      <a class="dr-add" href="{{ base }}/studio/" hidden>Add photos</a>
-      {%- if photos and photos.size > 0 %}
-      <button class="dr-sign" type="button" data-lights-toggle>
-        <span class="dr-sign__plate" aria-hidden="true">In use</span>
-        <span class="dr-sign__switch" data-sign-hint>Lights on</span>
-      </button>
-      {%- endif %}
-    </div>
+    <a class="dr-add" href="{{ base }}/studio/" hidden>Add photos</a>
   </header>
 
   {%- if photos and photos.size > 0 %}
-  <nav class="dr-line" aria-label="Drying line: prints you have developed">
-    <svg class="dr-line__wire" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <path d="M0 8 Q500 34 1000 8" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
-    </svg>
-    <ol class="dr-line__pins">
-      {%- for ph in photos %}
-      {%- assign par = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
-      <li class="pin" data-pin="{{ forloop.index0 }}" style="--ar: {{ par }}">
-        <span class="pin__clip" aria-hidden="true"></span>
-        <button class="pin__print" type="button" tabindex="-1" aria-label="Go to print No. {{ forloop.index }}">
-          <img src="{{ base }}{{ ph.thumb }}" alt="" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
-        </button>
-      </li>
-      {%- endfor %}
-    </ol>
-  </nav>
+  <div class="dr-bar">
+    <nav class="dr-line" aria-label="Drying line: prints you have developed">
+      <svg class="dr-line__wire" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="M0 8 Q500 34 1000 8" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <ol class="dr-line__pins">
+        {%- for ph in photos %}
+        {%- assign par = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+        <li class="pin" data-pin="{{ forloop.index0 }}" style="--ar: {{ par }}">
+          <span class="pin__clip" aria-hidden="true"></span>
+          <button class="pin__print" type="button" tabindex="-1" aria-label="Go to print No. {{ forloop.index }}">
+            <img src="{{ base }}{{ ph.thumb }}" alt="" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
+          </button>
+        </li>
+        {%- endfor %}
+      </ol>
+    </nav>
+    <button class="dr-sign" type="button" data-lights-toggle>
+      <span class="dr-sign__plate" aria-hidden="true">In use</span>
+      <span class="dr-sign__switch" data-sign-hint>Lights on</span>
+    </button>
+  </div>
   {%- endif %}
 
   <main id="main" class="dr-room">
@@ -97,13 +94,13 @@
           <span class="tray__timer" aria-hidden="true">Dev <b data-timer>0:00</b></span>
           <div class="print" style="view-transition-name: print-{{ forloop.index }}">
             <button class="print__open" type="button" aria-label="Look closely at print No. {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}">
-              <img class="print__img"
+              <span class="print__liquid"><img class="print__img"
                    src="{{ base }}{{ ph.src }}"
                    srcset="{{ base }}{{ ph.thumb }} 900w, {{ base }}{{ ph.src }} {{ ph.w }}w"
                    sizes="(max-width: 700px) 92vw, 62vw"
                    alt="{% if t != "" %}{{ t }}{% else %}Photograph No. {{ forloop.index }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}"
                    width="{{ ph.w }}" height="{{ ph.h }}"
-                   {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" draggable="false">
+                   {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" draggable="false"></span>
             </button>
           </div>
         </div>
@@ -129,6 +126,13 @@
         {%- endif %}
       </article>
       {%- endfor %}
+    </div>
+
+    <!-- With the lights on: the bench and its empty trays -->
+    <div class="dr-bench" aria-hidden="true">
+      <span class="dr-bench__tray">Developer</span>
+      <span class="dr-bench__tray">Stop</span>
+      <span class="dr-bench__tray">Fixer</span>
     </div>
 
     <dialog class="loupe" aria-label="A print, up close">

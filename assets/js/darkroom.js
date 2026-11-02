@@ -54,9 +54,22 @@
   // The wire is the quadratic M0 8 Q500 34 1000 8 drawn 40 px tall, so at a
   // fraction f along it the wire sits 52 f (1 - f) px below its ends.
   var sagQueued = false;
+  // Size the clothespinned prints so every one fits on the visible line.
+  function fitPins() {
+    if (!pinList || !pins.length) return;
+    var cs = getComputedStyle(pinList);
+    var avail = pinList.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (avail <= 0) return;
+    var gap = parseFloat(cs.columnGap) || 0;
+    var sum = 0;
+    pins.forEach(function (p) { sum += parseFloat(p.style.getPropertyValue("--ar")) || 1; });
+    var h = (avail - pins.length * 6 - (pins.length - 1) * gap - 2) / sum;
+    line.style.setProperty("--pin-fit", Math.max(16, Math.floor(h)) + "px");
+  }
   function sag() {
     sagQueued = false;
     if (!line) return;
+    fitPins();
     var lr = line.getBoundingClientRect();
     if (!lr.width) return;
     pins.forEach(function (p) {
@@ -262,7 +275,7 @@
   function setLights(on) {
     body.setAttribute("data-lights", on ? "on" : "safe");
     if (hint) hint.textContent = on ? "Safelight" : "Lights on";
-    if (themeMeta) themeMeta.setAttribute("content", on ? "#e7e7e4" : "#170605");
+    if (themeMeta) themeMeta.setAttribute("content", on ? "#a3a4a0" : "#170605");
     settleAll();
     if (flicker) flicker.classList.remove("is-on");
     window.scrollTo(0, 0);

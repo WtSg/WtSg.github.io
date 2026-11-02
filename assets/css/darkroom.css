@@ -33,11 +33,11 @@
   --room: #170605;
   --room-0: rgba(23, 6, 5, 0);
   --room-2: #230a07;
-  --rim: #3b1611;
-  --rim-hi: #5a221a;
-  --liquid: #1d0806;
-  --pool: rgba(176, 30, 18, .30);
-  --pool-2: rgba(176, 30, 18, .08);
+  --rim: #110403;
+  --rim-hi: #4a1810;
+  --liquid: #3a0d08;
+  --pool: rgba(190, 34, 20, .42);
+  --pool-2: rgba(176, 30, 18, .10);
   --text: #f2d7d0;
   --muted: #bf938a;
   --wire: #7a4236;
@@ -50,39 +50,39 @@
   --hand: "Permanent Marker", "Marker Felt", "Comic Sans MS", cursive;
 
   --gut: clamp(1rem, 4vw, 2.5rem);
-  --head-h: 6.3rem;
+  --head-h: 4.4rem;
   --line-h: 6.2rem;
   --wire-top: .55rem;
   --pin-h: 3.3rem;
   --rim-w: .55rem;
-  --basin-pad: clamp(.8rem, 2.2vw, 1.5rem);
+  --basin-pad: clamp(1.1rem, 3vw, 2.3rem);
   --paper-pad: clamp(.5rem, 1.3vw, .85rem);
   --chrome: calc(2 * (var(--gut) + var(--rim-w) + var(--basin-pad) + var(--paper-pad)) + 1.2rem);
   --row: 13rem;
+  --hang-gap: clamp(1rem, 2.2vw, 1.8rem);
   --dev: 2.8s;
 }
 
-/* ---------- Tokens: lights on (white fluorescent, neutral grey) ---------- */
+/* ---------- Tokens: lights on (white fluorescent on a mid-grey room) ---------- */
 body[data-lights="on"] {
   color-scheme: light;
-  --room: #e7e7e4;
-  --room-0: rgba(231, 231, 228, 0);
-  --room-2: #d9d9d5;
-  --rim: #b9b9b3;
-  --rim-hi: #cfcfca;
-  --liquid: #cfd2d0;
-  --pool: rgba(255, 255, 255, .55);
-  --pool-2: rgba(255, 255, 255, .15);
-  --text: #161616;
-  --muted: #565656;
-  --wire: #9a9a95;
-  --focus: #1f5f9a;
+  --room: #a3a4a0;
+  --room-0: rgba(163, 164, 160, 0);
+  --room-2: #979894;
+  --rim: #5f605c;
+  --rim-hi: #7d7e7a;
+  --liquid: #b9c1bd;
+  --pool: rgba(255, 255, 255, .26);
+  --pool-2: rgba(255, 255, 255, .07);
+  --text: #121212;
+  --muted: #2b2b29;
+  --wire: #3a3b38;
+  --focus: #0b3a6b;
 }
 
 [hidden] { display: none !important; }
 
 html {
-  background: var(--room);
   scrollbar-color: var(--rim-hi) var(--room);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -105,12 +105,12 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(62% 52% at 50% 46%, var(--pool), var(--pool-2) 58%, transparent 78%),
+    radial-gradient(70% 58% at 50% 44%, var(--pool), var(--pool-2) 60%, transparent 80%),
     var(--room);
 }
 
 ::selection { background: #c4281a; color: #fff4ef; }
-body[data-lights="on"] ::selection { background: #1f5f9a; color: #fff; }
+body[data-lights="on"] ::selection { background: #0b3a6b; color: #fff; }
 
 a { color: inherit; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
@@ -131,7 +131,7 @@ button { font: inherit; color: inherit; }
 
 .dr-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* ---------- Header: wordmark, title, the IN USE sign (the Lights switch) ---------- */
+/* ---------- Header: one wordmark line home, the subject in grease pencil ---------- */
 .dr-head {
   display: flex;
   justify-content: space-between;
@@ -139,24 +139,18 @@ button { font: inherit; color: inherit; }
   gap: 1rem;
   min-height: var(--head-h);
   box-sizing: border-box;
-  padding: 1rem var(--gut) .2rem;
+  padding: 1.1rem var(--gut) .3rem;
 }
-.dr-head__left { display: grid; gap: .1rem; min-width: 0; }
-.dr-mark {
-  justify-self: start;
-  font: 500 .85rem/1.2 var(--label);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: none;
-}
-.dr-mark:hover { color: var(--text); }
+.dr-head__left { display: grid; gap: .15rem; min-width: 0; }
 .dr-title {
   margin: 0;
-  font: 700 clamp(1.9rem, 3.6vw, 2.6rem)/.95 var(--label);
-  letter-spacing: .03em;
+  font: 700 1.2rem/1.15 var(--label);
+  letter-spacing: .1em;
   text-transform: uppercase;
+  color: var(--muted);
 }
+.dr-mark { color: var(--text); text-decoration: none; }
+.dr-mark:hover { text-decoration: underline; text-underline-offset: .22em; text-decoration-thickness: 1px; }
 .dr-sub {
   margin: .25rem 0 0;
   font: 400 1rem/1.2 var(--hand);
@@ -165,7 +159,6 @@ button { font: inherit; color: inherit; }
   transform-origin: 0 50%;
 }
 
-.dr-head__right { display: flex; align-items: flex-start; gap: 1rem; }
 .dr-add {
   padding: .45rem .65rem;
   border: 1px dashed currentColor;
@@ -178,10 +171,13 @@ button { font: inherit; color: inherit; }
 }
 .dr-add:hover { color: var(--text); }
 
+/* The IN USE sign is the light switch; it rides with the drying line. */
 .dr-sign {
+  flex: none;
   display: grid;
   justify-items: end;
-  gap: .5rem;
+  gap: .45rem;
+  margin: .3rem var(--gut) 0 .25rem;
   padding: 0;
   border: 0;
   background: none;
@@ -236,14 +232,24 @@ body[data-lights="on"] .dr-sign__switch::before {
   background: radial-gradient(circle at 50% 28%, currentColor 0 .16rem, transparent .18rem);
 }
 
-/* ---------- The drying line ---------- */
-.dr-line {
+/* ---------- The drying line (sticky, with the light switch at its end) ---------- */
+.dr-bar {
   position: sticky;
   top: 0;
   z-index: 20;
+  display: flex;
+  align-items: flex-start;
   height: var(--line-h);
-  color: var(--wire);
   background: linear-gradient(var(--room) 62%, var(--room-0));
+}
+.dr-line {
+  /* Pins shrink to fit every print on the line (darkroom.js sets --pin-fit). */
+  --ph: min(var(--pin-h), var(--pin-fit, var(--pin-h)));
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  color: var(--wire);
 }
 .dr-line__wire {
   position: absolute;
@@ -259,18 +265,17 @@ body[data-lights="on"] .dr-sign__switch::before {
   display: flex;
   gap: clamp(.6rem, 2vw, 1.6rem);
   margin: 0;
-  padding: 0 var(--gut);
+  padding: 0 .5rem 0 var(--gut);
   list-style: none;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
-.dr-line__pins::-webkit-scrollbar { display: none; }
 .pin {
   --sag: 0px;
   position: relative;
   flex: 0 0 auto;
-  width: calc(var(--pin-h) * var(--ar) + 6px);
+  width: calc(var(--ph) * var(--ar) + 6px);
   height: 100%;
 }
 .pin:first-child { margin-left: auto; }
@@ -312,8 +317,8 @@ body[data-lights="on"] .dr-sign__switch::before {
 }
 .pin__print img {
   display: block;
-  height: var(--pin-h);
-  width: calc(var(--pin-h) * var(--ar));
+  height: var(--ph);
+  width: calc(var(--ph) * var(--ar));
 }
 .dr-ready .pin:not(.has-print) .pin__print { opacity: 0; visibility: hidden; }
 .pin.is-swinging .pin__print { animation: swing 1.9s cubic-bezier(.3, .6, .3, 1); }
@@ -345,7 +350,7 @@ body[data-lights="on"] .dr-sign__switch::before {
 
 .tray {
   /* Room left for the print once the line, the tray rim and the tape fit on screen. */
-  --avail: calc(100svh - var(--line-h) - 11rem);
+  --avail: calc(100svh - var(--line-h) - 2 * (var(--rim-w) + var(--basin-pad) + var(--paper-pad)) - 5.6rem);
   --h: min(62svh, var(--avail), calc((100vw - var(--chrome)) / var(--ar)));
   display: grid;
   justify-items: center;
@@ -357,13 +362,14 @@ body[data-lights="on"] .dr-sign__switch::before {
   scroll-margin-top: var(--line-h);
 }
 .tray:first-child {
-  --avail: calc(100svh - var(--line-h) - var(--head-h) - 11rem);
+  --avail: calc(100svh - var(--line-h) - var(--head-h) - 2 * (var(--rim-w) + var(--basin-pad) + var(--paper-pad)) - 5.6rem);
   min-height: calc(100vh - var(--line-h) - var(--head-h));
   min-height: calc(100svh - var(--line-h) - var(--head-h));
   padding-top: 1.6rem;
 }
 
-/* A developer tray: dark plastic rim, a film of liquid. */
+/* A developer tray: black plastic rim, a pool of developer catching the safelight.
+   The sheen and the meniscus live in the liquid around the print, never over it. */
 .tray__basin {
   position: relative;
   padding: var(--basin-pad);
@@ -371,11 +377,12 @@ body[data-lights="on"] .dr-sign__switch::before {
   border-top-color: var(--rim-hi);
   border-radius: 1rem;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(150, 30, 20, .28), transparent 62%),
+    linear-gradient(118deg, transparent 12%, rgba(255, 170, 150, .12) 20%, rgba(255, 170, 150, .035) 29%, transparent 37%),
+    linear-gradient(180deg, rgba(200, 44, 28, .26), rgba(200, 44, 28, 0) 58%),
     var(--liquid);
   box-shadow:
-    inset 0 .7rem 1.4rem rgba(0, 0, 0, .65),
-    inset 0 0 0 1px rgba(0, 0, 0, .5),
+    inset 0 0 0 1px rgba(255, 140, 120, .18),
+    inset 0 .8rem 1.6rem rgba(0, 0, 0, .5),
     0 1.8rem 3rem -1.4rem rgba(0, 0, 0, .85);
 }
 /* The surface of the developer catching the light while it moves. */
@@ -419,9 +426,11 @@ body[data-lights="on"] .dr-sign__switch::before {
   height: 100%;
   padding: 0;
   border: 0;
-  background: none;
+  background: var(--paper);
+  overflow: hidden; /* keeps the ripple inside the image; the paper border stays straight */
   cursor: zoom-in;
 }
+.print__liquid { display: block; width: 100%; height: 100%; }
 .print__img {
   display: block;
   width: 100%;
@@ -481,7 +490,7 @@ body[data-lights="on"] .dr-sign__switch::before {
   }
   /* Ripples through the developer on precise pointers; a gentle rock on touch. */
   @media (hover: hover) and (pointer: fine) {
-    .tray.is-developing .print { filter: url(#agitate); }
+    .tray.is-developing .print__liquid { filter: url(#agitate); }
   }
   @media (pointer: coarse) {
     .tray.is-developing .print { animation: slosh var(--dev) ease-out both; }
@@ -555,21 +564,64 @@ body[data-lights="on"] .dr-sign__switch::before {
   100% { opacity: .82; }
 }
 
-body[data-lights="on"] .dr-line { position: relative; }
+/* The lit room: every print hangs on wires across a grey wall, true to its
+   aspect, and the empty trays wait on the bench below. */
+body[data-lights="on"] .dr-bar {
+  justify-content: flex-end;
+  height: auto;
+  background: none;
+  pointer-events: none;
+}
+body[data-lights="on"] .dr-line { display: none; }
+body[data-lights="on"] .dr-sign { pointer-events: auto; }
+
 body[data-lights="on"] .dr-trays {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: clamp(.7rem, 1.5vw, 1.2rem);
-  padding: 1.2rem var(--gut) 3rem;
+  column-gap: var(--hang-gap);
+  row-gap: clamp(1.4rem, 3vw, 2.4rem);
+  padding: .6rem var(--gut) 1rem;
 }
-body[data-lights="on"] .dr-trays::after { content: ""; flex: 999999 1 0; }
+body[data-lights="on"] .dr-trays::after {
+  content: "";
+  flex: 999999 1 0;
+  height: 1rem;
+  margin-left: calc(var(--hang-gap) / -2);
+  background: linear-gradient(var(--wire), var(--wire)) 0 .55rem / 100% 1.5px no-repeat;
+}
 body[data-lights="on"] .tray {
   --pad: .4rem;
+  position: relative;
   display: block;
   min-height: 0;
-  padding: 0;
+  padding: 1.25rem 0 0;
   flex: var(--ar) 1 calc(var(--ar) * var(--row) + 2 * var(--pad));
+}
+/* The wire each print hangs from, joined to its neighbours across the gap. */
+body[data-lights="on"] .tray::before {
+  content: "";
+  position: absolute;
+  top: .55rem;
+  left: calc(var(--hang-gap) / -2);
+  right: calc(var(--hang-gap) / -2);
+  height: 1.5px;
+  background: var(--wire);
+}
+/* Two wooden clothespins biting the top edge. */
+body[data-lights="on"] .tray::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: .15rem;
+  left: 0;
+  right: 0;
+  height: 21px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #7d5832, #c99d66 45%, #a77a48 55%, #7d5832) 16% 0 / 7px 21px no-repeat,
+    linear-gradient(90deg, #7d5832, #c99d66 45%, #a77a48 55%, #7d5832) 84% 0 / 7px 21px no-repeat;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35));
 }
 body[data-lights="on"] .tray__basin {
   padding: 0;
@@ -583,14 +635,45 @@ body[data-lights="on"] .print {
   width: 100%;
   height: auto;
   padding: var(--pad);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .18), 0 .6rem 1.2rem -.5rem rgba(0, 0, 0, .28);
+  transform-origin: 50% 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 .9rem 1.4rem -.7rem rgba(0, 0, 0, .45);
 }
+body[data-lights="on"] .tray:nth-child(3n+1) .print { rotate: .45deg; }
+body[data-lights="on"] .tray:nth-child(3n+2) .print { rotate: -.35deg; }
 body[data-lights="on"] .print__img { height: auto; aspect-ratio: var(--ar); }
 body[data-lights="on"] .tray .tape,
 body[data-lights="on"] .tray__timer { display: none; }
-body[data-lights="on"] .tray .print:hover {
-  transform: translateY(-.25rem);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, .18), 0 1.1rem 1.8rem -.7rem rgba(0, 0, 0, .35);
+body[data-lights="on"] .tray.is-developed .print:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 1.2rem 1.8rem -.8rem rgba(0, 0, 0, .5);
+  animation: nudge 1.1s ease-out;
+}
+
+.dr-bench { display: none; }
+body[data-lights="on"] .dr-bench {
+  display: flex;
+  justify-content: center;
+  gap: clamp(.8rem, 3vw, 2.4rem);
+  padding: 1.6rem var(--gut) 2.6rem;
+}
+.dr-bench__tray {
+  display: grid;
+  place-items: end center;
+  width: clamp(5.5rem, 15vw, 11rem);
+  aspect-ratio: 4 / 3;
+  box-sizing: border-box;
+  padding-bottom: .55rem;
+  border: .45rem solid var(--rim);
+  border-top-color: var(--rim-hi);
+  border-radius: .8rem;
+  background:
+    linear-gradient(118deg, transparent 18%, rgba(255, 255, 255, .28) 28%, rgba(255, 255, 255, .06) 36%, transparent 44%),
+    var(--liquid);
+  box-shadow: inset 0 .5rem 1rem rgba(0, 0, 0, .22), 0 1rem 1.6rem -1rem rgba(0, 0, 0, .55);
+  font: 700 .78rem/1 var(--label);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text);
 }
 
 ::view-transition-group(*) {
@@ -726,16 +809,22 @@ body[data-lights="on"] .tray .print:hover {
 /* ---------- Small screens ---------- */
 @media (max-width: 700px) {
   :root {
-    --head-h: 5.6rem;
+    --head-h: 4.3rem;
     --line-h: 5.2rem;
     --pin-h: 2.5rem;
     --rim-w: .4rem;
     --row: 6.4rem;
+    --hang-gap: .9rem;
   }
   .dr-head { gap: .6rem; }
-  .dr-sign__plate { font-size: .9rem; letter-spacing: .2em; padding: .4rem .6rem .35rem .75rem; }
+  .dr-title { font-size: 1rem; letter-spacing: .08em; }
+  .dr-sign { grid-auto-flow: column; align-items: center; gap: .35rem; margin-top: .35rem; }
+  .dr-sign__plate { font-size: .8rem; letter-spacing: .18em; padding: .38rem .5rem .33rem .62rem; }
+  /* The switch glyph stays; its words remain the button's name for screen readers. */
+  .dr-sign__switch { font-size: 0; gap: 0; }
   .dr-add { display: none; }
-  .tray { padding-top: 2.2rem; }
+  .tray { min-height: 72svh; padding-top: 2.2rem; }
+  .tray:first-child { min-height: 0; align-content: start; padding-top: 1.6rem; }
   .loupe[open] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
@@ -754,5 +843,6 @@ body[data-lights="on"] .tray .print:hover {
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none !important; }
   .print, .dr-sign__plate { transition: none; }
-  .pin.has-print .pin__print:hover { animation: none; }
+  .pin.has-print .pin__print:hover,
+  body[data-lights="on"] .tray.is-developed .print:hover { animation: none; }
 }
