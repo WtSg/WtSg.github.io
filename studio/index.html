@@ -36,31 +36,31 @@ permalink: /studio/
     <noscript><p class="studio__alert">The studio needs JavaScript. Turn it on and reload the page.</p></noscript>
 
     <section class="studio__step" aria-labelledby="connect-h">
-      <h2 id="connect-h">1. Connect to GitHub</h2>
+      <h2 id="connect-h">1. Sign in</h2>
       <div id="connect-form">
-        <p class="studio__help">Paste a GitHub access token that can edit the <code>WtSg.github.io</code> repository. You only do this once per device.</p>
+        <div class="studio__row">
+          <label class="field">
+            <span class="field__label">Password</span>
+            <input id="token" type="password" autocomplete="current-password" spellcheck="false">
+          </label>
+          <button id="connect" class="btn" type="button">Enter</button>
+        </div>
+        <label class="check"><input id="remember" type="checkbox" checked> Remember on this device</label>
+        <!-- The password is a GitHub access token that can edit WtSg/WtSg.github.io. -->
         <details class="studio__details">
-          <summary>How to create the token</summary>
+          <summary>How to get one</summary>
           <ol class="studio__steps">
             <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
             <li>Name it “Gallery Studio”. Leave <b>Resource owner</b> as WtSg, and pick an expiration (for example, one year).</li>
             <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b>WtSg/WtSg.github.io</b>. (“Public repositories” is read-only and won’t work.)</li>
             <li>Under <b>Permissions</b>, click <b>Add permissions</b> (or open <b>Repository permissions</b>), choose <b>Contents</b>, and set it to <b>Read and write</b>.</li>
-            <li>Generate the token, copy it, and paste it below. GitHub shows it only once. To fix an existing token, open it on the same page and click <b>Edit</b>; the token text stays the same.</li>
+            <li>Generate the token, copy it, and use it as the password. GitHub shows it only once. To fix an existing token, open it on the same page and click <b>Edit</b>; the token text stays the same.</li>
           </ol>
         </details>
-        <div class="studio__row">
-          <label class="field">
-            <span class="field__label">Access token</span>
-            <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-          </label>
-          <button id="connect" class="btn" type="button">Connect</button>
-        </div>
-        <label class="check"><input id="remember" type="checkbox"> Remember on this device (leave unchecked on a shared computer)</label>
       </div>
       <div id="connected" class="studio__connected" hidden>
-        <p><span class="studio__ok" aria-hidden="true"></span><span id="connected-text">Connected.</span></p>
-        <button id="disconnect" class="btn btn--line btn--small" type="button">Disconnect</button>
+        <p><span class="studio__ok" aria-hidden="true"></span><span id="connected-text">Signed in.</span></p>
+        <button id="disconnect" class="btn btn--line btn--small" type="button">Sign out</button>
       </div>
       <p id="connect-status" class="studio__status" role="status" aria-live="polite"></p>
     </section>
@@ -132,7 +132,8 @@ permalink: /studio/
               <input id="s-artist" type="text" maxlength="120">
             </label>
             <label class="check"><input id="s-camera" type="checkbox"> Show camera, lens, focal length, aperture, shutter speed and ISO in the gallery</label>
-            <p class="field__hint">Read from each JPEG, HEIC or AVIF before it is stripped. Location is always removed and is never shown.</p>
+            <label class="check"><input id="s-place" type="checkbox"> Fill in the place from where the photo was taken</label>
+            <p class="field__hint">Read from each JPEG, HEIC or AVIF before it is stripped. For the place, the photo's location, rounded to about a kilometre, is looked up on OpenStreetMap to find the town; you can change it before publishing. The location itself is always removed from the file and never published.</p>
           </fieldset>
           <button id="s-reset" class="btn btn--line btn--small" type="button">Reset to defaults</button>
         </div>
@@ -155,7 +156,7 @@ permalink: /studio/
 
     <section class="studio__step" aria-labelledby="pub-h">
       <h2 id="pub-h">4. Published photos</h2>
-      <p id="pub-empty" class="studio__help">Connect to see the photos already in your gallery.</p>
+      <p id="pub-empty" class="studio__help">Sign in to see the photos already in your gallery.</p>
       <ol id="pub-list" class="pubs" aria-label="Published photos"></ol>
     </section>
   </main>

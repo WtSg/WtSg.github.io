@@ -84,8 +84,10 @@
     specLine: specLine,
     altText: altText,
     open: function () {},
+    go: function () {},
     onClose: null,
-    onStep: null
+    onStep: null,
+    onFill: null
   };
   window.Gallery = api;
   if (!dialog || typeof dialog.showModal !== "function" || !photos.length) return;
@@ -95,11 +97,23 @@
   var cap = dialog.querySelector(".gl__cap");
   var spec = dialog.querySelector(".gl__spec");
   var count = dialog.querySelector(".gl__count");
+  var frameEl = dialog.querySelector(".gl__frame");
+  var roll = dialog.querySelector(".gl__roll");
+  // The roll: every photograph as a frame on a strip of film, to jump to.
+  if (roll) {
+    roll.innerHTML = photos.map(function (p) {
+      var n = (p.i + 1 < 10 ? "0" : "") + (p.i + 1);
+      return '<li><button class="gl__frm" type="button" data-gl-i="' + p.i + '" aria-label="' + esc(label(p)) + '">' +
+        '<img src="' + esc(p.thumb) + '" alt="" loading="lazy" decoding="async" draggable="false" style="--ar:' + p.ar.toFixed(4) + '">' +
+        '<span class="gl__edge" aria-hidden="true">' + n + "</span></button></li>";
+    }).join("");
+  }
   var index = 0, openedAt = 0, opener = null, closing = false;
 
   function fill(i, fromSrc) {
     var p = photos[i];
     img.style.setProperty("--ar", p.ar);
+    stage.style.setProperty("--ar", p.ar);
     img.alt = altText(p);
     img.src = fromSrc || p.src;
     if (fromSrc && fromSrc !== p.src) {
@@ -110,9 +124,18 @@
     var meta = metaLine(p);
     cap.innerHTML = '<p class="gl__title">' + esc(label(p)) + "</p>" + (meta ? '<p class="gl__meta">' + esc(meta) + "</p>" : "");
     var rows = specRows(p);
-    spec.innerHTML = rows.map(function (r) { return "<div><dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>"; }).join("");
+    spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>"; }).join("");
     spec.hidden = !rows.length;
     count.textContent = (i + 1) + " / " + photos.length;
+    if (roll) {
+      Array.prototype.forEach.call(roll.querySelectorAll(".gl__frm"), function (b) {
+        var on = +b.getAttribute("data-gl-i") === i;
+        b.classList.toggle("is-on", on);
+        if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+        if (on && dialog.open && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "center", behavior: still() ? "auto" : "smooth" });
+      });
+    }
+    if (api.onFill) api.onFill(i, p);
     [i + 1, i - 1].forEach(function (k) {
       var n = new Image();
       n.src = photos[(k + photos.length) % photos.length].src;
@@ -126,6 +149,8 @@
     fill(i, fromSrc);
     dialog.showModal();
     root.classList.add("gl-open");
+    var on = roll && roll.querySelector(".gl__frm.is-on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
     if (still() || !img.animate) return;
     var r0 = null;
     if (from && from.getBoundingClientRect) r0 = from.getBoundingClientRect();
@@ -143,8 +168,19 @@
         { transform: "translateY(-1rem) scale(1.03) rotateX(5deg)", offset: 0.62 },
         { transform: "none" }
       ], { duration: 760, easing: "cubic-bezier(.2,.75,.25,1)" });
+      focusPull(520);
     });
   };
+  // The frame lines close in and the photograph comes into focus, as a lens does.
+  function focusPull(delay) {
+    if (still() || !img.animate) return;
+    img.animate([{ filter: "blur(9px)" }, { filter: "blur(9px)", offset: 0.35 }, { filter: "blur(0)" }],
+      { duration: delay + 380, easing: "cubic-bezier(.3,.7,.2,1)" });
+    if (frameEl && frameEl.animate) {
+      frameEl.animate([{ opacity: 0, transform: "scale(1.08)" }, { opacity: 0, transform: "scale(1.08)", offset: 0.45 }, { opacity: 1, transform: "none" }],
+        { duration: delay + 300, easing: "cubic-bezier(.2,.8,.2,1)" });
+    }
+  }
 
   function close() {
     if (!dialog.open || closing) return;
@@ -153,8 +189,9 @@
     var a = dialog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease-in" });
     a.onfinish = function () { dialog.close(); };
   }
-  function step(d) {
-    var n = (index + d + photos.length) % photos.length;
+  function step(d) { go((index + d + photos.length) % photos.length, d); }
+  api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
+  function go(n, d) {
     if (api.onStep) api.onStep(n);
     if (still() || !img.animate) { index = n; fill(n); return; }
     var out = img.animate([
@@ -169,10 +206,13 @@
         { transform: "translateX(" + (d * 4) + "%)", opacity: 0 },
         { transform: "none", opacity: 1 }
       ], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
+      focusPull(120);
     };
   }
 
   dialog.addEventListener("click", function (e) {
+    var frm = e.target.closest("[data-gl-i]");
+    if (frm) { api.go(+frm.getAttribute("data-gl-i")); return; }
     var act = e.target.closest("[data-gl]");
     if (act) {
       var a = act.getAttribute("data-gl");

@@ -72,15 +72,18 @@
 
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
-  var pw = 0, ph = 0, ledH = 30, capH = 16, hintH = 16, footH = 40;
+  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
   function measure() {
     vw = window.innerWidth;
     vh = window.innerHeight;
     narrow = vw < 700;
     // the long side of a photograph on the wall, fully pulled back
     Lb = clamp(Math.min(vw, vh * 1.6) * 0.21, 112, 330);
-    pw = patch.offsetWidth;
-    ph = patch.offsetHeight;
+    // the focus patch at its own size; zoomed out it shrinks with the frame lines
+    patch.style.width = patch.style.height = "";
+    pw = pw0 = patch.offsetWidth;
+    ph = ph0 = patch.offsetHeight;
+    patchK = -1;
     ledH = below.firstElementChild.offsetHeight || ledH;
     capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
@@ -349,6 +352,15 @@
     // they close round it; zoomed in, they stay and the photograph grows past them)
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
+    // the focus patch keeps its size against the frame lines (never smaller than a third)
+    var pk = Math.max(0.35, fz);
+    if (Math.abs(pk - patchK) > 0.002) {
+      patchK = pk;
+      pw = pw0 * pk;
+      ph = ph0 * pk;
+      patch.style.width = pw.toFixed(1) + "px";
+      patch.style.height = ph.toFixed(1) + "px";
+    }
     var frErr = Math.abs(fL - fr.L) + Math.abs(fS - fr.S) + Math.abs(frTo.rot - fr.rot);
     if (frErr > 0.02 || frDirty) {
       frDirty = false;
@@ -629,6 +641,35 @@
     setTimeout(open, 135);
   }
   G.onClose = function (i, moved) { if (moved) lockPhoto(i); };
+
+  /* ---------- The close-up: the same LED readout, under the photograph ---------- */
+  var glLed = document.querySelector(".gl__led"), glRoll = 0;
+  G.onFill = function (i) {
+    if (!glLed) return;
+    var v = ledText(photos[i]);
+    var cells = [["f", "<em>F</em>", ""], ["s", "<em>" + v.sl + "</em>", ""], ["iso", "<em>ISO</em>", ""], ["mm", "", "<em>MM</em>"]]
+      .filter(function (c) { return v[c[0]]; });
+    glLed.innerHTML = '<div class="vf-led">' +
+      (cells.length ? '<span class="vf-led__exif">' + cells.map(function (c) {
+        return '<span class="vf-led__cell">' + c[1] + '<b data-k="' + c[0] + '"></b>' + c[2] + "</span>";
+      }).join("") + "</span>" : "") +
+      '<span class="vf-led__cell vf-led__cell--n"><b data-k="n"></b></span></div>';
+    var bs = Array.prototype.slice.call(glLed.querySelectorAll("b[data-k]"));
+    var put = function (b, t) { b.textContent = t; b.setAttribute("data-off", t.replace(/\d/g, "8")); };
+    clearInterval(glRoll);
+    if (still()) { bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")]); }); return; }
+    // every segment lit for a moment, then the digits roll and settle
+    var ticks = 0;
+    bs.forEach(function (b) { put(b, v[b.getAttribute("data-k")].replace(/\d/g, "8")); });
+    glRoll = setInterval(function () {
+      ticks++;
+      bs.forEach(function (b) {
+        var t = v[b.getAttribute("data-k")];
+        put(b, ticks >= 9 ? t : ticks < 4 ? t.replace(/\d/g, "8") : t.replace(/\d/g, function () { return String(Math.floor(Math.random() * 10)); }));
+      });
+      if (ticks >= 9) clearInterval(glRoll);
+    }, 45);
+  };
 
   /* ---------- Start: the camera wakes ---------- */
   function startAt(i, offX, offY) {

@@ -158,6 +158,8 @@ button { font: inherit; color: inherit; }
   rotate: -1.5deg;
   transform-origin: 0 50%;
 }
+.dr-back { color: var(--text); text-underline-offset: .2em; text-decoration-thickness: 1px; }
+.dr-back:hover { color: var(--accent, var(--text)); }
 
 .dr-add {
   padding: .45rem .65rem;
