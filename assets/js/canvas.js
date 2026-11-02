@@ -72,7 +72,7 @@
 
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
-  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
+  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, patchNow = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
   var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false, patchOn = true, wakeSet = 1;
   function measure() {
     vw = window.innerWidth;
@@ -85,6 +85,7 @@
     pw = pw0 = patch.offsetWidth;
     ph = ph0 = patch.offsetHeight;
     patchK = -1;
+    patchNow = -1;
     ledH = below.firstElementChild.offsetHeight || ledH;
     capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
@@ -113,6 +114,10 @@
     wall = document.createElement("div");
     wall.className = "cv-wall";
     plane.appendChild(wall);
+    // the lens: its corners a touch soft and dark, as a real one draws them (canvas.css)
+    var lens = document.createElement("div");
+    lens.className = "cv-lens";
+    plane.appendChild(lens);
     items = [];
     baked = 0;
     cw = Lb * 1.16;
@@ -223,7 +228,7 @@
   }
   var fr = { L: 1, S: 1, rot: 0 }, frTo = { L: 1, S: 1, rot: 0 }, frDirty = true;
   var dragging = false, wheeling = false, hold = 0, subject = null, lockOn = null;
-  var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null;
+  var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null, heldPull = 0;
   var sharp = null, opening = false;
 
   // Frame a photograph: move it to the centre, close in until it fills the frame,
@@ -357,7 +362,7 @@
 
     if (calm || pinch) { ox = tx; oy = ty; }
     else if (!waking) {
-      var a = ease(dt, dragging ? 22 : opening ? 300 : 120);
+      var a = ease(dt, dragging || panning ? 22 : opening ? 300 : 120);
       ox += (tx - ox) * a;
       oy += (ty - oy) * a;
     }
@@ -365,7 +370,11 @@
 
     // the lens pulls back with speed, and over a long glide
     var pull = clamp((spd - 1.5) / 20, 0, 1);
-    if (dragging) pull = Math.max(pull, 0.28);
+    // while the wall is held (the mouse button or the finger still down) the lens stays as far
+    // back as this drag has taken it, so pausing to look about does not close in; it closes
+    // in only once let go
+    if (dragging) { heldPull = Math.max(heldPull, pull, 0.28); pull = heldPull; }
+    else heldPull = 0;
     // Over a long glide across the wall the lens pulls back too; a step to a neighbour
     // does not, so the photograph eases straight to its new size with the frame lines.
     if (!moving) pull = Math.max(pull, clamp((dist * s - vw * 1.1) / (vw * 1.2), 0, 1) * 0.7);
@@ -381,6 +390,7 @@
     var bake = rest ? s : 0;
     if (bake !== baked) {
       baked = bake;
+      plane.classList.toggle("is-still", !!bake);
       wall.style.transform = bake ? "none" : "scale(" + s.toFixed(4) + ")";
       for (var b2 = 0; b2 < items.length; b2++) {
         var ib = items[b2], f = bake || 1;
@@ -405,9 +415,13 @@
     // they close round it; zoomed in, they stay and the photograph grows past them)
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
-    // the focus patch keeps its size against the frame lines (never smaller than a third)
-    var pk = Math.max(0.35, fz);
-    if (Math.abs(pk - patchK) > 0.002) {
+    // the focus patch keeps its size against the frame lines (never smaller than a third),
+    // and eases to it at the frame lines' own pace rather than jumping there
+    var pkGoal = Math.max(0.35, fz);
+    patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
+    if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
+    var pk = patchNow;
+    if (Math.abs(pk - patchK) > 0.0005) {
       patchK = pk;
       pw = pw0 * pk;
       ph = ph0 * pk;
@@ -488,7 +502,7 @@
   }
 
   /* ---------- Input: drag, inertia, scroll, keys ---------- */
-  var down = null, samples = [], wheelT = 0;
+  var down = null, samples = [], wheelT = 0, panning = false;
   function hideHint() { if (hint) hint.classList.add("is-gone"); }
   function takeOver() {
     hold = 0;
@@ -626,6 +640,22 @@
       }
       return;
     }
+    // Two fingers on a trackpad move the wall, as a drag does (the lens pulls back with the
+    // speed, and once they rest the nearest photograph is framed); a mouse wheel, or a pinch,
+    // zooms. The trackpad is told from the wheel by the close-up's own test.
+    if (!e.ctrlKey && G.isTrackpad && G.isTrackpad(e)) {
+      if (!panning) takeOver();
+      panning = true;
+      var px = e.deltaX * unit, py = e.deltaY * unit;
+      if (e.shiftKey && !e.deltaX) { px = py; py = 0; }
+      tx -= px / s;
+      ty -= py / s;
+      moved += Math.hypot(px, py);
+      wheeling = true;
+      clearTimeout(wheelT);
+      wheelT = setTimeout(function () { wheeling = false; panning = false; lockNearest(); }, 200);
+      return;
+    }
     // a pinch zooms faster per event than a wheel notch
     setZoom(zr() * Math.exp(-clamp(dy, -60, 60) * (e.ctrlKey ? 0.01 : 0.0045)), e.clientX, e.clientY);
     wheeling = true;
@@ -634,25 +664,27 @@
   }, { passive: false });
   // Safari on a Mac sends a trackpad pinch as gesture events. On touch screens the
   // pointers above do the pinch; there these only keep the page itself from zooming.
+  // Anywhere on the page (the name, the footer too) a pinch zooms the wall, never the page;
+  // with the close-up open, it zooms the photograph there (gallery-loupe.js).
   var gz = 1;
-  room.addEventListener("gesturestart", function (e) {
+  document.addEventListener("gesturestart", function (e) {
     e.preventDefault();
-    if (touchy) return;
+    if (touchy || root.classList.contains("gl-open")) return;
     gz = zr();
     takeOver();
-  });
-  room.addEventListener("gesturechange", function (e) {
+  }, { passive: false });
+  document.addEventListener("gesturechange", function (e) {
     e.preventDefault();
     if (touchy || root.classList.contains("gl-open")) return;
     setZoom(gz * e.scale, e.clientX, e.clientY);
     wheeling = true;
-  });
-  room.addEventListener("gestureend", function (e) {
+  }, { passive: false });
+  document.addEventListener("gestureend", function (e) {
     e.preventDefault();
-    if (touchy) return;
+    if (touchy || root.classList.contains("gl-open")) return;
     wheeling = false;
     lockNearest();
-  });
+  }, { passive: false });
   zoomBtns.forEach(function (b) {
     b.addEventListener("click", function () { zoomStep(b.getAttribute("data-cv-zoom") === "out" ? -1 : 1); });
   });
@@ -699,8 +731,8 @@
 
   /* ---------- Opening a photograph ---------- */
   // Zoomed out, a click zooms back in on the photograph clicked; at the framed size or
-  // closer, a click opens the close-up straight from where the photograph is, and behind
-  // it the wall frames that photograph, ready for when it closes.
+  // closer, a click on the framed photograph opens the close-up straight from where it is,
+  // and a click on one beside it brings that one into the frame.
   function shoot(it, back) {
     hideHint();
     hold = 0;
@@ -711,7 +743,8 @@
       lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
       return;
     }
-    var framed = subject === it && lockOn === it;
+    // a photograph beside the framed one is only brought into the frame; the framed one opens
+    if (lockOn !== it && subject !== it) { lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy }); return; }
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
     fire({ it: it, back: back });
   }
