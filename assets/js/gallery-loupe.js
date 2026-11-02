@@ -184,13 +184,21 @@
   /* ---------- The film: drag it through the gate ---------- */
   // Only a scroll made by hand chooses a photograph: when the code itself glides the
   // film (the arrows, a frame clicked) it sets target, and passing frames choose nothing.
-  var track = roll && roll.parentNode, gate = dialog.querySelector(".gl__gate"), wind = dialog.querySelector("[data-wind]");
-  var rotors = Array.prototype.map.call(dialog.querySelectorAll("[data-rotor]"), function (g) {
-    var c = g.querySelector("circle");
-    return { g: g, r: +g.getAttribute("data-rotor") || 14, cx: c.getAttribute("cx"), cy: c.getAttribute("cy") };
+  var gate = dialog.querySelector(".gl__gate");
+  // the surfaces that turn (the wound film, the knob's knurling) slide their pattern; the
+  // roll on the reel thickens; the mark on the cassette's knob goes round
+  var turners = Array.prototype.map.call(dialog.querySelectorAll("[data-scroll]"), function (el) {
+    return { el: el, k: +el.getAttribute("data-scroll") || 1, period: +el.getAttribute("width") || 10 };
+  });
+  var winds = Array.prototype.slice.call(dialog.querySelectorAll("[data-wind]"));
+  var ticks = Array.prototype.map.call(dialog.querySelectorAll("[data-tick]"), function (el) {
+    var v = el.getAttribute("data-tick").split(" ");
+    return { el: el, cx: +v[0], r: +v[1], w: +el.getAttribute("width") || 1 };
   });
   var lis = roll ? Array.prototype.slice.call(roll.children) : [];
   var mids = [], wides = [], target = -1, armed = false, fingers = 0, settleT = 0, nearI = -1, filmRaf = 0, rollQuiet = 0, md = null;
+  // how far the finger travelled along the film: a deliberate swipe always moves at least one frame
+  var swipeFrom = 0, swipeDx = 0;
   var hasScrollEnd = "onscrollend" in window;
   function measureRoll() {
     if (!roll || !lis.length) return;
@@ -220,8 +228,14 @@
     filmRaf = 0;
     if (!roll || !mids.length) return;
     var x = roll.scrollLeft, max = Math.max(1, roll.scrollWidth - roll.clientWidth), mid = x + roll.clientWidth / 2;
-    rotors.forEach(function (o) { o.g.setAttribute("transform", "rotate(" + (-x / o.r * 57.2958 % 360).toFixed(2) + " " + o.cx + " " + o.cy + ")"); });
-    if (wind) wind.setAttribute("r", (13 + 11 * Math.min(1, x / max)).toFixed(2));
+    turners.forEach(function (o) { o.el.setAttribute("patternTransform", "translate(" + (-((x * o.k) % o.period)).toFixed(2) + " 0)"); });
+    var ww = 12 + 22 * Math.min(1, x / max);
+    winds.forEach(function (el) { el.setAttribute("x", (22 - ww / 2).toFixed(2)); el.setAttribute("width", ww.toFixed(2)); });
+    ticks.forEach(function (o) {
+      var a = x / 9;
+      o.el.setAttribute("x", (o.cx + o.r * Math.sin(a) - o.w / 2).toFixed(2));
+      o.el.style.opacity = Math.cos(a) > 0 ? "1" : "0";
+    });
     // the gate takes the width of the frame in it, eased between neighbours
     var k = 0;
     while (k < mids.length - 1 && mids[k + 1] < mid) k++;
@@ -242,6 +256,8 @@
     var k = nearest();
     if (armed) {
       armed = false;
+      if (k === index && Math.abs(swipeDx) > 24) k = Math.max(0, Math.min(photos.length - 1, index + (swipeDx > 0 ? 1 : -1)));
+      swipeDx = 0;
       if (k !== index) api.go(k);
       return;
     }
@@ -255,7 +271,8 @@
       if (!hasScrollEnd) settleT = setTimeout(settle, 150);
     }, { passive: true });
     if (hasScrollEnd) roll.addEventListener("scrollend", settle);
-    roll.addEventListener("touchstart", function (e) { fingers = e.touches.length; byHand(); }, { passive: true });
+    roll.addEventListener("touchstart", function (e) { fingers = e.touches.length; byHand(); swipeFrom = e.touches[0].clientX; swipeDx = 0; }, { passive: true });
+    roll.addEventListener("touchmove", function (e) { if (e.touches.length === 1) swipeDx = swipeFrom - e.touches[0].clientX; }, { passive: true });
     var lift = function (e) { fingers = e.touches.length; if (!fingers) { clearTimeout(settleT); settleT = setTimeout(settle, 180); } };
     roll.addEventListener("touchend", lift, { passive: true });
     roll.addEventListener("touchcancel", lift, { passive: true });
@@ -291,7 +308,8 @@
       md = null;
       if (!was.moved) return;
       rollQuiet = performance.now() + 400;
-      var k = nearest();
+      var k = nearest(), dx = was.left - roll.scrollLeft;
+      if (k === index && Math.abs(dx) > 24) k = Math.max(0, Math.min(photos.length - 1, index + (dx < 0 ? 1 : -1)));
       armed = true;
       roll.scrollTo({ left: Math.max(0, mids[k] - roll.clientWidth / 2), behavior: still() ? "auto" : "smooth" });
       setTimeout(function () { roll.style.scrollSnapType = ""; if (armed) settle(); }, 450);

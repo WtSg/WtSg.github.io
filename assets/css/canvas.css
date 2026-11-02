@@ -389,21 +389,25 @@ p { margin: 0; }
    take-up reel on the left, under the red gate in the middle, out of a cassette on the
    right; drag it and the reel and the cassette's spool turn, and it settles with a frame
    in the gate, which is the photograph shown (gallery-loupe.js). */
-.gl__film { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; min-width: 0; }
-.gl__reel, .gl__can { position: relative; z-index: 1; display: block; width: 3.7rem; height: 3.7rem; overflow: visible; }
-.gl__reel { margin-right: -.45rem; }
-.gl__can { margin-left: -.55rem; }
-.gl__reel-rim { fill: #181715; stroke: rgba(255, 255, 255, .14); stroke-width: 1; }
-.gl__reel-wound { fill: #0b0a09; stroke: #3b3631; stroke-width: .9; }
-.gl__reel-hub { fill: #2a2825; stroke: rgba(255, 255, 255, .18); stroke-width: .8; }
-.gl__reel-slot { fill: #0a0a0a; }
+.gl__film { --strip-h: 4.3rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; min-width: 0; }
+/* Seen as in an open camera back: both stand upright, half again as tall as the film,
+   which runs into the cassette's felt slot and onto the reel; the film's ends tuck in behind them. */
+.gl__reel, .gl__can { position: relative; z-index: 1; display: block; height: calc(var(--strip-h) * 1.5); width: calc(var(--strip-h) * .6875); overflow: visible; }
+.gl__reel { margin-right: calc(var(--strip-h) * -.34); }
+.gl__can { margin-left: calc(var(--strip-h) * -.34); }
+.gl__reel-flange { fill: #1f1e1b; stroke: rgba(255, 255, 255, .16); stroke-width: .8; }
+.gl__reel-core { fill: #2c2a26; }
+.gl__reel-wound { fill: #15120f; }
+#gl-wound-holes rect { fill: rgba(236, 228, 212, .42); }
 .gl__reel-pin { fill: #4a4641; }
-.gl__can-lip { fill: #0d0c0b; stroke: rgba(255, 255, 255, .1); stroke-width: .8; }
-.gl__can-body { stroke: rgba(255, 255, 255, .18); stroke-width: 1; }
-.gl__can-ridge { fill: none; stroke: rgba(0, 0, 0, .5); stroke-width: 1.3; }
-.gl__can-knob { fill: #1b1a18; stroke: rgba(255, 255, 255, .22); stroke-width: .8; }
-.gl__can-fork { fill: #060606; }
-.gl__can-mark { fill: var(--led); }
+.gl__can-body { stroke: rgba(255, 255, 255, .14); stroke-width: .8; }
+.gl__can-band { fill: rgba(0, 0, 0, .3); }
+.gl__can-cap { fill: #1c1b19; stroke: rgba(255, 255, 255, .16); stroke-width: .8; }
+.gl__can-lip { fill: #0d0c0b; stroke: rgba(255, 255, 255, .12); stroke-width: .8; }
+.gl__can-felt { fill: #2a2622; }
+.gl__can-knob { fill: #3a3732; stroke: rgba(255, 255, 255, .2); stroke-width: .6; }
+#gl-knurl rect { fill: rgba(0, 0, 0, .55); }
+.gl__can-tick { fill: var(--led); }
 .gl__track { position: relative; min-width: 0; }
 /* the film gate: fixed in the middle, the size of the frame in it */
 .gl__gate {
@@ -459,7 +463,7 @@ p { margin: 0; }
   .gl .gl__btn--close { justify-self: center; }
   .gl__frm img { height: 2.4rem; }
   .gl__gate { height: calc(2.4rem + 8px); }
-  .gl__reel, .gl__can { width: 3.1rem; height: 3.1rem; }
+  .gl__film { --strip-h: 3.8rem; }
   .vf-led { gap: .8rem; padding: .45rem .65rem .42rem; }
   .vf-led__exif { gap: .8rem; }
   .vf-led b { font-size: 1.1rem; }
