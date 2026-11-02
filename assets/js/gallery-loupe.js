@@ -541,6 +541,14 @@
     peeks = { prev: prev, next: next, at: index };
   }
   function peekDrop() { if (peeks) { peeks.prev.remove(); peeks.next.remove(); peeks = null; } }
+  // the window resized: the glimpses are measured afresh for it (there may now be room, or none)
+  var peekT = 0;
+  window.addEventListener("resize", function () {
+    if (!dialog.open) return;
+    if (peeks) peekDrop();
+    clearTimeout(peekT);
+    peekT = setTimeout(peekShow, 140);
+  });
   // the glimpses handed to a movement, at full brightness (only if they are this photograph's)
   function peekTake() {
     var p = peeks;
@@ -632,12 +640,15 @@
       else close();
       return;
     }
-    // A tap or click on the photograph, or the black round it: the previous photograph on the
-    // left half, the next on the right (closing is a swipe down, the Close key or Escape).
-    // Zoomed in, it returns the photograph whole instead.
-    if (e.target === dialog || e.target === stage || e.target === img) {
-      if (zoomed()) zoomTo(1, 0, 0, 220);
-      else step(e.clientX < window.innerWidth / 2 ? -1 : 1);
+    // A tap or click beside the photograph, on the glimpse of a neighbour or the black on that
+    // side: that neighbour. On the photograph itself, nothing (closing is a swipe down, the
+    // Close key or Escape); zoomed in, it returns the photograph whole.
+    var peek = e.target.classList && e.target.classList.contains("gl__img--peek");
+    if (e.target === dialog || e.target === stage || e.target === img || peek) {
+      if (zoomed()) { zoomTo(1, 0, 0, 220); return; }
+      var r = img.getBoundingClientRect();
+      if (e.clientX < r.left) step(-1);
+      else if (e.clientX > r.right) step(1);
     }
   });
   dialog.addEventListener("keydown", function (e) {
