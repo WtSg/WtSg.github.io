@@ -329,10 +329,17 @@
     maskEl.style.clipPath = cut;
   }
   // Where the readout docks: above the footer, and above the zoom buttons where it would meet them.
+  // Docked (zoomed out) the readout sits just above the footer, on its own (the caption
+  // goes), and where it would meet the - and + keys they step up above it.
   function dockY(h) {
-    var y = vh - footH - 14;
-    if (zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8) y = Math.min(y, zoomBox.t - 12);
-    return Math.max(vh / 2, y - h);
+    return Math.max(vh / 2, vh - footH - 12 - h);
+  }
+  var liftSet = -1;
+  function liftZoom(dock) {
+    var lift = dock && zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8 ? ledH + 10 : 0;
+    if (lift === liftSet) return;
+    liftSet = lift;
+    room.style.setProperty("--zoom-lift", lift + "px");
   }
 
   /* ---------- The frame loop ---------- */
@@ -458,9 +465,10 @@
     // photograph among the others, it docks at the foot of the window, clear of the wall.
     var radB = (fr.rot * Math.PI) / 180;
     var underY = vh / 2 + (fr.L * Math.abs(Math.sin(radB)) + fr.S * Math.abs(Math.cos(radB))) / 2 + 16;
-    var belowH = ledH + (capEl.hidden ? 0 : capH + 10);
     var dock = fz < 0.97;
     if (dock !== docked) { docked = dock; vf.classList.toggle("is-docked", dock); }
+    liftZoom(dock);
+    var belowH = ledH + (capEl.hidden || dock ? 0 : capH + 10);
     var bGoal = dock ? dockY(belowH) : underY;
     belowY = belowY < 0 || calm ? bGoal : belowY + (bGoal - belowY) * ease(dt, 110);
     if (Math.abs(belowY - belowSet) > 0.3) {
