@@ -440,10 +440,12 @@ p { margin: 0; }
 .gl__led:empty { display: none; }
 .gl__led .vf-led__cell--n:first-child { padding-left: 0; border-left: 0; }
 /* the frame number out of all of them: 08/46 */
-.gl__led .vf-led__of { margin: 0 .18rem 0 .12rem; font-size: 1rem; color: var(--led-label); align-self: center; }
+.vf-led .vf-led__of { margin: 0 .18rem 0 .12rem; font-size: 1rem; color: var(--led-label); align-self: center; }
 /* the close-up never scrolls sideways, and the page never zooms under it (a pinch zooms
    into the photograph instead: gallery-loupe.js) */
 .gl[open] { overflow-x: hidden; touch-action: pan-x pan-y; }
+/* nor does the page with the wall: a pinch or a double tap anywhere never zooms it */
+html.cv-on { touch-action: pan-x pan-y; }
 .gl .gl__stage { -webkit-user-select: none; user-select: none; }
 /* zoomed in, the photograph stays within its own room */
 .gl .gl__stage.is-zoomed { overflow: hidden; cursor: grab; }
@@ -571,10 +573,12 @@ p { margin: 0; }
   .gl__frm img { height: 2.4rem; }
   .gl__gate { height: calc(2.4rem + 8px); }
   .gl__film { --strip-h: 3.8rem; }
-  .vf-led { gap: .8rem; padding: .45rem .65rem .42rem; }
-  .vf-led__exif { gap: .8rem; }
-  .vf-led b { font-size: 1.1rem; }
-  .vf-led__cell--n { padding-left: .75rem; }
+  /* narrow: the readout keeps to the screen, its digits and gaps shrinking with it */
+  .vf-led { gap: min(.8rem, 2.2vw); padding: .45rem min(.65rem, 2vw) .42rem; }
+  .vf-led__exif { gap: min(.8rem, 2.2vw); }
+  .vf-led b { font-size: min(1.1rem, 4.3vw); }
+  .vf-led__cell--n { padding-left: min(.75rem, 2vw); }
+  .vf-led .vf-led__of { margin: 0 .08rem; font-size: min(1rem, 3.6vw); }
   .vf-patch { width: 5.2rem; height: 3.3rem; }
   .cv-on .cv-key { top: 4.4rem; }
 }

@@ -44,6 +44,9 @@
   var FIELDS = ["f", "s", "iso", "mm"];
   var led = {}, cell = {}, lamp = {};
   FIELDS.concat("n").forEach(function (k) { led[k] = vf.querySelector('[data-led="' + k + '"]'); });
+  // the frame number out of all of them: 06/36
+  var ledOf = vf.querySelector('[data-led="of"]');
+  if (ledOf) { ledOf.textContent = pad(photos.length); ledOf.setAttribute("data-off", pad(photos.length).replace(/\d/g, "8")); }
   FIELDS.forEach(function (k) { cell[k] = vf.querySelector('[data-cell="' + k + '"]'); });
   ["l", "c", "r"].forEach(function (k) { lamp[k] = vf.querySelector('[data-lamp="' + k + '"]'); });
   var ghost = document.createElement("img");
