@@ -215,6 +215,8 @@
     home = from || null;
     fill(i, fromSrc);
     dialog.showModal();
+    // the click of the tap that opened it (some phones send it to what is now under the finger) is not a tap to close
+    quietUntil = performance.now() + 450;
     if (!keyed && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     root.classList.add("gl-open");
     if (roll) { measureRoll(); centre(i, false); }
@@ -402,51 +404,72 @@
   }
   function step(d) { go((index + d + photos.length) % photos.length, d); }
   api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
-  // Stepping to another photograph: it is decoded first, so nothing is ever blank; then one
-  // continuous movement: the photograph shown stays on top as a copy and slides away as it
-  // fades, the next slides in under it, and the frame lines glide to the new shape. The
-  // opening's focus pull and lamp test are for the opening only.
-  var goSeq = 0, EASE = "cubic-bezier(.22,.8,.2,1)";
+  /* ---------- Paging, as in a phone's photo album ---------- */
+  // Sideways the photographs lie side by side, a gap apart: a drag moves them with the
+  // finger, the next coming in from the side, and let go they glide on to it or back. The
+  // arrows, the keys and the roll slide the same way. Nothing fades: the photograph
+  // arriving is decoded before it moves, and takes the main place only once it shows.
+  var GAP = 28, EASE = "cubic-bezier(.25,.8,.25,1)", slide = null, goTok = 0;
+  function sideOf(n) {
+    var el = document.createElement("img");
+    el.className = "gl__img gl__img--side";
+    el.alt = "";
+    el.draggable = false;
+    el.setAttribute("aria-hidden", "true");
+    el.style.setProperty("--ar", photos[n].ar);
+    el.src = photos[n].src;
+    stage.insertBefore(el, img.nextSibling);
+    return el;
+  }
+  // where a side photograph sits: a gap beyond the edge of the one shown, on side d
+  function offsetOf(el, d) { return d * (img.getBoundingClientRect().width / 2 + GAP + el.getBoundingClientRect().width / 2); }
+  function at(el, x) { el.style.transform = "translateX(" + x.toFixed(1) + "px)"; }
+  function lines(on) {
+    if (!frameEl) return;
+    frameEl.style.transition = "opacity " + (on ? ".25s" : ".1s") + " ease-out";
+    frameEl.style.opacity = on ? "" : "0";
+  }
+  // the slide under way, finished at once: its photograph shown, nothing left over
+  function endSlide() { if (slide) slide.done(); }
+  // glide from fromDx to photograph n, which lies on side d as el; others move along and go
+  function slideTo(n, fromDx, el, others) {
+    endSlide();
+    var off = el._off, to = -off, dur = Math.max(240, Math.min(440, Math.abs(to - fromDx) * 0.85));
+    var tx = function (x) { return { transform: "translateX(" + x.toFixed(1) + "px)" }; };
+    lines(false);
+    var anims = [img.animate([tx(fromDx), tx(to)], { duration: dur, easing: EASE, fill: "forwards" }),
+      el.animate([tx(off + fromDx), tx(0)], { duration: dur, easing: EASE, fill: "forwards" })];
+    (others || []).forEach(function (o) { anims.push(o.animate([tx(o._off + fromDx), tx(o._off + to)], { duration: dur, easing: EASE, fill: "forwards" })); });
+    var s = { over: false };
+    s.done = function () {
+      if (s.over) return;
+      s.over = true;
+      if (slide === s) slide = null;
+      fill(n);
+      at(el, 0);
+      img.style.transform = "";
+      anims.forEach(function (a) { a.cancel(); });
+      (others || []).forEach(function (o) { o.remove(); });
+      var drop = function () { el.remove(); lines(true); };
+      if (img.decode) img.decode().then(drop, drop); else drop();
+    };
+    slide = s;
+    anims[0].onfinish = s.done;
+  }
   function go(n, d) {
     if (api.onStep) api.onStep(n);
     index = n;
-    var want = ++goSeq;
+    var tok = ++goTok;
+    endSlide();
     if (still() || !img.animate) { fill(n); return; }
-    var pre = new Image();
-    pre.src = photos[n].src;
-    var ready = pre.decode ? pre.decode().catch(function () {}) : new Promise(function (r) { pre.onload = pre.onerror = r; });
-    ready.then(function () {
-      if (want !== goSeq || !dialog.open) return;
-      Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--old"), function (g) { g.remove(); });
-      var r0 = img.getBoundingClientRect(), f0 = frameEl ? frameEl.getBoundingClientRect() : null;
-      var old = img.cloneNode(false);
-      old.classList.add("gl__img--old");
-      old.alt = "";
-      old.setAttribute("aria-hidden", "true");
-      old.style.width = r0.width + "px";
-      old.style.height = r0.height + "px";
-      stage.insertBefore(old, img.nextSibling);
-      fill(n);
-      var D = 520, X = 8;
-      var a = old.animate([
-        { transform: "none", opacity: 1 },
-        { transform: "translateX(" + (-d * X) + "%) scale(.965)", opacity: 0 }
-      ], { duration: D, easing: EASE, fill: "forwards" });
-      a.onfinish = a.oncancel = function () { old.remove(); };
-      img.animate([
-        { transform: "translateX(" + (d * X) + "%) scale(.965)", opacity: 0 },
-        { transform: "none", opacity: 1 }
-      ], { duration: D, easing: EASE });
-      if (f0 && frameEl.animate) {
-        var f1 = frameEl.getBoundingClientRect();
-        if (Math.abs(f0.width - f1.width) > 1 || Math.abs(f0.height - f1.height) > 1) {
-          frameEl.animate([
-            { width: f0.width + "px", height: f0.height + "px" },
-            { width: f1.width + "px", height: f1.height + "px" }
-          ], { duration: D, easing: EASE });
-        }
-      }
-    });
+    var el = sideOf(n);
+    var start = function () {
+      if (tok !== goTok || !dialog.open) { el.remove(); return; }
+      el._off = offsetOf(el, d);
+      at(el, el._off);
+      slideTo(n, 0, el);
+    };
+    if (el.decode) el.decode().then(start, start); else start();
   }
 
   dialog.addEventListener("click", function (e) {
@@ -504,6 +527,7 @@
       // held only once it is a drag: a plain click keeps its own target (the photograph, or the black around it)
       try { stage.setPointerCapture(e.pointerId); } catch (x) {}
     }
+    if (g.axis === "x") { pageMove(e, dx, now); return; }
     if (g.axis !== "down") return;
     // speed over the last moments, for a quick flick
     g.v = g.v * 0.4 + 0.6 * ((e.clientY - g.ly) / Math.max(1, now - g.lt));
@@ -512,12 +536,57 @@
     g.dy = Math.max(0, dy);
     if (!still()) pull(g.dy, Math.min(1, g.dy / (window.innerHeight * 0.55)), g.bg);
   });
+  // A sideways drag: the photograph and its neighbours, each a gap apart, follow the finger.
+  function pageMove(e, dx, now) {
+    if (still() || photos.length < 2 || !img.animate) return;
+    if (!g.pages) {
+      endSlide();
+      var N = photos.length, prev = sideOf((index - 1 + N) % N), next = sideOf((index + 1) % N);
+      prev._off = offsetOf(prev, -1);
+      next._off = offsetOf(next, 1);
+      g.pages = { prev: prev, next: next, w: img.getBoundingClientRect().width };
+      g.vx = 0; g.lx = e.clientX; g.lt = now;
+      lines(false);
+    }
+    g.vx = g.vx * 0.4 + 0.6 * ((e.clientX - g.lx) / Math.max(1, now - g.lt));
+    g.lx = e.clientX;
+    g.lt = now;
+    g.dx = dx;
+    img.style.transform = "translateX(" + dx.toFixed(1) + "px)";
+    at(g.pages.prev, g.pages.prev._off + dx);
+    at(g.pages.next, g.pages.next._off + dx);
+  }
+  // Let go: on to the neighbour when dragged a fifth of the way or flicked, else back.
+  function pageEnd(t, cancelled) {
+    var P = t.pages;
+    if (!P) return;
+    var dx = t.dx || 0, d = dx < 0 ? 1 : -1, N = photos.length;
+    var flick = Math.abs(t.vx) > 0.25 && (t.vx < 0 ? 1 : -1) === d;
+    if (!cancelled && dx && (Math.abs(dx) > P.w * 0.2 || flick)) {
+      var n = (index + d + N) % N, el = d > 0 ? P.next : P.prev, other = d > 0 ? P.prev : P.next;
+      if (api.onStep) api.onStep(n);
+      index = n;
+      ++goTok;
+      slideTo(n, dx, el, [other]);
+      return;
+    }
+    // back to where it was
+    var tx = function (x) { return { transform: "translateX(" + x.toFixed(1) + "px)" }; }, opt = { duration: 260, easing: EASE };
+    img.style.transform = "";
+    img.animate([tx(dx), tx(0)], opt);
+    [P.prev, P.next].forEach(function (o) {
+      at(o, o._off);
+      var a = o.animate([tx(o._off + dx), tx(o._off)], opt);
+      a.onfinish = function () { o.remove(); };
+    });
+    lines(true);
+  }
   function release(e, cancelled) {
     if (!g || e.pointerId !== g.id) return;
     var t = g, dx = e.clientX - t.x;
     g = null;
     if (t.axis) quietUntil = performance.now() + 400;
-    if (t.axis === "x") { if (!cancelled && Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); return; }
+    if (t.axis === "x") { pageEnd(t, cancelled); return; }
     if (t.axis !== "down") return;
     if (!cancelled && (t.dy > 90 || (t.v > 0.6 && t.dy > 30))) {
       if (still() || !stage.animate) { unpull(); close(true); return; }
@@ -540,6 +609,11 @@
   dialog.addEventListener("close", function () {
     g = null;
     unpull();
+    endSlide();
+    ++goTok;
+    Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
+    img.style.transform = "";
+    lines(true);
     settleClosed();
     closing = false;
     root.classList.remove("gl-open");
