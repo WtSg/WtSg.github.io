@@ -436,6 +436,8 @@
       ph = nh;
       patch.style.width = pw.toFixed(1) + "px";
       patch.style.height = ph.toFixed(1) + "px";
+      // its corners rounded in proportion to it, so it keeps the same look at any zoom
+      patch.style.borderRadius = (Math.min(pw, ph) * 0.15).toFixed(1) + "px";
     }
     var frErr = Math.abs(fL - fr.L) + Math.abs(fS - fr.S) + Math.abs(frTo.rot - fr.rot);
     if (frErr > 0.02 || frDirty) {
