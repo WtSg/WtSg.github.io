@@ -368,7 +368,7 @@ p { margin: 0; }
 }
 .gl [data-gl="prev"] { grid-area: prev; }
 .gl [data-gl="next"] { grid-area: next; }
-.gl__roll { grid-area: roll; }
+.gl__film { grid-area: roll; }
 .gl .gl__btn--close { grid-area: close; }
 .gl__count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .gl .gl__btn {
@@ -385,15 +385,49 @@ p { margin: 0; }
 .gl .gl__btn:hover { color: var(--led); border-color: rgba(255, 74, 46, .45); }
 .gl .gl__btn--close { margin: 0; background: rgba(0, 0, 0, .8); color: var(--ink); border-color: rgba(255, 255, 255, .14); padding: .55rem 1rem; }
 
-/* The roll: frames on a strip of film, sprocket holes along both edges. */
+/* The roll: frames on a strip of film, sprocket holes along both edges. It runs off a
+   take-up reel on the left, under the red gate in the middle, out of a cassette on the
+   right; drag it and the reel and the cassette's spool turn, and it settles with a frame
+   in the gate, which is the photograph shown (gallery-loupe.js). */
+.gl__film { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; min-width: 0; }
+.gl__reel, .gl__can { position: relative; z-index: 1; display: block; width: 3.7rem; height: 3.7rem; overflow: visible; }
+.gl__reel { margin-right: -.45rem; }
+.gl__can { margin-left: -.55rem; }
+.gl__reel-rim { fill: #181715; stroke: rgba(255, 255, 255, .14); stroke-width: 1; }
+.gl__reel-wound { fill: #0b0a09; stroke: #3b3631; stroke-width: .9; }
+.gl__reel-hub { fill: #2a2825; stroke: rgba(255, 255, 255, .18); stroke-width: .8; }
+.gl__reel-slot { fill: #0a0a0a; }
+.gl__reel-pin { fill: #4a4641; }
+.gl__can-lip { fill: #0d0c0b; stroke: rgba(255, 255, 255, .1); stroke-width: .8; }
+.gl__can-body { stroke: rgba(255, 255, 255, .18); stroke-width: 1; }
+.gl__can-ridge { fill: none; stroke: rgba(0, 0, 0, .5); stroke-width: 1.3; }
+.gl__can-knob { fill: #1b1a18; stroke: rgba(255, 255, 255, .22); stroke-width: .8; }
+.gl__can-fork { fill: #060606; }
+.gl__can-mark { fill: var(--led); }
+.gl__track { position: relative; min-width: 0; }
+/* the film gate: fixed in the middle, the size of the frame in it */
+.gl__gate {
+  position: absolute;
+  left: 50%;
+  top: calc(.7rem - 4px);
+  width: var(--gate-w, 4.5rem);
+  height: calc(2.9rem + 8px);
+  transform: translateX(-50%);
+  border: 1.5px solid var(--led);
+  border-radius: 2px;
+  box-shadow: 0 0 .7rem rgba(255, 74, 46, .35);
+  pointer-events: none;
+}
 .gl__roll {
+  position: relative;
   display: flex;
   gap: .5rem;
-  justify-content: safe center;
   margin: 0;
-  padding: .7rem .7rem;
+  padding: .7rem 50%;
   list-style: none;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
   scrollbar-width: none;
   border-radius: .2rem;
   background-color: #121110;
@@ -403,13 +437,14 @@ p { margin: 0; }
   background-size: 100% .24rem, 100% .24rem;
   background-position: 0 .18rem, 0 calc(100% - .18rem);
   background-repeat: no-repeat;
+  /* the sprocket holes travel with the film */
+  background-attachment: local;
 }
 .gl__roll::-webkit-scrollbar { display: none; }
-.gl__roll li { flex: none; }
+.gl__roll li { flex: none; scroll-snap-align: center; scroll-snap-stop: always; }
 .gl__frm { position: relative; display: block; padding: 0; border: 0; background: none; cursor: pointer; opacity: .5; transition: opacity .2s; }
-.gl__frm:hover, .gl__frm.is-on { opacity: 1; }
+.gl__frm:hover, .gl__frm.is-on, .gl__frm.is-near { opacity: 1; }
 .gl__frm img { display: block; height: 2.9rem; width: auto; aspect-ratio: var(--ar, 1.5); object-fit: cover; }
-.gl__frm.is-on img { outline: 1.5px solid var(--led); outline-offset: 2px; }
 /* the frame number, printed on the film's edge */
 .gl__edge { position: absolute; top: -.62rem; left: .1rem; font: 700 .5rem/1 var(--mono); letter-spacing: .06em; color: #f0933a; }
 .gl__frm.is-on .gl__edge { color: var(--led); }
@@ -423,6 +458,8 @@ p { margin: 0; }
   .gl__controls { grid-template-columns: auto 1fr auto; grid-template-areas: "roll roll roll" "prev close next"; }
   .gl .gl__btn--close { justify-self: center; }
   .gl__frm img { height: 2.4rem; }
+  .gl__gate { height: calc(2.4rem + 8px); }
+  .gl__reel, .gl__can { width: 3.1rem; height: 3.1rem; }
   .vf-led { gap: .8rem; padding: .45rem .65rem .42rem; }
   .vf-led__exif { gap: .8rem; }
   .vf-led b { font-size: 1.1rem; }

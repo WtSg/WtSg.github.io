@@ -132,8 +132,8 @@
         var on = +b.getAttribute("data-gl-i") === i;
         b.classList.toggle("is-on", on);
         if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
-        if (on && dialog.open && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "center", behavior: still() ? "auto" : "smooth" });
       });
+      if (dialog.open) centre(i, true);
     }
     if (api.onFill) api.onFill(i, p);
     [i + 1, i - 1].forEach(function (k) {
@@ -149,8 +149,7 @@
     fill(i, fromSrc);
     dialog.showModal();
     root.classList.add("gl-open");
-    var on = roll && roll.querySelector(".gl__frm.is-on");
-    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
+    if (roll) { measureRoll(); centre(i, false); }
     if (still() || !img.animate) return;
     var r0 = null;
     if (from && from.getBoundingClientRect) r0 = from.getBoundingClientRect();
@@ -180,6 +179,130 @@
       frameEl.animate([{ opacity: 0, transform: "scale(1.08)" }, { opacity: 0, transform: "scale(1.08)", offset: 0.45 }, { opacity: 1, transform: "none" }],
         { duration: delay + 300, easing: "cubic-bezier(.2,.8,.2,1)" });
     }
+  }
+
+  /* ---------- The film: drag it through the gate ---------- */
+  // Only a scroll made by hand chooses a photograph: when the code itself glides the
+  // film (the arrows, a frame clicked) it sets target, and passing frames choose nothing.
+  var track = roll && roll.parentNode, gate = dialog.querySelector(".gl__gate"), wind = dialog.querySelector("[data-wind]");
+  var rotors = Array.prototype.map.call(dialog.querySelectorAll("[data-rotor]"), function (g) {
+    var c = g.querySelector("circle");
+    return { g: g, r: +g.getAttribute("data-rotor") || 14, cx: c.getAttribute("cx"), cy: c.getAttribute("cy") };
+  });
+  var lis = roll ? Array.prototype.slice.call(roll.children) : [];
+  var mids = [], wides = [], target = -1, armed = false, fingers = 0, settleT = 0, nearI = -1, filmRaf = 0, rollQuiet = 0, md = null;
+  var hasScrollEnd = "onscrollend" in window;
+  function measureRoll() {
+    if (!roll || !lis.length) return;
+    var w = roll.clientWidth;
+    roll.style.paddingLeft = Math.max(0, (w - lis[0].offsetWidth) / 2).toFixed(1) + "px";
+    roll.style.paddingRight = Math.max(0, (w - lis[lis.length - 1].offsetWidth) / 2).toFixed(1) + "px";
+    mids = lis.map(function (li) { return li.offsetLeft + li.offsetWidth / 2; });
+    wides = lis.map(function (li) { return li.offsetWidth; });
+  }
+  function nearest() {
+    var mid = roll.scrollLeft + roll.clientWidth / 2, best = 0, bd = Infinity;
+    for (var k = 0; k < mids.length; k++) { var d = Math.abs(mids[k] - mid); if (d < bd) { bd = d; best = k; } }
+    return best;
+  }
+  // Put frame i in the gate: glide there, or jump.
+  function centre(i, smooth) {
+    if (!roll || !mids.length) return;
+    var left = Math.max(0, mids[i] - roll.clientWidth / 2);
+    if (Math.abs(left - roll.scrollLeft) < 1) { target = -1; filmMoved(); return; }
+    target = i;
+    armed = false;
+    roll.scrollTo({ left: left, behavior: smooth && !still() ? "smooth" : "auto" });
+    if (!smooth || still()) filmMoved();
+  }
+  // The film has moved: turn the reel and the spool, wind the film on, size the gate.
+  function filmMoved() {
+    filmRaf = 0;
+    if (!roll || !mids.length) return;
+    var x = roll.scrollLeft, max = Math.max(1, roll.scrollWidth - roll.clientWidth), mid = x + roll.clientWidth / 2;
+    rotors.forEach(function (o) { o.g.setAttribute("transform", "rotate(" + (-x / o.r * 57.2958 % 360).toFixed(2) + " " + o.cx + " " + o.cy + ")"); });
+    if (wind) wind.setAttribute("r", (13 + 11 * Math.min(1, x / max)).toFixed(2));
+    // the gate takes the width of the frame in it, eased between neighbours
+    var k = 0;
+    while (k < mids.length - 1 && mids[k + 1] < mid) k++;
+    var w = wides[k];
+    if (k < mids.length - 1 && mid > mids[k]) { var t = (mid - mids[k]) / (mids[k + 1] - mids[k]); w = wides[k] + (wides[k + 1] - wides[k]) * Math.min(1, t); }
+    if (gate) gate.style.setProperty("--gate-w", (w + 8).toFixed(1) + "px");
+    var n = nearest();
+    if (n !== nearI) {
+      if (lis[nearI]) lis[nearI].firstElementChild.classList.remove("is-near");
+      nearI = n;
+      lis[n].firstElementChild.classList.add("is-near");
+    }
+  }
+  // The film has stopped: if it was moved by hand, the frame in the gate is the photograph.
+  function settle() {
+    clearTimeout(settleT);
+    if (!dialog.open || fingers > 0 || md) return;
+    var k = nearest();
+    if (armed) {
+      armed = false;
+      if (k !== index) api.go(k);
+      return;
+    }
+    if (target >= 0 && k === target) target = -1;
+  }
+  function byHand() { armed = true; target = -1; }
+  if (roll) {
+    roll.addEventListener("scroll", function () {
+      if (!filmRaf) filmRaf = requestAnimationFrame(filmMoved);
+      clearTimeout(settleT);
+      if (!hasScrollEnd) settleT = setTimeout(settle, 150);
+    }, { passive: true });
+    if (hasScrollEnd) roll.addEventListener("scrollend", settle);
+    roll.addEventListener("touchstart", function (e) { fingers = e.touches.length; byHand(); }, { passive: true });
+    var lift = function (e) { fingers = e.touches.length; if (!fingers) { clearTimeout(settleT); settleT = setTimeout(settle, 180); } };
+    roll.addEventListener("touchend", lift, { passive: true });
+    roll.addEventListener("touchcancel", lift, { passive: true });
+    // A mouse wheel turns the film a frame a notch; a trackpad's sideways swipe drags it.
+    var wheelAt = 0;
+    roll.addEventListener("wheel", function (e) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        var now = performance.now();
+        if (now - wheelAt > 260) { wheelAt = now; step(e.deltaY > 0 ? 1 : -1); }
+      } else byHand();
+    }, { passive: false });
+    // With a mouse the film is dragged by hand too; let go, it glides to the nearest frame.
+    roll.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "mouse" || e.button > 0) return;
+      md = { id: e.pointerId, x: e.clientX, left: roll.scrollLeft, moved: false };
+    });
+    roll.addEventListener("pointermove", function (e) {
+      if (!md || e.pointerId !== md.id) return;
+      var dx = e.clientX - md.x;
+      if (!md.moved) {
+        if (Math.abs(dx) < 5) return;
+        md.moved = true;
+        byHand();
+        roll.style.scrollSnapType = "none";
+        try { roll.setPointerCapture(e.pointerId); } catch (x) {}
+      }
+      roll.scrollLeft = md.left - dx;
+    });
+    var mouseUp = function (e) {
+      if (!md || e.pointerId !== md.id) return;
+      var was = md;
+      md = null;
+      if (!was.moved) return;
+      rollQuiet = performance.now() + 400;
+      var k = nearest();
+      armed = true;
+      roll.scrollTo({ left: Math.max(0, mids[k] - roll.clientWidth / 2), behavior: still() ? "auto" : "smooth" });
+      setTimeout(function () { roll.style.scrollSnapType = ""; if (armed) settle(); }, 450);
+    };
+    roll.addEventListener("pointerup", mouseUp);
+    roll.addEventListener("pointercancel", mouseUp);
+    // the click a mouse drag ends with is not a click on a frame
+    roll.addEventListener("click", function (e) {
+      if (performance.now() < rollQuiet) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
+    window.addEventListener("resize", function () { if (dialog.open) { measureRoll(); centre(index, false); } });
   }
 
   function close() {
