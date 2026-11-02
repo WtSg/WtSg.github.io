@@ -368,7 +368,8 @@
       else close();
       return;
     }
-    if (e.target === dialog || e.target === stage) close();
+    // a tap or click on the photograph, or the black round it, goes back to the wall
+    if (e.target === dialog || e.target === stage || e.target === img) close();
   });
   dialog.addEventListener("keydown", function (e) {
     if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
