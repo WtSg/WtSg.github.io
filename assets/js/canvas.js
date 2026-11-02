@@ -13,12 +13,12 @@
  *   coming in, and the dot lights when it is sharp.
  * - The LED readout counts the frame and shows the photograph's real settings
  *   when it has them; its digits roll as the frame changes.
- * - Click (or Enter) fires a focal-plane shutter and opens the photograph.
+ * - Click (or Enter) opens the photograph, growing out of the wall as an app opens from its icon.
  * - Zoom: the mouse wheel, a pinch with two fingers or on a trackpad, the - and +
  *   buttons or keys (0 resets). Out, more of the wall shows and the frame lines
  *   close round the photograph; in, the photograph grows past them. It still
  *   comes to rest on the nearest photograph.
- * - Reduced motion: no inertia, speed zoom, turn or shutter; frames change at once.
+ * - Reduced motion: no inertia, speed zoom or turn; frames change at once.
  */
 (function () {
   "use strict";
@@ -38,7 +38,6 @@
   var capEl = vf.querySelector("[data-vf-caption]");
   var exifEl = vf.querySelector("[data-led-exif]");
   var sLabel = vf.querySelector("[data-led-sl]");
-  var shutter = room.querySelector(".vf-shutter");
   var hint = room.querySelector("[data-cv-hint]");
   var foot = document.querySelector(".cv-foot");
   var keys = Array.prototype.slice.call(room.querySelectorAll(".cv-key"));
@@ -698,7 +697,7 @@
     });
   });
 
-  /* ---------- The shutter ---------- */
+  /* ---------- Opening a photograph ---------- */
   // Zoomed out, a click zooms back in on the photograph clicked; at the framed size or
   // closer, a click opens the close-up straight from where the photograph is, and behind
   // it the wall frames that photograph, ready for when it closes.
@@ -714,20 +713,13 @@
     }
     var framed = subject === it && lockOn === it;
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
-    fire({ it: it, back: back }, !framed);
+    fire({ it: it, back: back });
   }
-  function fire(shot, quick) {
+  // The close-up opens at once, growing out of the photograph like an app from its icon
+  // (gallery-loupe.js): no curtain wipe across the frame first.
+  function fire(shot) {
     var it = shot.it, back = shot.back || keys[it.i];
-    var open = function () { G.open(it.i, it.img, back, it.img.currentSrc || it.img.src); };
-    // the shutter only crosses the frame lines when it is their photograph that is taken
-    if (quick || still() || !shutter.animate) { open(); return; }
-    // two curtains: the first closes across the frame, the second opens behind it
-    shutter.animate([
-      { clipPath: "inset(0 100% 0 0)" },
-      { clipPath: "inset(0 0 0 0)", offset: 0.45 },
-      { clipPath: "inset(0 0 0 100%)" }
-    ], { duration: 300, easing: "cubic-bezier(.6,0,.4,1)" });
-    setTimeout(open, 135);
+    G.open(it.i, it.img, back, it.img.currentSrc || it.img.src);
   }
   // Closing goes back to the wall as it was before the close-up opened, wherever the roll was turned to.
   G.onClose = function () {};

@@ -188,45 +188,50 @@
     });
   }
 
+  // Opening and closing move as an app does on a phone: the close-up grows out of the
+  // photograph's place on the wall (the dark window as a rounded rectangle, the photograph
+  // in it) on a spring, and closing shrinks it back into that place. Where the browser
+  // can draw a spring curve it is one; otherwise a gentle overshoot.
+  var SPRING = window.CSS && CSS.supports && CSS.supports("animation-timing-function", "linear(0, 1)")
+    ? "linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1)"
+    : "cubic-bezier(.3, 1.12, .4, 1)";
+  var home = null;   // where the photograph came from on the wall
+  function rectOf(from) {
+    var r = from && from.getBoundingClientRect ? from.getBoundingClientRect() : from && from.width ? from : null;
+    return r && r.width ? { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height, width: r.width, height: r.height } : null;
+  }
+  function window_(r, radius) {
+    var w = window.innerWidth, h = window.innerHeight;
+    return "inset(" + r.top.toFixed(1) + "px " + (w - r.right).toFixed(1) + "px " + (h - r.bottom).toFixed(1) + "px " + r.left.toFixed(1) + "px round " + radius + "px)";
+  }
+  function flip(r0, r1) {
+    var dx = (r0.left + r0.width / 2) - (r1.left + r1.width / 2), dy = (r0.top + r0.height / 2) - (r1.top + r1.height / 2);
+    return "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(" + (r0.width / r1.width).toFixed(4) + ")";
+  }
   api.open = function (i, from, focusBack, fromSrc) {
     index = openedAt = i;
     opener = focusBack || (from && from.focus ? from : null);
     closing = false;
+    home = from || null;
     fill(i, fromSrc);
     dialog.showModal();
     if (!keyed && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     root.classList.add("gl-open");
     if (roll) { measureRoll(); centre(i, false); }
     if (still() || !img.animate) return;
-    var r0 = null;
-    if (from && from.getBoundingClientRect) r0 = from.getBoundingClientRect();
-    else if (from && from.width) r0 = from;
+    var r0 = rectOf(from);
     img.style.opacity = "0";
     requestAnimationFrame(function () {
       img.style.opacity = "";
-      var r1 = img.getBoundingClientRect();
-      if (!r0 || !r0.width || !r1.width) return;
-      var dx = (r0.left + r0.width / 2) - (r1.left + r1.width / 2);
-      var dy = (r0.top + r0.height / 2) - (r1.top + r1.height / 2);
-      var s = r0.width / r1.width;
-      img.animate([
-        { transform: "translate(" + dx + "px," + dy + "px) scale(" + s + ")" },
-        { transform: "translateY(-1rem) scale(1.03) rotateX(5deg)", offset: 0.62 },
-        { transform: "none" }
-      ], { duration: 760, easing: "cubic-bezier(.2,.75,.25,1)" });
-      focusPull(520);
+      var r1 = rectOf(img);
+      if (!r0 || !r1) return;
+      var D = 560;
+      img.animate([{ transform: flip(r0, r1) }, { transform: "none" }], { duration: D, easing: SPRING });
+      try { dialog.animate([{ clipPath: window_(r0, 14) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: D, easing: SPRING }); } catch (e) {}
+      if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1 }], { duration: D, easing: "ease-out" });
     });
   };
-  // The frame lines close in and the photograph comes into focus, as a lens does.
-  function focusPull(delay) {
-    if (still() || !img.animate) return;
-    img.animate([{ filter: "blur(9px)" }, { filter: "blur(9px)", offset: 0.35 }, { filter: "blur(0)" }],
-      { duration: delay + 380, easing: "cubic-bezier(.3,.7,.2,1)" });
-    if (frameEl && frameEl.animate) {
-      frameEl.animate([{ opacity: 0, transform: "scale(1.08)" }, { opacity: 0, transform: "scale(1.08)", offset: 0.45 }, { opacity: 1, transform: "none" }],
-        { duration: delay + 300, easing: "cubic-bezier(.2,.8,.2,1)" });
-    }
-  }
+
 
   /* ---------- The film: drag it through the gate ---------- */
   // Only a scroll made by hand chooses a photograph: when the code itself glides the
@@ -370,12 +375,30 @@
     window.addEventListener("resize", function () { if (dialog.open) { measureRoll(); centre(index, false); } });
   }
 
-  function close() {
+  // Closing: back into the photograph's place on the wall when it is the one that was
+  // opened (the wall has not moved), else a short fade; quick (after a swipe down) fades.
+  function close(quick) {
     if (!dialog.open || closing) return;
     if (still() || !dialog.animate) { dialog.close(); return; }
     closing = true;
-    var a = dialog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease-in" });
-    a.onfinish = function () { dialog.close(); };
+    var r0 = !quick && index === openedAt ? rectOf(home) : null, r1 = rectOf(img), D = 380, E = "cubic-bezier(.4, 0, .2, 1)", last;
+    if (r0 && r1 && img.animate) {
+      img.animate([{ transform: "none" }, { transform: flip(r0, r1) }], { duration: D, easing: E, fill: "forwards" });
+      rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: "forwards" }); });
+      if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: "forwards" });
+      try {
+        last = dialog.animate([{ clipPath: "inset(0px 0px 0px 0px round 0px)" }, { clipPath: window_(r0, 14) }], { duration: D, easing: E, fill: "forwards" });
+        dialog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: D, easing: E, fill: "forwards", pseudoElement: "::backdrop" });
+      } catch (e) {}
+    }
+    if (!last) last = dialog.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease-in", fill: "forwards" });
+    last.onfinish = function () { dialog.close(); };
+  }
+  // after closing, nothing of the closing movement is left for the next opening
+  function settleClosed() {
+    [dialog, img, frameEl].concat(rest()).forEach(function (el) {
+      if (el && el.getAnimations) el.getAnimations().forEach(function (a) { a.cancel(); });
+    });
   }
   function step(d) { go((index + d + photos.length) % photos.length, d); }
   api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
@@ -497,11 +520,11 @@
     if (t.axis === "x") { if (!cancelled && Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); return; }
     if (t.axis !== "down") return;
     if (!cancelled && (t.dy > 90 || (t.v > 0.6 && t.dy > 30))) {
-      if (still() || !stage.animate) { unpull(); close(); return; }
+      if (still() || !stage.animate) { unpull(); close(true); return; }
       var from = stage.style.transform;
       stage.animate([{ transform: from }, { transform: "translateY(" + (t.dy + window.innerHeight * 0.4).toFixed(0) + "px) scale(.78)" }],
         { duration: 260, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
-      close();
+      close(true);
       return;
     }
     // not far enough: back into the frame
@@ -517,6 +540,7 @@
   dialog.addEventListener("close", function () {
     g = null;
     unpull();
+    settleClosed();
     closing = false;
     root.classList.remove("gl-open");
     if (api.onClose) api.onClose(index, index !== openedAt);
