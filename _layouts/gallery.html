@@ -54,16 +54,29 @@
 
     <div class="photos">
       {%- for ph in photos %}
-      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}{% assign cam = ph.camera | strip %}
+      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}{% assign cam = ph.camera | strip %}{% assign ex = ph.exif %}
       <figure class="photo" id="p-{{ ph.id }}" data-full="{{ base }}{{ ph.src }}" data-w="{{ ph.w }}" data-h="{{ ph.h }}">
         <button class="photo__open" type="button" aria-label="View {{ t | default: 'photograph' }} larger">
           <img src="{{ base }}{{ ph.thumb }}" alt="{{ t | default: 'Photograph' }}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
         </button>
-        {%- if t != "" or pl != "" or yr != "" or cam != "" %}
+        {%- if t != "" or pl != "" or yr != "" or cam != "" or ex %}
         <figcaption>
           {%- if t != "" %}<span class="photo__title">{{ t }}</span>{% endif %}
           {%- if pl != "" or yr != "" %}<span class="photo__meta">{{ pl }}{% if pl != "" and yr != "" %} · {% endif %}{{ yr }}</span>{% endif %}
-          {%- if cam != "" %}<span class="photo__camera">{{ cam }}</span>{% endif %}
+          {%- if ex %}
+          {%- assign spec_keys = "camera,focal,aperture,shutter,iso" | split: "," %}
+          {%- capture spec %}{% for k in spec_keys %}{% if ex[k] and ex[k] != "" %}|{{ ex[k] }}{% endif %}{% endfor %}{% endcapture %}
+          {%- assign spec_parts = spec | strip | remove_first: "|" | split: "|" %}
+          <span class="photo__camera">{{ spec_parts | join: " · " }}</span>
+          <dl class="photo__spec">
+            {%- if ex.camera and ex.camera != "" %}<div><dt>Camera</dt><dd>{{ ex.camera }}</dd></div>{% endif %}
+            {%- if ex.lens and ex.lens != "" %}<div><dt>Lens</dt><dd>{{ ex.lens }}</dd></div>{% endif %}
+            {%- if ex.focal and ex.focal != "" %}<div><dt>Focal length</dt><dd>{{ ex.focal }}</dd></div>{% endif %}
+            {%- if ex.aperture and ex.aperture != "" %}<div><dt>Aperture</dt><dd>{{ ex.aperture }}</dd></div>{% endif %}
+            {%- if ex.shutter and ex.shutter != "" %}<div><dt>Shutter</dt><dd>{{ ex.shutter }}</dd></div>{% endif %}
+            {%- if ex.iso and ex.iso != "" %}<div><dt>ISO</dt><dd>{{ ex.iso | remove: "ISO " }}</dd></div>{% endif %}
+          </dl>
+          {%- elsif cam != "" %}<span class="photo__camera">{{ cam }}</span>{% endif %}
         </figcaption>
         {%- endif %}
       </figure>

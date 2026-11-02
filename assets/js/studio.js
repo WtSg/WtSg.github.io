@@ -33,7 +33,7 @@
     edge: 2000, quality: 86,
     wmOn: true, wmText: "\u00A9 " + YEAR + " " + AUTHOR, wmPos: "br", wmSize: "s", wmOpacity: 60,
     copyright: "Copyright " + YEAR + " " + AUTHOR + ". All rights reserved.", artist: AUTHOR,
-    camera: false
+    camera: true
   };
   var DATA_PATH = "_data/gallery.yml";
   var IMG_DIR = "img/gallery/";
@@ -118,7 +118,7 @@
   var DEFAULT_HEADER = [
     "# Photography gallery, newest first.",
     "# Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.",
-    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, camera, added.",
+    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.",
     "# You can edit a title, place or year here by hand; keep each photo on one line."
   ];
   function parseGallery(text) {
@@ -135,7 +135,8 @@
     entries.forEach(function (e) {
       lines.push("- " + JSON.stringify({
         id: e.id, src: e.src, thumb: e.thumb, w: e.w, h: e.h,
-        title: e.title || "", place: e.place || "", year: e.year || "", camera: e.camera || "", added: e.added || ""
+        title: e.title || "", place: e.place || "", year: e.year || "",
+        exif: e.exif || undefined, camera: e.camera || undefined, added: e.added || ""
       }));
     });
     return lines.join("\n") + "\n";
@@ -154,62 +155,69 @@
   // ("ILCE-7M4 · FE 35mm F1.8 · 35 mm · f/2 · 1/250 s · ISO 100"). Only these
   // values are kept, for captions; the published file never carries them.
   function readExifInfo(buf) {
-    var info = { year: "", camera: "" };
+    var info = { found: false, year: "", camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
     try {
-      var v = new DataView(buf);
-      if (v.getUint16(0) !== 0xFFD8) return info;
-      var off = 2;
-      while (off + 4 < v.byteLength) {
-        var marker = v.getUint16(off), len = v.getUint16(off + 2);
-        if (marker === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) { // "Exif"
-          var t = off + 10, little = v.getUint16(t) === 0x4949;
-          var u16 = function (q) { return v.getUint16(t + q, little); };
-          var u32 = function (q) { return v.getUint32(t + q, little); };
-          var entries = function (ifd) {
-            var map = {}, n = u16(ifd);
-            for (var i = 0; i < n; i++) { var e = ifd + 2 + i * 12; map[u16(e)] = e; }
-            return map;
-          };
-          var value = function (e) {
-            var type = u16(e + 2), count = u32(e + 4);
-            var size = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8, 11: 4, 12: 8 }[type] || 1;
-            var q = size * count <= 4 ? e + 8 : u32(e + 8);
-            if (type === 2) {
-              var str = "";
-              for (var k = 0; k < count; k++) { var c = v.getUint8(t + q + k); if (!c) break; str += String.fromCharCode(c); }
-              return str.trim();
-            }
-            if (type === 3) return u16(q);
-            if (type === 4) return u32(q);
-            if (type === 5) { var den = u32(q + 4); return den ? u32(q) / den : 0; }
-            if (type === 10) { var d2 = v.getInt32(t + q + 4, little); return d2 ? v.getInt32(t + q, little) / d2 : 0; }
-            if (type === 11) return v.getFloat32(t + q, little);
-            if (type === 12) return v.getFloat64(t + q, little);
-            return null;
-          };
-          var ifd0 = entries(u32(4));
-          var exif = ifd0[0x8769] !== undefined ? entries(u32(ifd0[0x8769] + 8)) : {};
-          var get = function (map, tag) { return map[tag] !== undefined ? value(map[tag]) : null; };
-          var date = String(get(exif, 0x9003) || get(ifd0, 0x0132) || "");
-          if (/^\d{4}/.test(date) && date.slice(0, 4) !== "0000") info.year = date.slice(0, 4);
-          var make = String(get(ifd0, 0x010F) || ""), model = String(get(ifd0, 0x0110) || "");
-          var brand = make.split(" ")[0].toLowerCase();
-          var body = model && brand && model.toLowerCase().indexOf(brand) === 0 ? model : [make, model].filter(Boolean).join(" ");
-          var lens = String(get(exif, 0xA434) || "");
-          var focal = get(exif, 0x920A), fnum = get(exif, 0x829D), exp = get(exif, 0x829A), iso = get(exif, 0x8827);
-          var parts = [];
-          if (body) parts.push(body);
-          if (lens && lens !== body) parts.push(lens);
-          if (focal) parts.push(Math.round(focal) + " mm");
-          if (fnum) parts.push("f/" + Math.round(fnum * 10) / 10);
-          if (exp) parts.push(exp >= 1 ? Math.round(exp * 10) / 10 + " s" : "1/" + Math.round(1 / exp) + " s");
-          if (iso) parts.push("ISO " + iso);
-          info.camera = parts.join(" · ");
-          return info;
+      var v = new DataView(buf), bytes = new Uint8Array(buf), t = -1;
+      if (v.byteLength > 4 && v.getUint16(0) === 0xFFD8) {
+        var off = 2;
+        while (off + 10 < v.byteLength) {
+          var marker = v.getUint16(off), len = v.getUint16(off + 2);
+          if (marker === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) { t = off + 10; break; }   // "Exif"
+          if ((marker & 0xFF00) !== 0xFF00) break;
+          off += 2 + len;
         }
-        if ((marker & 0xFF00) !== 0xFF00) break;
-        off += 2 + len;
+      } else {
+        // HEIC / HEIF / AVIF keep EXIF as an item: find "Exif\0\0" followed by a TIFF header.
+        for (var k0 = 0; k0 + 10 < bytes.length; k0++) {
+          if (bytes[k0] === 0x45 && bytes[k0 + 1] === 0x78 && bytes[k0 + 2] === 0x69 && bytes[k0 + 3] === 0x66 &&
+              bytes[k0 + 4] === 0 && bytes[k0 + 5] === 0 &&
+              ((bytes[k0 + 6] === 0x4D && bytes[k0 + 7] === 0x4D && bytes[k0 + 9] === 0x2A) ||
+               (bytes[k0 + 6] === 0x49 && bytes[k0 + 7] === 0x49 && bytes[k0 + 8] === 0x2A))) { t = k0 + 6; break; }
+        }
       }
+      if (t < 0) return info;
+      var little = v.getUint16(t) === 0x4949;
+      var u16 = function (q) { return v.getUint16(t + q, little); };
+      var u32 = function (q) { return v.getUint32(t + q, little); };
+      var entries = function (ifd) {
+        var map = {}, n = u16(ifd);
+        for (var i2 = 0; i2 < n; i2++) { var e = ifd + 2 + i2 * 12; map[u16(e)] = e; }
+        return map;
+      };
+      var value = function (e) {
+        var type = u16(e + 2), count = u32(e + 4);
+        var size = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8, 11: 4, 12: 8 }[type] || 1;
+        var q = size * count <= 4 ? e + 8 : u32(e + 8);
+        if (type === 2) {
+          var str = "";
+          for (var k = 0; k < count; k++) { var c = v.getUint8(t + q + k); if (!c) break; str += String.fromCharCode(c); }
+          return str.trim();
+        }
+        if (type === 3) return u16(q);
+        if (type === 4) return u32(q);
+        if (type === 5) { var den = u32(q + 4); return den ? u32(q) / den : 0; }
+        if (type === 10) { var d2 = v.getInt32(t + q + 4, little); return d2 ? v.getInt32(t + q, little) / d2 : 0; }
+        if (type === 11) return v.getFloat32(t + q, little);
+        if (type === 12) return v.getFloat64(t + q, little);
+        return null;
+      };
+      var ifd0 = entries(u32(4));
+      var exif = ifd0[0x8769] !== undefined ? entries(u32(ifd0[0x8769] + 8)) : {};
+      var get = function (map, tag) { return map[tag] !== undefined ? value(map[tag]) : null; };
+      info.found = true;
+      var date = String(get(exif, 0x9003) || get(ifd0, 0x0132) || "");
+      if (/^\d{4}/.test(date) && date.slice(0, 4) !== "0000") info.year = date.slice(0, 4);
+      var make = String(get(ifd0, 0x010F) || ""), model = String(get(ifd0, 0x0110) || "");
+      var brand = make.split(" ")[0].toLowerCase();
+      info.camera = model && brand && model.toLowerCase().indexOf(brand) === 0 ? model : [make, model].filter(Boolean).join(" ");
+      info.lens = String(get(exif, 0xA434) || "");
+      if (info.lens === info.camera) info.lens = "";
+      var focal = get(exif, 0x920A), fnum = get(exif, 0x829D), exp = get(exif, 0x829A), iso = get(exif, 0x8827);
+      if (focal) info.focal = Math.round(focal) + " mm";
+      if (fnum) info.aperture = "f/" + Math.round(fnum * 10) / 10;
+      if (exp) info.shutter = exp >= 1 ? Math.round(exp * 10) / 10 + " s" : "1/" + Math.round(1 / exp) + " s";
+      if (iso) info.iso = "ISO " + iso;
+      info.summary = [info.camera, info.lens, info.focal, info.aperture, info.shutter, info.iso].filter(Boolean).join(" · ");
     } catch (e) {}
     return info;
   }
@@ -365,9 +373,14 @@
     return (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase()
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "photo";
   }
+  // Use the file name as a starting title only when it reads like words
+  // ("Charles_River_dusk"), never for camera numbering ("B_4098", "IMG_1234", "DSC01234").
   function titleFromName(name) {
     var base = name.replace(/\.[^.]+$/, "");
-    if (/^(img|dsc|dscf|dscn|pxl|mvimg|_mg|p\d{3}|gopr|dji)[_-]?\d/i.test(base) || /^\d[\d_ -]*$/.test(base)) return "";
+    if (/^(img|dsc|dscf|dscn|pxl|mvimg|_mg|p\d{3}|gopr|dji)[_-]?\d/i.test(base)) return "";
+    var letters = (base.match(/[A-Za-z\u00C0-\u024F\u4E00-\u9FFF]/g) || []).length;
+    var digits = (base.match(/\d/g) || []).length;
+    if (!/[A-Za-z\u00C0-\u024F]{3,}|[\u4E00-\u9FFF]/.test(base) || digits >= letters) return "";
     return base.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
   }
   function today() { var d = new Date(); return d.toISOString().slice(0, 10); }
@@ -399,13 +412,19 @@
     if (!item) return;
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
-    var headP = item.file.slice(0, 524288).arrayBuffer().then(function (buf) {
-      var x = readExifInfo(buf);
-      return { year: x.year, camera: x.camera, hdr: detectHdr(buf) };
-    }).catch(function () { return { year: "", camera: "", hdr: false }; });
+    var HEAD = 524288, TAIL = 1048576, f = item.file;
+    var headP = f.slice(0, HEAD).arrayBuffer().then(function (buf) {
+      var x = readExifInfo(buf), hdr = detectHdr(buf);
+      if (x.found || f.size <= HEAD) return { exif: x, hdr: hdr };
+      return f.slice(Math.max(HEAD, f.size - TAIL)).arrayBuffer().then(function (tail) {
+        return { exif: readExifInfo(tail), hdr: hdr };
+      });
+    }).catch(function () { return { exif: readExifInfo(new ArrayBuffer(0)), hdr: false }; });
     Promise.all([prepare(item), headP]).then(function (r) {
-      if (!item.year && r[1].year) item.year = r[1].year;
-      item.camera = r[1].camera;
+      var x = r[1].exif;
+      if (!item.year && x.year) item.year = x.year;
+      item.exif = x.summary ? { camera: x.camera, lens: x.lens, focal: x.focal, aperture: x.aperture, shutter: x.shutter, iso: x.iso } : null;
+      item.camera = x.summary;
       item.hdr = r[1].hdr;
       item.status = "ready";
     }, function () {
@@ -450,7 +469,7 @@
         (item.hdr ? (COLOR_SPACE === "display-p3"
           ? " HDR photo: published as a standard web image that keeps its wide colour."
           : " HDR photo: published as a standard web image.") : "") +
-        (settings.camera && item.camera ? " Caption: " + item.camera + "." : "");
+        (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "");
     } else {
       meta.textContent = item.name + " · preparing…";
     }
@@ -527,7 +546,7 @@
       it.id = id;
       return { id: id, src: "/" + IMG_DIR + id + ".jpg", thumb: "/" + IMG_DIR + id + "-thumb.jpg", w: it.w, h: it.h,
                title: it.title || "", place: it.place || "", year: /^\d{4}$/.test(it.year || "") ? it.year : "",
-               camera: settings.camera ? (it.camera || "") : "", added: added };
+               exif: settings.camera ? (it.exif || null) : null, added: added };
     });
     var n = items.length, nextPublished = null;
     commitChanges("Add " + n + " photo" + (n === 1 ? "" : "s") + " to the gallery", function () {
@@ -768,7 +787,7 @@
   });
 
   // Exposed for automated checks only; does nothing on its own.
-  window.__galleryStudio = { colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
+  window.__galleryStudio = { titleFromName: titleFromName, colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
 
   // ---------- start ----------
   fillForm(); describe();
