@@ -329,14 +329,16 @@
     maskEl.style.clipPath = cut;
   }
   // Where the readout docks: above the footer, and above the zoom buttons where it would meet them.
-  // Docked (zoomed out) the readout sits just above the footer, on its own (the caption
-  // goes), and where it would meet the - and + keys they step up above it.
+  // The readout keeps one place at every zoom, just above the footer, on its own (no caption),
+  // and where it would meet the - and + keys they step up above it (and above the first
+  // visit's hint, which floats over the readout until the wall is first touched).
   function dockY(h) {
     return Math.max(vh / 2, vh - footH - 12 - h);
   }
   var liftSet = -1;
   function liftZoom(dock) {
-    var lift = dock && zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8 ? ledH + 10 : 0;
+    var hinted = hint && !hint.classList.contains("is-gone");
+    var lift = dock && zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8 ? ledH + 10 + (hinted ? hintH + 8 : 0) : 0;
     if (lift === liftSet) return;
     liftSet = lift;
     room.style.setProperty("--zoom-lift", lift + "px");
@@ -465,7 +467,7 @@
     // photograph among the others, it docks at the foot of the window, clear of the wall.
     var radB = (fr.rot * Math.PI) / 180;
     var underY = vh / 2 + (fr.L * Math.abs(Math.sin(radB)) + fr.S * Math.abs(Math.cos(radB))) / 2 + 16;
-    var dock = fz < 0.97;
+    var dock = true;
     if (dock !== docked) { docked = dock; vf.classList.toggle("is-docked", dock); }
     liftZoom(dock);
     var belowH = ledH + (capEl.hidden || dock ? 0 : capH + 10);
@@ -475,7 +477,7 @@
       belowSet = belowY;
       vf.style.setProperty("--below-y", belowY.toFixed(1) + "px");
       // the hint goes when it would run into the footer
-      if (hint) hint.hidden = belowY + belowH + 10 + hintH > vh - footH - 6;
+      if (hint) hint.hidden = !dock && belowY + belowH + 10 + hintH > vh - footH - 6;
     }
 
     // which photograph is in the frame now, and how far it is from focus
