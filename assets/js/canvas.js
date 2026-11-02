@@ -668,11 +668,22 @@
   window.addEventListener("keydown", function (e) { if (e.key === "Control" || e.key === "Meta") keyHeld = true; });
   window.addEventListener("keyup", function (e) { if (e.key === "Control" || e.key === "Meta") keyHeld = false; });
   window.addEventListener("blur", function () { keyHeld = false; });
+  // A scroll begun in the close-up is the close-up's to its end: the two-finger swipe down
+  // that closes it goes on arriving after it has gone (a trackpad glides on once the fingers
+  // lift), and the wall takes no part of it, so the photograph closed into stays framed. The
+  // wall answers the next scroll, once this one has stopped.
+  var wheelLast = 0, wheelInGl = false;
   window.addEventListener("wheel", function (e) {
-    if (root.classList.contains("gl-open")) return;
+    var now = performance.now(), gap = now - wheelLast;
+    wheelLast = now;
+    if (root.classList.contains("gl-open")) { wheelInGl = true; return; }
     e.preventDefault();
+    if (wheelInGl) {
+      if (gap < 250) return;
+      wheelInGl = false;
+    }
     var unit = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 300 : 1;
-    var dy = (e.deltaY || (e.shiftKey ? e.deltaX : 0)) * unit, now = performance.now();
+    var dy = (e.deltaY || (e.shiftKey ? e.deltaX : 0)) * unit;
     if ((e.ctrlKey || e.metaKey) && keyHeld) {
       // a notch (or a steady scroll) at a time, not every event of it
       if (now - stepLast > 320) stepAcc = 0;
