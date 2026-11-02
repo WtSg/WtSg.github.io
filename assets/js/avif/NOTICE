@@ -1,0 +1,10 @@
+AVIF decoder used by the Gallery Studio when a browser cannot decode AV1 itself
+(Safari, for the 4:4:4 "High" profile AV1 in HDR AVIF photos).
+
+Unmodified files from @jsquash/avif 2.1.1 (https://github.com/jamsinclair/jSquash),
+Apache License 2.0 (see LICENSE), derived from Squoosh
+(https://github.com/GoogleChromeLabs/squoosh). The WebAssembly module is built from:
+  - libavif 1.0.1, https://github.com/AOMediaCodec/libavif (BSD 2-Clause)
+  - libaom, https://aomedia.googlesource.com/aom (BSD 2-Clause, with the
+    Alliance for Open Media Patent License 1.0)
+  - libyuv, https://chromium.googlesource.com/libyuv/libyuv (BSD 3-Clause)

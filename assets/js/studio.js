@@ -165,11 +165,15 @@
   // Reads a JPEG's EXIF for the capture year and a one-line camera summary
   // ("ILCE-7M4 · FE 35mm F1.8 · 35 mm · f/2 · 1/250 s · ISO 100"). Only these
   // values are kept, for captions; the published file never carries them.
-  function readExifInfo(buf) {
+  // tiffAt, when given, is where the TIFF block starts in buf (an Exif item or box read on its own).
+  function readExifInfo(buf, tiffAt) {
     var info = { found: false, year: "", date: "", lat: null, lon: null, camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
     try {
       var v = new DataView(buf), bytes = new Uint8Array(buf), t = -1;
-      if (v.byteLength > 4 && v.getUint16(0) === 0xFFD8) {
+      if (tiffAt !== undefined) {
+        var tb = tiffAt + 4 <= bytes.length ? bytes.subarray(tiffAt, tiffAt + 4) : [];
+        if ((tb[0] === 0x49 && tb[1] === 0x49 && tb[2] === 0x2A && tb[3] === 0) || (tb[0] === 0x4D && tb[1] === 0x4D && tb[2] === 0 && tb[3] === 0x2A)) t = tiffAt;
+      } else if (v.byteLength > 4 && v.getUint16(0) === 0xFFD8) {
         var off = 2;
         while (off + 10 < v.byteLength) {
           var marker = v.getUint16(off), len = v.getUint16(off + 2);
@@ -406,7 +410,13 @@
       var bmp = res[0];
       var sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
       // The HDR gain map, if the photo has one this browser can read.
-      var gmP = HDR ? HDR.read(item.file, sw / sh, { maxEdge: s.edge, colorSpace: COLOR_SPACE }).catch(function (e) {
+      // AV1 this browser can't decode is read tile by tile in WebAssembly: slow, so say how far it got
+      var onProgress = function (done, total) {
+        item.note = "reading its HDR here, part " + Math.min(total, done + 1) + " of " + total + "…";
+        var m = queueList.querySelector('[data-key="' + item.key + '"] .queue__meta');
+        if (m && item.status === "preparing") m.textContent = item.name + " · " + item.note;
+      };
+      var gmP = HDR ? HDR.read(item.file, sw / sh, { maxEdge: s.edge, colorSpace: COLOR_SPACE, onProgress: onProgress }).catch(function (e) {
         item.hdrProblem = (e && e.message) || "unreadable";
         if (window.console) console.warn("Gallery Studio: the HDR gain map of " + item.name + " was not kept (" + item.hdrProblem + ").");
         return null;
@@ -466,7 +476,7 @@
 
   // ---------- queue UI ----------
   function addFiles(list) {
-    var files = Array.prototype.filter.call(list, function (f) { return /^image\//.test(f.type) || /\.(heic|heif|avif|jpe?g|png|webp)$/i.test(f.name); });
+    var files = Array.prototype.filter.call(list, function (f) { return /^image\//.test(f.type) || /\.(heic|heif|avif|jxl|jpe?g|png|webp)$/i.test(f.name); });
     if (!files.length) { setStatus(publishStatus, "Those files aren't photos. Choose JPEG, HEIC, AVIF, PNG or WebP images.", "error"); return; }
     setStatus(publishStatus, "");
     files.forEach(function (file) {
@@ -478,14 +488,60 @@
     processPending();
   }
 
-  // A file's camera details and HDR flag: from its head, or its tail where a format keeps EXIF at the end.
+  // JPEG XL keeps Exif in a box of its container ("Exif", or "brob" holding it Brotli-
+  // compressed): walk the boxes, reading only their headers, and return its content.
+  var JXL = [0, 0, 0, 12, 0x4A, 0x58, 0x4C, 0x20, 0x0D, 0x0A, 0x87, 0x0A];
+  function isJxl(u8) { for (var i = 0; i < 12; i++) if (u8[i] !== JXL[i]) return false; return true; }
+  function jxlExif(f) {
+    var p = 0, steps = 0;
+    var next = function () {
+      if (p + 8 > f.size || steps++ > 64) return null;
+      return f.slice(p, p + 20).arrayBuffer().then(function (hb) {
+        var v = new DataView(hb), size = v.getUint32(0), head = 8, type = "", inner = "";
+        for (var i = 4; i < 8; i++) type += String.fromCharCode(v.getUint8(i));
+        if (size === 1) { size = v.getUint32(8) * 4294967296 + v.getUint32(12); head = 16; }
+        else if (size === 0) size = f.size - p;
+        if (size < head) return null;
+        var start = p + head, end = p + size;
+        p = end;
+        if (end - start > 4194304) return next();
+        if (type === "Exif") return f.slice(start, end).arrayBuffer();
+        if (type === "brob" && hb.byteLength >= head + 4) {
+          for (var j = head; j < head + 4; j++) inner += String.fromCharCode(v.getUint8(j));
+          if (inner === "Exif") {
+            try {
+              return new Response(f.slice(start + 4, end).stream().pipeThrough(new DecompressionStream("brotli"))).arrayBuffer().catch(next);
+            } catch (e) { /* no Brotli in this browser */ }
+          }
+        }
+        return next();
+      });
+    };
+    return Promise.resolve(next());
+  }
+  // A HEIF's (HEIC's, AVIF's) Exif item, from where the file's index says it is.
+  function heifExif(f, head) {
+    var r = HDR && HDR.exifRanges ? HDR.exifRanges(head) : null;
+    return r ? new Blob(r.map(function (x) { return f.slice(x[0], x[1]); })).arrayBuffer() : Promise.resolve(null);
+  }
+  // A file's camera details and HDR flag. HEIF and JPEG XL: from the Exif block their
+  // structure points to (a 4-byte offset, then TIFF). Otherwise, or when that fails: found
+  // in the head, or the tail where a format keeps EXIF at the end.
   function readFileExif(f) {
     var HEAD = 524288, TAIL = 1048576;
     return f.slice(0, HEAD).arrayBuffer().then(function (buf) {
-      var x = readExifInfo(buf), hdr = detectHdr(buf);
-      if (x.found || f.size <= HEAD) return { exif: x, hdr: hdr };
-      return f.slice(Math.max(HEAD, f.size - TAIL)).arrayBuffer().then(function (tail) {
-        return { exif: readExifInfo(tail), hdr: hdr };
+      var hdr = detectHdr(buf), u8 = new Uint8Array(buf);
+      var own = (u8.length >= 12 && isJxl(u8) ? jxlExif(f) : heifExif(f, buf)).catch(function () { return null; });
+      return own.then(function (b) {
+        if (b && b.byteLength > 8) {
+          var x0 = readExifInfo(b, 4 + new DataView(b).getUint32(0));
+          if (x0.found) return { exif: x0, hdr: hdr };
+        }
+        var x = readExifInfo(buf);
+        if (x.found || f.size <= HEAD) return { exif: x, hdr: hdr };
+        return f.slice(Math.max(HEAD, f.size - TAIL)).arrayBuffer().then(function (tail) {
+          return { exif: readExifInfo(tail), hdr: hdr };
+        });
       });
     }).catch(function () { return { exif: readExifInfo(new ArrayBuffer(0)), hdr: false }; });
   }
@@ -527,6 +583,7 @@
     if (!item) return;
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
+    item.note = "";
     var headP = readFileExif(item.file);
     var placeP = headP.then(function (h) {
       return settings.place && !item.place && !item.placeTried ? placeFor(h.exif.lat, h.exif.lon) : "";
@@ -589,7 +646,7 @@
         (item.date ? " Taken " + item.date + "." : "") +
         (item.placeAuto ? " Place from where it was taken: " + item.place + "." : "");
     } else {
-      meta.textContent = item.name + " · preparing…";
+      meta.textContent = item.name + " · " + (item.note || "preparing…");
     }
     body.appendChild(meta);
 
@@ -825,7 +882,7 @@
       // the original, to read its camera details from
       var pick = document.createElement("input");
       pick.type = "file";
-      pick.accept = "image/*,.heic,.heif,.avif,.dng";
+      pick.accept = "image/*,.heic,.heif,.avif,.jxl,.dng";
       pick.hidden = true;
       var cam = document.createElement("button");
       cam.type = "button"; cam.className = "btn btn--line btn--small";
@@ -993,7 +1050,7 @@
   });
 
   // Exposed for automated checks only; does nothing on its own.
-  window.__galleryStudio = { titleFromName: titleFromName, colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
+  window.__galleryStudio = { titleFromName: titleFromName, colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, readFileExif: readFileExif, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
 
   // ---------- start ----------
   fillForm(); describe();
