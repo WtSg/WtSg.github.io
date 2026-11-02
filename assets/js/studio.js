@@ -141,9 +141,17 @@
     });
     return { header: header.length ? header : DEFAULT_HEADER, entries: entries };
   }
+  // The gallery's order: the newest year first; within a year, the latest added first
+  // (the order they already have, kept: the sort is stable). No year goes last.
+  function byYear(entries) {
+    var yr = function (e) { var y = parseInt(e.year, 10); return isNaN(y) ? -1 : y; };
+    return entries.map(function (e, k) { return { e: e, k: k }; })
+      .sort(function (a, b) { return yr(b.e) - yr(a.e) || a.k - b.k; })
+      .map(function (x) { return x.e; });
+  }
   function serializeGallery(header, entries) {
     var lines = header.slice();
-    entries.forEach(function (e) {
+    byYear(entries).forEach(function (e) {
       lines.push("- " + JSON.stringify({
         id: e.id, src: e.src, thumb: e.thumb, w: e.w, h: e.h,
         title: e.title || "", place: e.place || "", year: e.year || "",
@@ -434,6 +442,7 @@
         var t = Math.min(1, THUMB_EDGE / Math.max(w, h));
         var tw = Math.round(w * t), th = Math.round(h * t);
         var thumb = scaleTo(full, w, h, tw, th);
+        item.print = fingerprintOf(thumb);
         var jobs = [toJpegBytes(full, s.quality / 100), toJpegBytes(thumb, THUMB_QUALITY)];
         if (gm) {
           // The gain map keeps its share of the photo's resolution (an iPhone's is half).
@@ -457,6 +466,88 @@
         });
       });
     });
+  }
+
+  // ---------- duplicates ----------
+  // A photograph's fingerprint, taken from the copy that is published (its thumbnail):
+  // averaged down to 17 x 16 grey, then which way each pair of neighbours goes (a 256-bit
+  // difference hash). The same picture resized, recompressed, re-exported or watermarked
+  // keeps nearly all of it; another picture, even of the same place, shares far less.
+  var FP_W = 17, FP_H = 16, DUP_BITS = 40;
+  function fingerprintOf(src) {
+    var w0 = src.naturalWidth || src.width, h0 = src.naturalHeight || src.height, w = w0, h = h0, cur = src;
+    if (!w || !h) return null;
+    try {
+      while (w > 4 * FP_W && h > 4 * FP_H) {
+        var half = document.createElement("canvas");
+        half.width = Math.round(w / 2); half.height = Math.round(h / 2);
+        var hx = half.getContext("2d");
+        hx.imageSmoothingQuality = "high";
+        hx.drawImage(cur, 0, 0, half.width, half.height);
+        cur = half; w = half.width; h = half.height;
+      }
+      var c = document.createElement("canvas");
+      c.width = FP_W; c.height = FP_H;
+      var x = c.getContext("2d");
+      x.imageSmoothingQuality = "high";
+      x.drawImage(cur, 0, 0, FP_W, FP_H);
+      var d = x.getImageData(0, 0, FP_W, FP_H).data, g = [], bits = [];
+      for (var i = 0; i < FP_W * FP_H; i++) g.push(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]);
+      for (var y = 0; y < FP_H; y++) for (var k = 0; k < FP_W - 1; k++) bits.push(g[y * FP_W + k] < g[y * FP_W + k + 1] ? 1 : 0);
+      return { bits: bits, ar: w0 / h0 };
+    } catch (e) { return null; }    // a picture this page may not read: no fingerprint, no match
+  }
+  function fpDistance(a, b) { var n = 0; for (var i = 0; i < a.bits.length; i++) if (a.bits[i] !== b.bits[i]) n++; return n; }
+  function samePicture(a, b) { return !!(a && b) && Math.abs(Math.log(a.ar / b.ar)) < 0.02 && fpDistance(a, b) <= DUP_BITS; }
+  // Different exposure settings on both sides: not the same frame, however alike.
+  function exifClash(a, b) {
+    if (!a || !b) return false;
+    return ["aperture", "shutter", "iso", "focal"].some(function (k) { return a[k] && b[k] && a[k] !== b[k]; });
+  }
+  var pubPrints = {};
+  function publishedPrint(e) {
+    if (e.print) return Promise.resolve(e.print);
+    if (!pubPrints[e.id]) {
+      pubPrints[e.id] = new Promise(function (res) {
+        var im = new Image();
+        im.onload = function () { res(fingerprintOf(im)); };
+        im.onerror = function () { res(null); };
+        im.src = e.localPreview || e.thumb;
+      });
+    }
+    return pubPrints[e.id];
+  }
+  // Is this photo already in the gallery, or already in the list above it? Say so, and leave
+  // it out of publishing unless asked ("Publish anyway"). Nothing is ever dropped silently.
+  function checkDuplicate(item) {
+    if (!item || item.status !== "ready") return Promise.resolve();
+    var at = queue.indexOf(item), before = queue.slice(0, Math.max(0, at)), found = null;
+    before.forEach(function (q) {
+      if (found || q.status !== "ready") return;
+      var f = q.file, g = item.file;
+      if (f && g && f.name === g.name && f.size === g.size && f.lastModified === g.lastModified) found = "This file is already in the list above.";
+      else if (samePicture(item.print, q.print) && !exifClash(item.exif, q.exif)) found = "Looks like " + q.name + ", already in the list above.";
+    });
+    if (found) { setDup(item, found); return Promise.resolve(); }
+    if (!item.print || !published.length) { setDup(item, null); return Promise.resolve(); }
+    var list = published.slice();
+    return Promise.all(list.map(publishedPrint)).then(function (prints) {
+      var best = -1, bd = Infinity;
+      prints.forEach(function (fp, k) {
+        if (!samePicture(item.print, fp) || exifClash(item.exif, list[k].exif)) return;
+        var dd = fpDistance(item.print, fp);
+        if (dd < bd) { bd = dd; best = k; }
+      });
+      if (best < 0) { setDup(item, null); return; }
+      var e = list[best], where = [e.year, e.place].filter(Boolean).join(" · ");
+      setDup(item, "Looks like No. " + (published.indexOf(e) + 1) + (e.title ? ", " + e.title + "," : "") + " already in your gallery" + (where ? " (" + where + ")" : "") + ".");
+    });
+  }
+  function setDup(item, text) {
+    if (item.dup === text) return;
+    item.dup = text;
+    if (queue.indexOf(item) >= 0) renderItem(item);
+    updatePublish();
   }
 
   // ---------- naming ----------
@@ -605,6 +696,7 @@
       if (queue.indexOf(item) >= 0) renderItem(item);
       updatePublish();
       processPending();
+      return checkDuplicate(item);
     });
   }
 
@@ -685,6 +777,18 @@
       ql.appendChild(qs); ql.appendChild(sel); fields.appendChild(ql);
       body.appendChild(fields);
     }
+    if (item.status === "ready" && item.dup) {
+      var dupNote = document.createElement("p");
+      dupNote.className = "queue__dup";
+      dupNote.textContent = item.dup + (item.keep ? " It will be published anyway." : " It won't be published again.");
+      body.appendChild(dupNote);
+      var keep = document.createElement("button");
+      keep.type = "button"; keep.className = "btn btn--line btn--small";
+      keep.textContent = item.keep ? "Don't publish it" : "Publish anyway";
+      keep.disabled = busy;
+      keep.addEventListener("click", function () { item.keep = !item.keep; renderItem(item); updatePublish(); });
+      body.appendChild(keep);
+    }
     var remove = document.createElement("button");
     remove.type = "button"; remove.className = "btn btn--line btn--small"; remove.textContent = "Remove";
     remove.disabled = busy;
@@ -697,8 +801,9 @@
     li.appendChild(body);
   }
 
+  function willPublish(q) { return q.status === "ready" && (!q.dup || q.keep); }
   function updatePublish() {
-    var ready = queue.filter(function (q) { return q.status === "ready"; }).length;
+    var ready = queue.filter(willPublish).length;
     var waiting = queue.filter(function (q) { return q.status === "preparing"; }).length;
     publishBtn.disabled = busy || !token || !ready || waiting > 0;
     publishBtn.textContent = ready ? "Publish " + ready + " photo" + (ready === 1 ? "" : "s") : "Publish";
@@ -730,7 +835,7 @@
   }
 
   function publish() {
-    var items = queue.filter(function (q) { return q.status === "ready"; });
+    var items = queue.filter(willPublish);
     if (!items.length || !token) return;
     busy = true; updatePublish();
     queueList.querySelectorAll("button, input").forEach(function (el) { el.disabled = true; });
@@ -766,8 +871,8 @@
         return tree;
       });
     }).then(function () {
-      published = nextPublished;
-      items.forEach(function (it, i) { entries[i].localPreview = it.preview; });
+      items.forEach(function (it, i) { entries[i].localPreview = it.preview; entries[i].print = it.print; });
+      published = byYear(nextPublished);
       queue = queue.filter(function (q) { return items.indexOf(q) < 0; });
       queueList.querySelectorAll(".queue__item").forEach(function (li) {
         if (!queue.some(function (q) { return q.key === li.getAttribute("data-key"); })) li.remove();
@@ -930,6 +1035,7 @@
       if (remember !== null) writeToken(t, remember);
       try { localStorage.setItem(OWNER_KEY, "1"); } catch (e) {}
       published = g.entries;
+      queue.forEach(function (q) { checkDuplicate(q); });
       connectForm.hidden = true; connectedBox.hidden = false;
       connectedText.textContent = "Signed in.";
       setStatus(connectStatus, "");
@@ -1050,7 +1156,7 @@
   });
 
   // Exposed for automated checks only; does nothing on its own.
-  window.__galleryStudio = { titleFromName: titleFromName, colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, readFileExif: readFileExif, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
+  window.__galleryStudio = { titleFromName: titleFromName, colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, readExifInfo: readExifInfo, readFileExif: readFileExif, fingerprintOf: fingerprintOf, fpDistance: fpDistance, settings: function () { return settings; }, parseGallery: parseGallery, serializeGallery: serializeGallery };
 
   // ---------- start ----------
   fillForm(); describe();

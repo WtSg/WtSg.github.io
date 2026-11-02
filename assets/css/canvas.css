@@ -191,6 +191,7 @@ p { margin: 0; }
   opacity: .5;
 }
 .vf.is-focused .vf-patch { opacity: 0; transition-delay: .8s; }
+.vf-patch.is-empty { opacity: 0; transition-duration: .15s; }
 
 /* Under the frame: the LED readout, a caption when the photograph has one, the hint. */
 /* Zoomed out, it docks at the foot of the window instead (canvas.js sets --below-y). */

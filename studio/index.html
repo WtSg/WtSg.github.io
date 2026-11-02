@@ -43,16 +43,6 @@ permalink: /studio/
         </div>
         <label class="check"><input id="remember" type="checkbox" checked> Remember on this device</label>
         <!-- The password is a GitHub access token that can edit WtSg/WtSg.github.io. -->
-        <details class="studio__details">
-          <summary>How to get one</summary>
-          <ol class="studio__steps">
-            <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
-            <li>Name it “Gallery Studio”. Leave <b>Resource owner</b> as WtSg, and pick an expiration (for example, one year).</li>
-            <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b>WtSg/WtSg.github.io</b>. (“Public repositories” is read-only and won’t work.)</li>
-            <li>Under <b>Permissions</b>, click <b>Add permissions</b> (or open <b>Repository permissions</b>), choose <b>Contents</b>, and set it to <b>Read and write</b>.</li>
-            <li>Generate the token, copy it, and use it as the password. GitHub shows it only once. To fix an existing token, open it on the same page and click <b>Edit</b>; the token text stays the same.</li>
-          </ol>
-        </details>
       </div>
       <div id="connected" class="studio__connected" hidden>
         <p><span class="studio__ok" aria-hidden="true"></span><span id="connected-text">Signed in.</span></p>
