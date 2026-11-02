@@ -533,3 +533,20 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .vf-patch, .cv-hint { transition: none; }
 }
+
+/* On a phone the photograph takes all the room above the readout, the caption and the roll
+   (which keep to the foot of the screen), a narrow margin at the sides, its frame lines
+   close round it. Last in the file, so it wins over the phone rules above. */
+@supports (container-type: size) {
+  @media (max-width: 700px) {
+    .gl[open] {
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      align-content: stretch;
+      gap: 1rem;
+      padding: max(.75rem, env(safe-area-inset-top)) .5rem max(.6rem, env(safe-area-inset-bottom));
+    }
+    .gl__stage { container-type: size; }
+    .gl .gl__img, .gl__frame { width: min(100cqw - 16px, (100cqh - 16px) * var(--ar, 1.5)); }
+    .gl__frame::before, .gl__frame::after { inset: -7px; border-radius: 10px; }
+  }
+}
