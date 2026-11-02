@@ -133,6 +133,7 @@
     altText: altText,
     cameraHtml: cameraHtml,
     open: function () {},
+    rehome: function () {},
     go: function () {},
     onClose: null,
     onStep: null,
@@ -206,7 +207,8 @@
       pre.src = p.src;
     }
     var meta = metaLine(p);
-    cap.innerHTML = '<p class="gl__title">' + esc(label(p)) + "</p>" + (meta ? '<p class="gl__meta">' + esc(meta) + "</p>" : "");
+    // the frame number is on the LED (its own count, out of all of them); a title, if it has one, and where and when
+    cap.innerHTML = (p.title ? '<p class="gl__title">' + esc(p.title) + "</p>" : "") + (meta ? '<p class="gl__meta">' + esc(meta) + "</p>" : "");
     var rows = specRows(p);
     spec.innerHTML = rows.map(function (r) { return '<div data-k="' + esc(r[0].toLowerCase().replace(/\s+/g, "-")) + '"><dt>' + esc(r[0]) + "</dt><dd>" + (r[0] === "Camera" ? cameraHtml(r[1]) : esc(r[1])) + "</dd></div>"; }).join("");
     spec.classList.toggle("is-empty", !rows.length);
@@ -256,6 +258,9 @@
     home = from || null;
     fill(i, fromSrc);
     dialog.showModal();
+    // never left scrolled aside by the focus the browser gives it on opening
+    dialog.scrollLeft = 0;
+    dialog.scrollTop = 0;
     // when it opened: the click of the opening tap is not a tap in it (below)
     openT = performance.now();
     if (!keyed && document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -418,16 +423,27 @@
     window.addEventListener("resize", function () { if (dialog.open) { measureRoll(); centre(index, false); } });
   }
 
-  // Closing: back into the photograph's place on the wall when it is the one that was
-  // opened (the wall has not moved), else a short fade; quick (after a swipe down) fades.
-  function close(quick) {
+  // Closing: back into the photograph's place on the wall. The wall follows the close-up
+  // out of sight (a page that hosts it hands over the new place with api.rehome), so this
+  // is the photograph shown now, however far the close-up was paged; after a swipe down it
+  // flies back from where the finger left it. With no place to go back to, a short fade.
+  function close() {
     if (!dialog.open || closing) return;
     if (still() || !dialog.animate) { dialog.close(); return; }
     closing = true;
-    var r0 = !quick && index === openedAt ? rectOf(home) : null, r1 = rectOf(img), D = 380, E = "cubic-bezier(.4, 0, .2, 1)", last;
-    if (r0 && r1 && img.animate) {
-      img.animate([{ transform: "none" }, { transform: flip(r0, r1) }], { duration: D, easing: E, fill: "forwards" });
-      rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: "forwards" }); });
+    endSlide();
+    Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
+    frameSize();
+    var r0 = index === openedAt ? rectOf(home) : null, rNow = rectOf(img), D = 380, E = "cubic-bezier(.4, 0, .2, 1)", last;
+    // a pulled-down photograph: its pull becomes the start of its own movement home
+    if (stage.style.transform) {
+      stage.style.transform = "";
+      if (stage.getAnimations) stage.getAnimations().forEach(function (a) { a.cancel(); });
+    }
+    var r1 = rectOf(img);
+    if (r0 && r1 && rNow && img.animate) {
+      img.animate([{ transform: flip(rNow, r1) }, { transform: flip(r0, r1) }], { duration: D, easing: E, fill: "forwards" });
+      rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: getComputedStyle(c).opacity }, { opacity: 0 }], { duration: 140, fill: "forwards" }); });
       if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: "forwards" });
       try {
         last = dialog.animate([{ clipPath: "inset(0px 0px 0px 0px round 0px)" }, { clipPath: window_(r0, 14) }], { duration: D, easing: E, fill: "forwards" });
@@ -445,6 +461,8 @@
   }
   function step(d) { go((index + d + photos.length) % photos.length, d); }
   api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
+  // the photograph i now has its place on the page at el: closing goes back there
+  api.rehome = function (i, el) { if (el) { home = el; openedAt = i; } };
   /* ---------- Paging, as in a phone's photo album ---------- */
   // Sideways the photographs lie side by side, a gap apart: a drag moves them with the
   // finger, the next coming in from the side, and let go they glide on to it or back. The
@@ -685,11 +703,8 @@
     if (t.axis === "x") { pageEnd(t, cancelled); return; }
     if (t.axis !== "down") return;
     if (!cancelled && (t.dy > 90 || (t.v > 0.6 && t.dy > 30))) {
-      if (still() || !stage.animate) { unpull(); close(true); return; }
-      var from = stage.style.transform;
-      stage.animate([{ transform: from }, { transform: "translateY(" + (t.dy + window.innerHeight * 0.4).toFixed(0) + "px) scale(.78)" }],
-        { duration: 260, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
-      close(true);
+      if (still() || !stage.animate) unpull();
+      close();
       return;
     }
     // not far enough: back into the frame
