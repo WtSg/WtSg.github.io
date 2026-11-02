@@ -1,0 +1,99 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
+{%- assign photos = site.data.gallery -%}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
+  <title>Photography · {{ me.name }}</title>
+  {%- if page.noindex %}
+  <meta name="robots" content="noindex">
+  {%- endif %}
+  <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
+  <link rel="canonical" href="https://www.wshangguan.com/photography/">
+  <meta name="theme-color" content="#0c0c0c">
+  <link rel="preload" href="{{ base }}/assets/fonts/schibsted-grotesk-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/geist-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/dseg7-classic-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/gallery-loupe.css">
+  <link rel="stylesheet" href="{{ base }}/assets/css/canvas.css">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+</head>
+<body class="cv">
+  <header class="cv-mark">
+    <h1 class="cv-title"><a href="{{ base }}/">{{ me.name }}</a><span>Photography</span></h1>
+    <a class="cv-add" href="{{ base }}/studio/" data-owner-only hidden>Add photos</a>
+  </header>
+  <p class="cv-count" aria-hidden="true">{{ photos.size }} photograph{% if photos.size != 1 %}s{% endif %}</p>
+
+  <main id="main" class="cv-room">
+    {%- if photos and photos.size > 0 %}
+    <!-- The wall of photographs: laid out and repeated by canvas.js -->
+    <div class="cv-plane" aria-hidden="true"></div>
+
+    <!-- Looking at it through a rangefinder: bright-line frame, focus patch, LED readout -->
+    <div class="vf" aria-hidden="true">
+      <div class="vf-frame"><div class="vf-mask"></div><i class="vf-c vf-c--tl"></i><i class="vf-c vf-c--tr"></i><i class="vf-c vf-c--bl"></i><i class="vf-c vf-c--br"></i></div>
+      <div class="vf-patch"></div>
+      <div class="vf-below">
+        <div class="vf-led">
+          <span class="vf-led__exif" data-led-exif hidden>
+            <span class="vf-led__cell" data-cell="f"><em>F</em><b data-led="f"></b></span>
+            <span class="vf-led__cell" data-cell="s"><em data-led-sl>1/</em><b data-led="s"></b></span>
+            <span class="vf-led__cell" data-cell="iso"><em>ISO</em><b data-led="iso"></b></span>
+            <span class="vf-led__cell" data-cell="mm"><b data-led="mm"></b><em>MM</em></span>
+          </span>
+          <span class="vf-led__focus"><i data-lamp="l"><svg viewBox="0 0 8 10" focusable="false"><path d="M1 0 8 5 1 10z"/></svg></i><i data-lamp="c"></i><i data-lamp="r"><svg viewBox="0 0 8 10" focusable="false"><path d="M7 0 0 5 7 10z"/></svg></i></span>
+          <span class="vf-led__cell vf-led__cell--n"><b data-led="n" data-off="88">01</b></span>
+        </div>
+        <p class="vf-caption" data-vf-caption hidden></p>
+        <p class="cv-hint" data-cv-hint>Drag to look around · scroll to zoom · click to open</p>
+      </div>
+    </div>
+    <div class="vf-shutter" aria-hidden="true"></div>
+    <!-- Zoom by hand: out to see more of the wall, in to look closer (also the wheel, a pinch, - and +) -->
+    <div class="cv-zoom" role="group" aria-label="Zoom">
+      <button class="cv-zoom__btn" type="button" data-cv-zoom="out" aria-label="Zoom out" title="Zoom out (-)"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10"/></svg></button>
+      <button class="cv-zoom__btn" type="button" data-cv-zoom="in" aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10M8 3v10"/></svg></button>
+    </div>
+
+    <!-- Every photograph once: the gallery without JavaScript, and the keyboard path with it -->
+    <ol class="cv-list" aria-label="Photographs">
+      {%- for ph in photos %}
+      {%- assign ar = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}
+      <li style="--ar: {{ ar }}">
+        <button class="cv-key" type="button" data-cv-i="{{ forloop.index0 }}">
+          <img src="{{ base }}{{ ph.thumb }}" alt="{% if t != "" %}{{ t }}{% else %}Photograph No. {{ forloop.index }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
+          <span class="cv-key__label">No. {{ forloop.index }}{% if t != "" %} · {{ t }}{% endif %}{% if yr != "" %} · {{ yr }}{% endif %}</span>
+        </button>
+      </li>
+      {%- endfor %}
+    </ol>
+    {%- else %}
+    <p class="cv-empty">No photographs yet.</p>
+    {%- endif %}
+  </main>
+
+  <footer class="cv-foot" id="contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <p>© {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved.</p>
+    <p class="cv-foot__links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Homepage</a><a href="{{ base }}/studio/" rel="nofollow">Studio</a></p>
+  </footer>
+
+  {% include gallery-data.html %}
+  {% include gallery-loupe.html close="Close" %}
+  <script src="{{ base }}/assets/js/site.js" defer></script>
+  <script src="{{ base }}/assets/js/gallery-loupe.js" defer></script>
+  <script src="{{ base }}/assets/js/canvas.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+/*
+ * Photography, version: Endless canvas, seen through a rangefinder.
+ * The photographs hang on an endless wall you drag in any direction. A camera's
+ * viewfinder sits over it: the bright-line frame, the yellowish focus patch
+ * with its double image, and a red LED readout. Move fast and the lens pulls
+ * back over the whole wall; slow down and the nearest photograph is framed,
+ * focused and counted. Click and a focal-plane shutter fires. Photographs stay
+ * plain <img> elements: true colour, HDR-ready.
+ */
+
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("../fonts/schibsted-grotesk-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("../fonts/schibsted-grotesk-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../fonts/geist-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DSEG7";
+  src: url("../fonts/dseg7-classic-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+
+/* Layout: the wall fills the window; the viewfinder is fixed over it, with the
+   readout under the frame; the name, the count and a one-line footer sit at the
+   edges. Without JavaScript, the same photographs in justified rows. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0c0c;
+  --ink: #edebe6;
+  --muted: #9a978f;
+  --line: rgba(255, 247, 228, .95);
+  --line-dim: rgba(255, 247, 228, .2);
+  --led: #ff4a2e;
+  --led-label: rgba(255, 74, 46, .72);
+  --led-off: rgba(255, 74, 46, .12);
+  --patch-tint: rgba(255, 214, 128, .07);
+  --patch-edge: rgba(255, 232, 180, .42);
+  --focus: #edebe6;
+  --ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --seg: "DSEG7", var(--mono);
+  --gut: clamp(1rem, 2.4vw, 2rem);
+}
+
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1rem/1.5 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--ink); color: var(--bg); }
+a { color: inherit; }
+:focus-visible { outline: 1.5px solid var(--focus); outline-offset: 4px; }
+button { font: inherit; color: inherit; }
+p { margin: 0; }
+
+/* ---------- Edges ---------- */
+.cv-mark, .cv-count, .cv-foot { position: relative; z-index: 20; }
+.cv-mark { display: flex; gap: 1.2rem; align-items: flex-start; padding: var(--gut); }
+.cv-title { display: grid; margin: 0; font: 500 .95rem/1.3 var(--ui); }
+.cv-title a { text-decoration: none; }
+.cv-title a:hover { text-decoration: underline; text-underline-offset: .25em; text-decoration-thickness: 1px; }
+.cv-title span { color: var(--muted); font-weight: 400; }
+.cv-add { font: 400 .78rem/1.3 var(--mono); color: var(--muted); text-underline-offset: .25em; }
+.cv-count { position: absolute; top: var(--gut); right: var(--gut); font: 400 .78rem/1.3 var(--mono); color: var(--muted); }
+.cv-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .4rem 1.6rem;
+  padding: 1.6rem var(--gut);
+  font: 400 .76rem/1.4 var(--mono);
+  color: var(--muted);
+}
+.cv-foot__links { display: flex; gap: 1.2rem; }
+.cv-foot a { color: var(--ink); text-underline-offset: .25em; text-decoration-thickness: 1px; }
+
+/* ---------- Without JavaScript: justified rows ---------- */
+.cv-room { padding: 0 var(--gut) 2rem; }
+.cv-plane, .vf, .vf-shutter { display: none; }
+.cv-list { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.cv-list::after { content: ""; flex: 999 1 0; }
+.cv-list li { flex: var(--ar) 1 calc(var(--ar) * 13rem); }
+.cv-key { display: grid; gap: .4rem; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: zoom-in; }
+.cv-key img { display: block; width: 100%; height: auto; aspect-ratio: var(--ar); object-fit: cover; }
+.cv-key__label { font: 400 .72rem/1.3 var(--mono); color: var(--muted); }
+.cv-empty { padding: 20vh 0; text-align: center; color: var(--muted); }
+
+/* ---------- With JavaScript: the wall ---------- */
+.cv-on, .cv-on body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+.cv-on .cv-mark { position: fixed; inset: 0 auto auto 0; }
+.cv-on .cv-count { position: fixed; }
+.cv-on .cv-foot { position: fixed; inset: auto 0 0 0; padding: .9rem var(--gut); pointer-events: none; }
+.cv-on .cv-foot p { pointer-events: auto; }
+.cv-on .cv-room { position: fixed; inset: 0; padding: 0; }
+.cv-on .cv-plane {
+  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.cv-wall { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.cv-on .cv-plane.is-dragging { cursor: grabbing; }
+.cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: zoom-in; }
+.cv-plane.is-dragging .cv-item { cursor: grabbing; }
+.cv-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ---------- The viewfinder ---------- */
+.cv-on .vf { display: block; position: fixed; inset: 0; z-index: 10; pointer-events: none; --fy: 30vh; }
+.vf > * { position: absolute; z-index: 1; }
+/* Top and bottom stay dark enough to read the name and the footer over the wall. */
+.vf::before, .vf::after { content: ""; position: absolute; left: 0; right: 0; z-index: 0; height: 7.5rem; }
+.vf::before { top: 0; background: linear-gradient(to bottom, rgba(12, 12, 12, .78), rgba(12, 12, 12, 0)); }
+.vf::after { bottom: 0; background: linear-gradient(to top, rgba(12, 12, 12, .82), rgba(12, 12, 12, 0)); }
+
+/* The bright-line frame: a faint full outline, bright corners. It is sized,
+   and turned for portrait photographs, by canvas.js. */
+.vf-frame { left: 50%; top: 50%; width: 60vw; height: 40vw; transform: translate(-50%, -50%); }
+.vf-frame::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--line-dim); }
+/* Outside the frame the wall reads darker while it is still, as through the eyepiece. */
+.vf-mask { position: absolute; inset: 0; outline: 200vmax solid #000; opacity: .58; }
+.vf-c { position: absolute; z-index: 1; width: clamp(1.1rem, 2.6vmin, 2rem); height: clamp(1.1rem, 2.6vmin, 2rem); border: 0 solid var(--line); }
+.vf-c--tl { left: -1px; top: -1px; border-left-width: 1.5px; border-top-width: 1.5px; }
+.vf-c--tr { right: -1px; top: -1px; border-right-width: 1.5px; border-top-width: 1.5px; }
+.vf-c--bl { left: -1px; bottom: -1px; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.vf-c--br { right: -1px; bottom: -1px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+
+/* The focus patch: a ghost of the picture slides into register as it settles. */
+.vf-patch {
+  left: 50%;
+  top: 50%;
+  width: 6.6rem;
+  height: 4.2rem;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border: 1px solid var(--patch-edge);
+  border-radius: 1px;
+  background: var(--patch-tint);
+  transition: opacity .45s ease-out;
+}
+.vf-ghost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  opacity: .6;
+  mix-blend-mode: screen;
+}
+.vf.is-focused .vf-patch { opacity: 0; transition-delay: .8s; }
+
+/* Under the frame: the LED readout, a caption when the photograph has one, the hint. */
+.vf-below {
+  left: 50%;
+  top: calc(50% + var(--fy) + 1rem);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .65rem;
+}
+.vf-led {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: .55rem .9rem .52rem;
+  border-radius: .25rem;
+  background: rgba(0, 0, 0, .8);
+  color: var(--led);
+  white-space: nowrap;
+}
+.vf-led__exif { display: flex; align-items: baseline; gap: 1.1rem; }
+.vf-led__cell { display: inline-flex; align-items: baseline; gap: .28rem; }
+/* Seven-segment digits over their own unlit segments. */
+.vf-led b { position: relative; z-index: 0; font: 700 1.3rem/1 var(--seg); letter-spacing: .04em; }
+.vf-led b::before { content: attr(data-off); position: absolute; top: 0; right: 0; z-index: -1; color: var(--led-off); }
+.vf-led em { font: 400 .6rem/1 var(--mono); font-style: normal; letter-spacing: .08em; color: var(--led-label); }
+/* Focus lamps: an arrow toward the photograph coming in, the dot when it is sharp. */
+.vf-led__focus { display: inline-flex; align-items: center; gap: .34rem; }
+.vf-led__focus i { display: block; color: var(--led-off); }
+.vf-led__focus svg { display: block; width: .5rem; height: .64rem; fill: currentColor; }
+.vf-led__focus [data-lamp="c"] { width: .52rem; height: .52rem; border-radius: 50%; background: currentColor; }
+.vf-led__focus .is-on, .vf.is-test .vf-led__focus i { color: var(--led); }
+.vf-led__cell--n { padding-left: 1rem; border-left: 1px solid rgba(255, 74, 46, .28); }
+.vf-caption { font: 400 .76rem/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
+.cv-hint { font: 400 .72rem/1.3 var(--mono); color: var(--muted); white-space: nowrap; transition: opacity .6s; }
+.cv-hint.is-gone { opacity: 0; }
+
+/* ---------- Zoom: two buttons in the corner, housed like the LED readout ---------- */
+.cv-zoom { display: none; }
+.cv-on .cv-zoom {
+  position: fixed;
+  right: var(--gut);
+  bottom: calc(var(--foot-h, 3rem) + .5rem);
+  z-index: 21;
+  display: flex;
+  border-radius: .25rem;
+  background: rgba(0, 0, 0, .8);
+}
+.cv-zoom__btn {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cv-zoom__btn + .cv-zoom__btn { border-left: 1px solid rgba(255, 255, 255, .14); }
+.cv-zoom__btn svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.cv-zoom__btn:hover { color: var(--led); }
+.cv-zoom__btn:disabled { color: var(--muted); opacity: .45; cursor: default; }
+@media (pointer: coarse) {
+  .cv-zoom__btn { width: 2.75rem; height: 2.75rem; }
+}
+
+/* ---------- The shutter: two curtains crossing the frame ---------- */
+.cv-on .vf-shutter {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #000;
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+}
+
+/* The list becomes the keyboard path: off-screen until a key lands on it. */
+.cv-on .cv-list { position: fixed; left: 0; top: 0; display: block; }
+.cv-on .cv-key {
+  position: fixed;
+  left: -9999px;
+  top: var(--gut);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  width: auto;
+  padding: .35rem .8rem .35rem .35rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+}
+.cv-on .cv-key img { width: 2rem; height: 2rem; aspect-ratio: 1; border-radius: 50%; }
+.cv-on .cv-key .cv-key__label { color: var(--bg); }
+.cv-on .cv-key:focus { left: 50%; transform: translateX(-50%); }
+
+/* ---------- The large view ---------- */
+.gl {
+  --gl-bg: #0c0c0c;
+  --gl-fg: #edebe6;
+  --gl-muted: #9a978f;
+  --gl-paper: transparent;
+  --gl-line: rgba(237, 235, 230, .4);
+  --gl-focus: #edebe6;
+  --gl-backdrop: rgba(0, 0, 0, .9);
+  --gl-ui: var(--ui);
+  --gl-hand: var(--ui);
+  --gl-pad: 0px;
+}
+.gl .gl__img { box-shadow: none; }
+.gl .gl__title { font-weight: 500; font-size: 1.05rem; }
+.gl .gl__spec { font-family: var(--mono); font-size: .8rem; }
+
+@media (max-width: 700px) {
+  .vf-led { gap: .8rem; padding: .45rem .65rem .42rem; }
+  .vf-led__exif { gap: .8rem; }
+  .vf-led b { font-size: 1.1rem; }
+  .vf-led__cell--n { padding-left: .75rem; }
+  .vf-patch { width: 5.2rem; height: 3.3rem; }
+  .cv-on .cv-key { top: 4.4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vf-patch, .cv-hint { transition: none; }
+}

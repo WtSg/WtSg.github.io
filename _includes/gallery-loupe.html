@@ -1,0 +1,13 @@
+<dialog class="gl" aria-label="A photograph, up close">
+  <figure class="gl__stage"><img class="gl__img" src="" alt="" draggable="false"></figure>
+  <div class="gl__info">
+    <div class="gl__cap"></div>
+    <dl class="gl__spec"></dl>
+  </div>
+  <div class="gl__controls">
+    <button class="gl__btn" type="button" data-gl="prev" aria-label="Previous photograph">{% include gl-icon.html name="prev" %}</button>
+    <span class="gl__count" aria-live="polite"></span>
+    <button class="gl__btn" type="button" data-gl="next" aria-label="Next photograph">{% include gl-icon.html name="next" %}</button>
+    <button class="gl__btn gl__btn--close" type="button" data-gl="close" autofocus>{{ include.close | default: "Close" }}</button>
+  </div>
+</dialog>

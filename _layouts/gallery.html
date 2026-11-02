@@ -6,16 +6,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>document.documentElement.className = "js";</script>
+  <script>
+    // Prints start as blank paper only when the darkroom script is running; if it
+    // fails to load within 4 s, everything stays visible.
+    (function (h) {
+      h.className = "js dr-ready";
+      setTimeout(function () { if (!window.__darkroomLoaded) h.classList.remove("dr-ready"); }, 4000);
+    })(document.documentElement);
+  </script>
 
   <title>Photography · {{ me.name }}</title>
+  {%- if page.noindex %}
+  <meta name="robots" content="noindex">
+  {%- endif %}
   <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
   <link rel="canonical" href="https://www.wshangguan.com/photography/">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#170605">
 
-  <link rel="preload" href="{{ base }}/assets/fonts/stix-two-text-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="{{ base }}/assets/fonts/dejavu-sans.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{{ base }}/assets/css/site.css">
+  <link rel="preload" href="{{ base }}/assets/fonts/barlow-condensed-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/permanent-marker-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/darkroom.css">
+  <script type="importmap">{"imports": {"three": "{{ base }}/assets/three/three.module.min.js", "three/addons/": "{{ base }}/assets/three/addons/"}}</script>
 
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
@@ -26,94 +37,181 @@
     gtag('config', 'G-PSWJT5W8PE');
   </script>
 </head>
-<body>
-  <a class="skip" href="#main">Skip to content</a>
+<body class="darkroom" data-lights="safe">
+  <a class="skip" href="#main">Skip to the photographs</a>
 
-  <header class="masthead">
-    <div class="wrap masthead__inner">
-      <a class="wordmark" href="{{ base }}/">{{ me.name }}</a>
-      <nav aria-label="Site">
-        <ul>
-          <li><a href="{{ base }}/#research">Research</a></li>
-          <li><a href="{{ base }}/#work">Work</a></li>
-          <li><a href="{{ base }}/#publications">Publications</a></li>
-          <li><a href="{{ base }}/photography/" aria-current="page">Photography</a></li>
-        </ul>
-      </nav>
-      <a class="btn btn--small masthead__email" href="#contact" data-mail>Email</a>
+  <!-- Ripples on the developer while a print develops -->
+  <svg class="dr-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <filter id="agitate" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.018" numOctaves="2" seed="7" result="swell">
+        <animate attributeName="baseFrequency" values="0.006 0.018;0.009 0.024;0.006 0.018" dur="2.8s" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="swell" scale="0" xChannelSelector="R" yChannelSelector="G">
+        <animate id="agitate-run" attributeName="scale" values="22;12;5;0" keyTimes="0;0.4;0.75;1" dur="2.8s" begin="indefinite" fill="freeze"/>
+      </feDisplacementMap>
+    </filter>
+  </svg>
+
+  <div class="dr-flicker" aria-hidden="true"></div>
+
+  <header class="dr-head">
+    <div class="dr-head__left">
+      <h1 class="dr-title"><a class="dr-mark" href="{{ base }}/">{{ me.name }}</a> <span aria-hidden="true">·</span> Photography</h1>
+      <p class="dr-sub">Just my life{% if photos and photos.size > 0 %} · {{ photos.size }} print{% if photos.size != 1 %}s{% endif %}{% endif %}</p>
     </div>
+    <a class="dr-add" href="{{ base }}/studio/" hidden>Add photos</a>
   </header>
 
-  <main id="main" class="gallery wrap">
-    <div class="gallery__head">
-      <h1 class="gallery__title">Photography</h1>
-      <a class="btn btn--line btn--small gallery__studio" href="{{ base }}/studio/" hidden>Add photos</a>
-    </div>
-    {%- if photos and photos.size > 0 %}
-    <p class="gallery__lede">{{ photos.size }} photograph{% if photos.size != 1 %}s{% endif %}. Select one to view it larger.</p>
+  {%- if photos and photos.size > 0 %}
+  <div class="dr-bar">
+    <nav class="dr-line" aria-label="Drying line: prints you have developed">
+      <svg class="dr-line__wire" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="M0 8 Q500 34 1000 8" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <ol class="dr-line__pins">
+        {%- for ph in photos %}
+        {%- assign par = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+        <li class="pin" data-pin="{{ forloop.index0 }}" style="--ar: {{ par }}">
+          <span class="pin__clip" aria-hidden="true"></span>
+          <button class="pin__print" type="button" tabindex="-1" aria-label="Go to print No. {{ forloop.index }}">
+            <img src="{{ base }}{{ ph.thumb }}" alt="" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
+          </button>
+        </li>
+        {%- endfor %}
+      </ol>
+    </nav>
+    <button class="dr-sign" type="button" data-lights-toggle>
+      <span class="dr-sign__plate" aria-hidden="true">In use</span>
+      <span class="dr-sign__switch" data-sign-hint>Lights on</span>
+    </button>
+  </div>
+  {%- endif %}
 
-    <div class="photos">
+  <main id="main" class="dr-room">
+    {%- if photos and photos.size > 0 %}
+    {%- unless page.flat %}
+    <!-- The 3D darkroom (darkroom3d.js); shown only where WebGL works -->
+    <div class="dr-stage-wrap" style="--n: {{ photos.size }}" hidden>
       {%- for ph in photos %}
-      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}{% assign cam = ph.camera | strip %}{% assign ex = ph.exif %}
-      <figure class="photo" id="p-{{ ph.id }}" data-full="{{ base }}{{ ph.src }}" data-w="{{ ph.w }}" data-h="{{ ph.h }}">
-        <button class="photo__open" type="button" aria-label="View {{ t | default: 'photograph' }} larger">
-          <img src="{{ base }}{{ ph.thumb }}" alt="{{ t | default: 'Photograph' }}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
-        </button>
-        {%- if t != "" or pl != "" or yr != "" or cam != "" or ex %}
-        <figcaption>
-          {%- if t != "" %}<span class="photo__title">{{ t }}</span>{% endif %}
-          {%- if pl != "" or yr != "" %}<span class="photo__meta">{{ pl }}{% if pl != "" and yr != "" %} · {% endif %}{{ yr }}</span>{% endif %}
+      <span class="dr-snap" style="--i: {{ forloop.index0 }}" aria-hidden="true"></span>
+      {%- endfor %}
+      <span class="dr-snap" style="--i: {{ photos.size }}" aria-hidden="true"></span>
+      <div class="dr-stage">
+        <canvas class="dr-canvas" aria-hidden="true"></canvas>
+        <div class="dr-hud">
+          <div class="dr-hud__tape tape" aria-live="polite"></div>
+          <p class="dr-hud__timer" aria-hidden="true"><span data-hud-label>Exp</span> <b data-hud-timer>8.0</b></p>
+          <div class="dr-hud__nav">
+            <button class="dr-hud__btn" type="button" data-hud="prev" aria-label="Previous print">{% include gl-icon.html name="prev" %}</button>
+            <span class="dr-hud__count" data-hud-count>1 / {{ photos.size }}</span>
+            <button class="dr-hud__btn" type="button" data-hud="next" aria-label="Next print">{% include gl-icon.html name="next" %}</button>
+            <button class="dr-hud__btn dr-hud__btn--look" type="button" data-hud="look">{% include gl-icon.html name="loupe" %}<span class="dr-hud__look-text">Look closely</span></button>
+          </div>
+          <p class="dr-hud__hint" data-hud-hint>Scroll to make the next print</p>
+          <p class="dr-hud__try" data-hud-try hidden></p>
+        </div>
+        <p class="dr-hall-hint" data-hall-hint aria-hidden="true">Drag to wander the drying room · click a print to look closely</p>
+        <!-- Every print, for keyboards and screen readers: focusing one brings it to the tray -->
+        <ol class="dr-keys">
+          {%- for ph in photos %}
+          {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}
+          <li><button type="button" data-hud-print="{{ forloop.index0 }}">Look closely at print No. {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}</button></li>
+          {%- endfor %}
+        </ol>
+      </div>
+    </div>
+    {%- endunless %}
+
+    <div class="dr-trays">
+      {%- for ph in photos %}
+      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}{% assign ex = ph.exif %}
+      {%- assign ar = ph.w | times: 1.0 | divided_by: ph.h | round: 4 %}
+      <article class="tray" id="p-{{ ph.id }}" data-index="{{ forloop.index0 }}" data-full="{{ base }}{{ ph.src }}" data-thumb="{{ base }}{{ ph.thumb }}" style="--ar: {{ ar }}">
+        <div class="tray__basin">
+          <span class="tray__timer" aria-hidden="true">Dev <b data-timer>0:00</b></span>
+          <div class="print" style="view-transition-name: print-{{ forloop.index }}">
+            <button class="print__open" type="button" aria-label="Look closely at print No. {{ forloop.index }}{% if t != "" %}, {{ t }}{% endif %}">
+              <span class="print__liquid"><img class="print__img"
+                   src="{{ base }}{{ ph.src }}"
+                   srcset="{{ base }}{{ ph.thumb }} 900w, {{ base }}{{ ph.src }} {{ ph.w }}w"
+                   sizes="(max-width: 700px) 92vw, 62vw"
+                   alt="{% if t != "" %}{{ t }}{% else %}Photograph No. {{ forloop.index }}{% endif %}{% if pl != "" %}, {{ pl }}{% endif %}"
+                   width="{{ ph.w }}" height="{{ ph.h }}"
+                   {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" draggable="false"></span>
+            </button>
+          </div>
+        </div>
+        <div class="tape">
+          <p class="tape__hand">No. {{ forloop.index }}{% if t != "" %} · {{ t }}{% endif %}</p>
+          {%- if pl != "" or yr != "" %}<p class="tape__meta">{{ pl }}{% if pl != "" and yr != "" %} · {% endif %}{{ yr }}</p>{% endif %}
           {%- if ex %}
           {%- assign spec_keys = "camera,focal,aperture,shutter,iso" | split: "," %}
           {%- capture spec %}{% for k in spec_keys %}{% if ex[k] and ex[k] != "" %}|{{ ex[k] }}{% endif %}{% endfor %}{% endcapture %}
           {%- assign spec_parts = spec | strip | remove_first: "|" | split: "|" %}
-          <span class="photo__camera">{{ spec_parts | join: " · " }}</span>
-          <dl class="photo__spec">
-            {%- if ex.camera and ex.camera != "" %}<div><dt>Camera</dt><dd>{{ ex.camera }}</dd></div>{% endif %}
-            {%- if ex.lens and ex.lens != "" %}<div><dt>Lens</dt><dd>{{ ex.lens }}</dd></div>{% endif %}
-            {%- if ex.focal and ex.focal != "" %}<div><dt>Focal length</dt><dd>{{ ex.focal }}</dd></div>{% endif %}
-            {%- if ex.aperture and ex.aperture != "" %}<div><dt>Aperture</dt><dd>{{ ex.aperture }}</dd></div>{% endif %}
-            {%- if ex.shutter and ex.shutter != "" %}<div><dt>Shutter</dt><dd>{{ ex.shutter }}</dd></div>{% endif %}
-            {%- if ex.iso and ex.iso != "" %}<div><dt>ISO</dt><dd>{{ ex.iso | remove: "ISO " }}</dd></div>{% endif %}
-          </dl>
-          {%- elsif cam != "" %}<span class="photo__camera">{{ cam }}</span>{% endif %}
-        </figcaption>
+          <p class="tape__spec">{{ spec_parts | join: " · " }}</p>
+          {%- endif %}
+        </div>
+        {%- if ex %}
+        <dl class="spec" hidden>
+          {%- if ex.camera and ex.camera != "" %}<div><dt>Camera</dt><dd>{{ ex.camera }}</dd></div>{% endif %}
+          {%- if ex.lens and ex.lens != "" %}<div><dt>Lens</dt><dd>{{ ex.lens }}</dd></div>{% endif %}
+          {%- if ex.focal and ex.focal != "" %}<div><dt>Focal length</dt><dd>{{ ex.focal }}</dd></div>{% endif %}
+          {%- if ex.aperture and ex.aperture != "" %}<div><dt>Aperture</dt><dd>{{ ex.aperture }}</dd></div>{% endif %}
+          {%- if ex.shutter and ex.shutter != "" %}<div><dt>Shutter</dt><dd>{{ ex.shutter }}</dd></div>{% endif %}
+          {%- if ex.iso and ex.iso != "" %}<div><dt>ISO</dt><dd>{{ ex.iso | remove: "ISO " }}</dd></div>{% endif %}
+        </dl>
         {%- endif %}
-      </figure>
+      </article>
       {%- endfor %}
     </div>
 
-    <dialog class="lightbox" aria-label="Photograph viewer">
-      <figure class="lightbox__figure">
-        <img class="lightbox__img" src="" alt="" draggable="false">
-        <figcaption class="lightbox__cap"></figcaption>
-      </figure>
-      <div class="lightbox__controls">
-        <button class="btn btn--line btn--small" type="button" data-lb="prev">Previous</button>
-        <span class="lightbox__count" aria-live="polite"></span>
-        <button class="btn btn--line btn--small" type="button" data-lb="next">Next</button>
-        <button class="btn btn--small" type="button" data-lb="close">Close</button>
+    <!-- With the lights on: the bench and its empty trays -->
+    <div class="dr-bench" aria-hidden="true">
+      <span class="dr-bench__tray">Developer</span>
+      <span class="dr-bench__tray">Stop</span>
+      <span class="dr-bench__tray">Fixer</span>
+    </div>
+
+    <dialog class="loupe" aria-label="A print, up close">
+      <div class="loupe__stage">
+        <img class="loupe__img" src="" alt="" draggable="false">
+      </div>
+      <div class="loupe__info">
+        <div class="loupe__tape tape"></div>
+        <dl class="loupe__spec spec"></dl>
+      </div>
+      <div class="loupe__controls">
+        <button class="dr-btn" type="button" data-loupe="prev">Previous</button>
+        <span class="loupe__count" aria-live="polite"></span>
+        <button class="dr-btn" type="button" data-loupe="next">Next</button>
+        <button class="dr-btn dr-btn--solid" type="button" data-loupe="close" autofocus>Back to the darkroom</button>
       </div>
     </dialog>
     {%- else %}
-    <figure class="fig2 gallery__empty">
-      <div class="axes">
-        <div class="axes__plot axes__plot--photo">
-          <canvas class="noise noise--static" data-noise="120x24" aria-hidden="true"></canvas>
-        </div>
-        {% include ticks.html w=120 h=24 xs="0,20,40,60,80,100" ys="0,10,20" %}
-      </div>
-      <figcaption><span class="figlabel">Figure 1.</span> The gallery at <i>t</i>&nbsp;=&nbsp;1: no photographs yet.</figcaption>
-    </figure>
+    <div class="dr-trays">
+      <article class="tray tray--empty" style="--ar: 1.3333">
+        <div class="tray__basin"><div class="print print--blank"></div></div>
+        <div class="tape"><p class="tape__hand">Nothing in the developer yet</p></div>
+      </article>
+    </div>
     {%- endif %}
   </main>
 
-  <footer class="contact wrap gallery__footer" id="contact" aria-label="Copyright and contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
-    <p class="gallery__rights">All photographs © {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved. Please ask before using any of them.</p>
-    <p class="links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Back to the homepage</a><a href="{{ base }}/studio/" rel="nofollow">Studio (add photos)</a></p>
+  <footer class="dr-foot" id="contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <p>All photographs © {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved. Please ask before using any of them.</p>
+    <p class="dr-foot__links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Homepage</a><a href="{{ base }}/studio/" rel="nofollow">Studio (add photos)</a></p>
   </footer>
 
   <script src="{{ base }}/assets/js/site.js" defer></script>
-  <script src="{{ base }}/assets/js/gallery.js" defer></script>
+  <script src="{{ base }}/assets/js/darkroom.js" defer></script>
+  {%- unless page.flat %}
+  <script type="module">
+    // Loads the 3D scene only where modules and import maps work; darkroom.js decides whether to use it.
+    if (document.documentElement.classList.contains("has-3d")) import("{{ base }}/assets/js/darkroom3d.js").then(
+      function (m) { if (window.__dr3d) window.__dr3d.init(m); else window.__dr3dModule = m; },
+      function (e) { if (window.__dr3d) window.__dr3d.fail(e); else window.__dr3dError = e; }
+    );
+  </script>
+  {%- endunless %}
 </body>
 </html>

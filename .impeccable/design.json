@@ -385,5 +385,516 @@
       "Don't add entrance animations beyond the hero sampling run.",
       "Don't use colored or smoothed noise; it is grayscale and pixelated."
     ]
+  },
+  "worlds": {
+    "darkroom": {
+      "key": "darkroom",
+      "scope": "/photography/",
+      "sources": [
+        "_layouts/gallery.html",
+        "assets/css/darkroom.css",
+        "assets/js/darkroom.js"
+      ],
+      "generatedAt": "2026-11-02T12:00:00Z",
+      "title": "Design System: Darkroom (photography gallery)",
+      "note": "Separate world from the homepage entry at the top level of this file. Tokens are CSS custom properties on :root (safelight) and body[data-lights=\"on\"] (lights on).",
+      "modes": {
+        "safelight": {
+          "selector": ":root",
+          "tokens": {
+            "room": "#170605",
+            "room-0": "rgba(23, 6, 5, 0)",
+            "room-2": "#230a07",
+            "rim": "#110403",
+            "rim-hi": "#4a1810",
+            "liquid": "#3a0d08",
+            "pool": "rgba(190, 34, 20, .42)",
+            "pool-2": "rgba(176, 30, 18, .10)",
+            "text": "#f2d7d0",
+            "muted": "#bf938a",
+            "wire": "#7a4236",
+            "paper": "#f4f3ef",
+            "tape": "#d9c9a5",
+            "tape-ink": "#1f1b16",
+            "tape-ink-2": "#4a4034",
+            "focus": "#ffb4a6"
+          },
+          "selection": {
+            "background": "#c4281a",
+            "color": "#fff4ef"
+          },
+          "themeColor": "#170605"
+        },
+        "lights-on": {
+          "selector": "body[data-lights=\"on\"]",
+          "inherits": [
+            "paper",
+            "tape",
+            "tape-ink",
+            "tape-ink-2"
+          ],
+          "tokens": {
+            "room": "#a3a4a0",
+            "room-0": "rgba(163, 164, 160, 0)",
+            "room-2": "#979894",
+            "rim": "#5f605c",
+            "rim-hi": "#7d7e7a",
+            "liquid": "#b9c1bd",
+            "pool": "rgba(255, 255, 255, .26)",
+            "pool-2": "rgba(255, 255, 255, .07)",
+            "text": "#121212",
+            "muted": "#2b2b29",
+            "wire": "#3a3b38",
+            "focus": "#0b3a6b"
+          },
+          "selection": {
+            "background": "#0b3a6b",
+            "color": "#fff"
+          },
+          "themeColor": "#a3a4a0"
+        }
+      },
+      "layoutTokens": {
+        "gut": "clamp(1rem, 4vw, 2.5rem)",
+        "head-h": "4.4rem (4.3rem <=700px)",
+        "line-h": "6.2rem (5.2rem <=700px)",
+        "wire-top": ".55rem",
+        "pin-h": "3.3rem (2.5rem <=700px)",
+        "rim-w": ".55rem (.4rem <=700px)",
+        "basin-pad": "clamp(1.1rem, 3vw, 2.3rem)",
+        "paper-pad": "clamp(.5rem, 1.3vw, .85rem)",
+        "row": "15rem (6.4rem <=700px)",
+        "hang-gap": "clamp(1rem, 2.2vw, 1.8rem) (.9rem <=700px)",
+        "dev": "2.8s"
+      },
+      "extensions": {
+        "colorMeta": {
+          "room": {
+            "role": "neutral",
+            "displayName": "Safelight Room",
+            "canonical": "#170605",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "pool": {
+            "role": "primary",
+            "displayName": "Safelight Pool",
+            "canonical": "rgba(190, 34, 20, .42)",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "rim": {
+            "role": "neutral",
+            "displayName": "Tray Black",
+            "canonical": "#110403",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "liquid": {
+            "role": "neutral",
+            "displayName": "Developer",
+            "canonical": "#3a0d08",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "text": {
+            "role": "neutral",
+            "displayName": "Safelight Text",
+            "canonical": "#f2d7d0",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "muted": {
+            "role": "neutral",
+            "displayName": "Safelight Muted",
+            "canonical": "#bf938a",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "wire": {
+            "role": "neutral",
+            "displayName": "Wire",
+            "canonical": "#7a4236",
+            "tonalRamp": [
+              "#120403",
+              "#2a0a07",
+              "#4a140d",
+              "#6e2016",
+              "#952e22",
+              "#bb5a4c",
+              "#dc958a",
+              "#f5d6d0"
+            ]
+          },
+          "paper": {
+            "role": "neutral",
+            "displayName": "Photo Paper",
+            "canonical": "#f4f3ef",
+            "tonalRamp": [
+              "#1b1b19",
+              "#36352f",
+              "#55534a",
+              "#77756a",
+              "#9a988d",
+              "#bdbbb1",
+              "#dddcd5",
+              "#f4f3ef"
+            ]
+          },
+          "tape": {
+            "role": "secondary",
+            "displayName": "Masking Tape",
+            "canonical": "#d9c9a5",
+            "tonalRamp": [
+              "#1f1b16",
+              "#3a3226",
+              "#5a4e3a",
+              "#7c6d52",
+              "#9f8f6d",
+              "#c0af89",
+              "#d9c9a5",
+              "#f2e9d5"
+            ]
+          },
+          "room-lights-on": {
+            "role": "neutral",
+            "displayName": "Lit Room Grey",
+            "canonical": "#a3a4a0",
+            "tonalRamp": [
+              "#1a1a19",
+              "#33332f",
+              "#4d4d48",
+              "#6a6a66",
+              "#878884",
+              "#a3a4a0",
+              "#c4c5c1",
+              "#e6e7e3"
+            ]
+          }
+        },
+        "typographyMeta": {
+          "wordmark": {
+            "displayName": "Wordmark",
+            "value": "Barlow Condensed 700 1.2rem/1.15, .1em, uppercase",
+            "purpose": "Name · Photography, top left."
+          },
+          "sign": {
+            "displayName": "Sign",
+            "value": "Barlow Condensed 700 1.05rem/1, .24em, uppercase",
+            "purpose": "IN USE plate."
+          },
+          "hand": {
+            "displayName": "Hand",
+            "value": "Permanent Marker 400 1.05rem/1.3",
+            "purpose": "Grease pencil on tape: No. n and title; subtitle at 1rem rotated -1.5deg."
+          },
+          "tape-line": {
+            "displayName": "Tape Line",
+            "value": "Barlow Condensed 500 .8rem/1.3, .07em, uppercase",
+            "purpose": "Place, year and camera line on tape."
+          },
+          "small-label": {
+            "displayName": "Small Label",
+            "value": "Barlow Condensed 500 .78-.82rem/1, .14-.16em, uppercase",
+            "purpose": "Switch hint, tray timer (tabular), Add photos."
+          },
+          "spec": {
+            "displayName": "Spec",
+            "value": "Barlow Condensed 500 .95rem/1.3; terms .78rem .12em uppercase",
+            "purpose": "Camera details in the loupe."
+          },
+          "button": {
+            "displayName": "Button",
+            "value": "Barlow Condensed 700 .85rem/1, .12em, uppercase",
+            "purpose": "Loupe controls."
+          },
+          "body": {
+            "displayName": "Body",
+            "value": "Barlow Condensed 500 1.05rem/1.45; footer .95rem/1.5 .02em",
+            "purpose": "Page base and footer."
+          }
+        },
+        "fonts": [
+          {
+            "family": "Barlow Condensed",
+            "weights": [
+              500,
+              700
+            ],
+            "files": [
+              "assets/fonts/barlow-condensed-latin-500-normal.woff2",
+              "assets/fonts/barlow-condensed-latin-700-normal.woff2"
+            ],
+            "licence": "assets/fonts/LICENSE-Barlow.txt",
+            "fallback": "\"Arial Narrow\", \"Roboto Condensed\", sans-serif"
+          },
+          {
+            "family": "Permanent Marker",
+            "weights": [
+              400
+            ],
+            "files": [
+              "assets/fonts/permanent-marker-latin-400-normal.woff2"
+            ],
+            "licence": "assets/fonts/LICENSE-Permanent-Marker.txt",
+            "fallback": "\"Marker Felt\", \"Comic Sans MS\", cursive"
+          }
+        ],
+        "shadows": [
+          {
+            "name": "print-in-tray",
+            "value": "0 .15rem .3rem rgba(0,0,0,.35), 0 1rem 2rem -1rem rgba(0,0,0,.6)",
+            "purpose": "Print resting in the developer."
+          },
+          {
+            "name": "tray",
+            "value": "inset 0 0 0 1px rgba(255,140,120,.18), inset 0 .8rem 1.6rem rgba(0,0,0,.5), 0 1.8rem 3rem -1.4rem rgba(0,0,0,.85)",
+            "purpose": "Tray interior and its drop onto the bench."
+          },
+          {
+            "name": "pinned-print",
+            "value": "0 .35rem .6rem -.25rem rgba(0,0,0,.7)",
+            "purpose": "Thumbnail on the drying line."
+          },
+          {
+            "name": "clothespin",
+            "value": "0 2px 3px rgba(0,0,0,.45)",
+            "purpose": "Wooden clothespin."
+          },
+          {
+            "name": "tape",
+            "value": "0 1px 2px rgba(0,0,0,.4)",
+            "purpose": "Masking tape on the rim."
+          },
+          {
+            "name": "hung-print",
+            "value": "0 1px 2px rgba(0,0,0,.25), 0 .9rem 1.4rem -.7rem rgba(0,0,0,.45)",
+            "purpose": "Print on the wall with the lights on."
+          },
+          {
+            "name": "loupe-print",
+            "value": "0 .2rem .4rem rgba(0,0,0,.18), 0 1.6rem 3rem -1rem rgba(0,0,0,.45)",
+            "purpose": "Print lifted into the loupe."
+          }
+        ],
+        "motion": [
+          {
+            "name": "develop",
+            "value": "2.8s cubic-bezier(.5,0,.2,1); filter contrast→brightness→saturate: (.18,3.2,0) → 30% (.62,1.75,0) → 62% (.98,1.16,.45) → (1,1,1)",
+            "purpose": "Print develops from blank paper; starts 450ms after load at 45% visibility; timer counts to 1:30."
+          },
+          {
+            "name": "settle",
+            "value": "2.8s cubic-bezier(.3,.6,.2,1); scale(.975) translateY(.25rem) → none",
+            "purpose": "Print settles into the liquid while developing."
+          },
+          {
+            "name": "ripple",
+            "value": "SVG feTurbulence fractalNoise 0.006 0.018 ↔ 0.009 0.024 (2.8s loop) → feDisplacementMap scale 22,12,5,0 at 0/.4/.75/1; overscan scale 1.065,1.036,1.016,none inside overflow:hidden",
+            "purpose": "Developer ripples on fine pointers; the photo edge stays square."
+          },
+          {
+            "name": "slosh",
+            "value": "2.8s ease-out skewY .7 → -.55 → .35 → -.18 → .06 → 0deg",
+            "purpose": "Coarse-pointer substitute for the ripple."
+          },
+          {
+            "name": "fly-to-line",
+            "value": "1150ms cubic-bezier(.45,0,.2,1); peel -14px at .14, arc -9deg at .55, overshoot +6px 7deg at .88",
+            "purpose": "Developed print flies to its pin."
+          },
+          {
+            "name": "swing",
+            "value": "1.9s cubic-bezier(.3,.6,.3,1); rotate 16,-10,6,-3,1.2,0deg; clip snap scaleY 1.25 over 350ms",
+            "purpose": "Print swings on its clothespin after landing."
+          },
+          {
+            "name": "nudge",
+            "value": "1.1s ease-out; rotate 0,4,-2,0deg",
+            "purpose": "Hover on a hung print."
+          },
+          {
+            "name": "flicker",
+            "value": "560ms linear opacity steps of a #f3f5f1 overlay, ending .82",
+            "purpose": "Fluorescent tubes catching when the lights go on."
+          },
+          {
+            "name": "lights-view-transition",
+            "value": "groups .8s cubic-bezier(.22,.8,.24,1); root .55s; stagger 45ms per print, capped 540ms",
+            "purpose": "Prints move from trays to the wall."
+          },
+          {
+            "name": "loupe-lift",
+            "value": "820ms cubic-bezier(.2,.75,.25,1); from source rect → translateY(-1.4rem) scale(1.035) rotateX(7deg) at .62 → none; perspective 1400px",
+            "purpose": "Print lifted toward the viewer; info and controls rise .55s after .3s; close 200ms fade."
+          },
+          {
+            "name": "loupe-step",
+            "value": "170ms ease-in out, 340ms cubic-bezier(.2,.8,.2,1) in; ±4% and ±1.2deg",
+            "purpose": "Previous and next in the loupe."
+          },
+          {
+            "name": "print-hover",
+            "value": ".45s cubic-bezier(.2,.8,.2,1); translateY(-.3rem) rotate(-.35deg)",
+            "purpose": "Developed print lifts slightly on hover."
+          }
+        ],
+        "reducedMotion": "Every print loads developed and every pin hung; no develop, ripple, fly or swing. Lights switch instantly with no flicker or view transition. Loupe opens, steps and closes without animation. Hover nudges, print and sign transitions and smooth scrolling are off. Turning the preference on mid-visit settles everything. If the script fails within 4s, all prints show.",
+        "breakpoints": [
+          {
+            "name": "sm",
+            "value": "700px"
+          }
+        ]
+      },
+      "components": [
+        {
+          "name": "Developer Tray with Print and Tape",
+          "kind": "card",
+          "description": "Black plastic tray with developer, a paper-bordered print, timer and masking-tape caption.",
+          "html": "<div class=\"ds-dr-tray\"><div class=\"ds-dr-basin\"><span class=\"ds-dr-timer\">Dev <b>1:30</b></span><button class=\"ds-dr-print\" type=\"button\" aria-label=\"Look closely at print No. 1\"><span class=\"ds-dr-img\"></span></button></div><div class=\"ds-dr-tape\"><p class=\"ds-dr-hand\">No. 1</p><p class=\"ds-dr-spec\">Camera · 35 mm · f/5.6 · 1/500 s · ISO 100</p></div></div>",
+          "css": ".ds-dr-tray { display: grid; justify-items: center; padding: 2rem 1rem; background: #170605; font-family: \"Barlow Condensed\", \"Arial Narrow\", sans-serif; } .ds-dr-basin { position: relative; padding: 1.4rem; border: .55rem solid #110403; border-top-color: #4a1810; border-radius: 1rem; background: linear-gradient(118deg, transparent 12%, rgba(255,170,150,.12) 20%, rgba(255,170,150,.035) 29%, transparent 37%), linear-gradient(180deg, rgba(200,44,28,.26), rgba(200,44,28,0) 58%), #3a0d08; box-shadow: inset 0 0 0 1px rgba(255,140,120,.18), inset 0 .8rem 1.6rem rgba(0,0,0,.5), 0 1.8rem 3rem -1.4rem rgba(0,0,0,.85); } .ds-dr-timer { position: absolute; right: 0; bottom: calc(100% + .9rem); font: 500 .78rem/1 \"Barlow Condensed\", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #bf938a; font-variant-numeric: tabular-nums; } .ds-dr-timer b { margin-left: .3em; color: #f2d7d0; } .ds-dr-print { display: block; padding: .7rem; border: 0; background: #f4f3ef; cursor: zoom-in; box-shadow: 0 .15rem .3rem rgba(0,0,0,.35), 0 1rem 2rem -1rem rgba(0,0,0,.6); transition: transform .45s cubic-bezier(.2,.8,.2,1); } .ds-dr-print:hover { transform: translateY(-.3rem) rotate(-.35deg); } .ds-dr-print:focus-visible { outline: 2px solid #ffb4a6; outline-offset: 3px; } .ds-dr-img { display: block; width: 15rem; aspect-ratio: 3 / 2; background: #6b6f73; } .ds-dr-tape { position: relative; z-index: 3; margin-top: -1.15rem; padding: .5rem 1.15rem .55rem; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 40%, rgba(0,0,0,.05)), #d9c9a5; color: #1f1b16; rotate: -1.6deg; box-shadow: 0 1px 2px rgba(0,0,0,.4); } .ds-dr-tape p { margin: 0; } .ds-dr-hand { font: 400 1.05rem/1.3 \"Permanent Marker\", \"Marker Felt\", cursive; } .ds-dr-spec { margin-top: .15rem; font: 500 .8rem/1.3 \"Barlow Condensed\", sans-serif; letter-spacing: .07em; text-transform: uppercase; color: #4a4034; }"
+        },
+        {
+          "name": "IN USE Sign and Light Switch",
+          "kind": "button",
+          "description": "The lights toggle: a lit red plate and a CSS-drawn wall switch with its hint.",
+          "html": "<div class=\"ds-dr-wall\"><button class=\"ds-dr-sign\" type=\"button\"><span class=\"ds-dr-plate\" aria-hidden=\"true\">In use</span><span class=\"ds-dr-switch\">Lights on</span></button></div>",
+          "css": ".ds-dr-wall { padding: 1.5rem; background: #170605; } .ds-dr-sign { display: grid; justify-items: end; gap: .45rem; padding: 0; border: 0; background: none; cursor: pointer; } .ds-dr-sign:focus-visible { outline: 2px solid #ffb4a6; outline-offset: 3px; } .ds-dr-plate { padding: .45rem .8rem .4rem .95rem; border: 2px solid #2b0b07; border-radius: .3rem; background: linear-gradient(#cf3a27, #a6200f); color: #fff4ef; font: 700 1.05rem/1 \"Barlow Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: .24em; text-transform: uppercase; box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.25), 0 .5rem 1rem -.4rem rgba(0,0,0,.85); transition: border-color .3s; } .ds-dr-sign:hover .ds-dr-plate { border-color: #4a120c; } .ds-dr-switch { display: inline-flex; align-items: center; gap: .45rem; min-height: 1.5rem; color: #bf938a; font: 500 .82rem/1 \"Barlow Condensed\", sans-serif; letter-spacing: .14em; text-transform: uppercase; } .ds-dr-sign:hover .ds-dr-switch { color: #f2d7d0; } .ds-dr-switch::before { content: \"\"; width: .62rem; height: 1rem; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: .2rem; background: radial-gradient(circle at 50% 72%, currentColor 0 .16rem, transparent .18rem); }"
+        },
+        {
+          "name": "Drying Line Pin",
+          "kind": "custom",
+          "description": "A wooden clothespin on the wire holding a paper-bordered thumbnail; swings when a print lands.",
+          "html": "<div class=\"ds-dr-line\"><svg viewBox=\"0 0 1000 40\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><path d=\"M0 8 Q500 34 1000 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" vector-effect=\"non-scaling-stroke\"/></svg><div class=\"ds-dr-pin\"><span class=\"ds-dr-clip\"></span><button class=\"ds-dr-thumb\" type=\"button\" aria-label=\"Go to print No. 1\"><span></span></button></div></div>",
+          "css": ".ds-dr-line { position: relative; height: 6.2rem; background: #170605; color: #7a4236; } .ds-dr-line svg { position: absolute; left: 0; top: .55rem; width: 100%; height: 40px; overflow: visible; } .ds-dr-pin { position: absolute; left: 50%; top: calc(.55rem + 34px); } .ds-dr-clip { position: absolute; left: 0; top: -7px; width: 7px; height: 21px; translate: -50% 0; border-radius: 2px; background: linear-gradient(90deg, #7d5832, #c99d66 45%, #a77a48 55%, #7d5832); box-shadow: 0 2px 3px rgba(0,0,0,.45); z-index: 1; } .ds-dr-clip::after { content: \"\"; position: absolute; left: 1px; right: 1px; top: 8px; height: 3px; border-radius: 1px; background: #5b5f63; } .ds-dr-thumb { position: absolute; left: 0; top: 7px; translate: -50% 0; transform-origin: 50% -6px; padding: 3px; border: 0; background: #f4f3ef; cursor: pointer; box-shadow: 0 .35rem .6rem -.25rem rgba(0,0,0,.7); } .ds-dr-thumb span { display: block; height: 3.3rem; width: 4.95rem; background: #6b6f73; } .ds-dr-thumb:hover { animation: ds-dr-nudge 1.1s ease-out; } .ds-dr-thumb:focus-visible { outline: 2px solid #ffb4a6; outline-offset: 3px; } @keyframes ds-dr-nudge { 30% { rotate: 4deg; } 60% { rotate: -2deg; } } @media (prefers-reduced-motion: reduce) { .ds-dr-thumb:hover { animation: none; } }"
+        },
+        {
+          "name": "Bench Tub",
+          "kind": "custom",
+          "description": "Deep plastic chemistry tub shown on the bench with the lights on.",
+          "html": "<div class=\"ds-dr-bench\"><span class=\"ds-dr-tub\">Developer</span><span class=\"ds-dr-tub\">Stop</span><span class=\"ds-dr-tub\">Fixer</span></div>",
+          "css": ".ds-dr-bench { display: flex; justify-content: center; gap: 1.6rem; padding: 1.6rem; background: #a3a4a0; } .ds-dr-tub { display: grid; place-items: center; width: 9rem; aspect-ratio: 4 / 3; box-sizing: border-box; border: .6rem solid #4a4b47; border-top-color: #8e8f8b; border-bottom-color: #3c3d3a; border-radius: .9rem; background: #8f9894; box-shadow: inset 0 0 0 .4rem #686965, inset 0 1.1rem 1rem -.5rem rgba(0,0,0,.4), 0 1rem 1.6rem -1rem rgba(0,0,0,.55); font: 700 .78rem/1 \"Barlow Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #121212; }"
+        },
+        {
+          "name": "Darkroom Buttons",
+          "kind": "button",
+          "description": "Loupe controls: outline and solid.",
+          "html": "<div class=\"ds-dr-ctl\"><button class=\"ds-dr-btn\" type=\"button\">Previous</button><span class=\"ds-dr-count\">1 / 7</span><button class=\"ds-dr-btn\" type=\"button\">Next</button><button class=\"ds-dr-btn ds-dr-btn--solid\" type=\"button\">Back to the darkroom</button></div>",
+          "css": ".ds-dr-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: 1rem; background: #dedfdb; color: #161616; } .ds-dr-count { min-width: 3.5rem; text-align: center; font: 500 .9rem/1 \"Barlow Condensed\", sans-serif; letter-spacing: .1em; font-variant-numeric: tabular-nums; } .ds-dr-btn { min-height: 2.75rem; padding: .6rem .95rem; border: 1.5px solid currentColor; border-radius: .25rem; background: transparent; color: inherit; font: 700 .85rem/1 \"Barlow Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; } .ds-dr-btn:hover { background: rgba(0,0,0,.06); } .ds-dr-btn:focus-visible { outline: 2px solid #1f5f9a; outline-offset: 3px; } .ds-dr-btn--solid { margin-left: auto; background: #161616; border-color: #161616; color: #f4f3ef; } .ds-dr-btn--solid:hover { background: #333; }"
+        },
+        {
+          "name": "Loupe Spec List",
+          "kind": "custom",
+          "description": "Camera details beside the lifted print.",
+          "html": "<dl class=\"ds-dr-specs\"><div><dt>Camera</dt><dd>ILCE-7M4</dd></div><div><dt>Focal length</dt><dd>35 mm</dd></div><div><dt>Aperture</dt><dd>f/5.6</dd></div><div><dt>ISO</dt><dd>100</dd></div></dl>",
+          "css": ".ds-dr-specs { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; margin: 0; padding: 1rem; background: #dedfdb; color: #161616; font: 500 .95rem/1.3 \"Barlow Condensed\", \"Arial Narrow\", sans-serif; } .ds-dr-specs div { display: contents; } .ds-dr-specs dt { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: #5a5a55; align-self: baseline; } .ds-dr-specs dd { margin: 0; }"
+        }
+      ],
+      "narrative": {
+        "northStar": "The Darkroom",
+        "overview": "The gallery is a working darkroom lit by one safelight. Each photograph is a sheet of paper in a developer tray; it develops as the visitor reaches it (blank paper, then shadows, then full tones, while the developer ripples), then flies up to a sagging drying line and swings on a wooden clothespin. A lit IN USE sign is the light switch: the room flickers to white fluorescent light and every print is laid out on wires across a grey wall, with the empty tubs on the bench below. Any print can be lifted out to look at closely.\n\nTwo voices carry the type: Barlow Condensed for darkroom signage, timers and labels; Permanent Marker for grease pencil on masking tape. Text is sparse; the photographs lead. Photographs always keep their true colours and their own aspect ratios once developed.",
+        "keyCharacteristics": [
+          "Near-black red room with a single safelight pool; a neutral grey room with the lights on.",
+          "Bright photo-paper prints with white borders, sized from the image's own aspect ratio.",
+          "Physical materials: tray rim and liquid, masking tape, wire and clothespins, a sign plate, bench tubs.",
+          "Condensed uppercase signage plus grease-pencil handwriting.",
+          "One motion story per print: develop, fly, hang, swing. Every state appears instantly under reduced motion."
+        ],
+        "rules": [
+          {
+            "name": "The Two Lights Rule",
+            "body": "The room has exactly two states, safelight and lights on, and every surface colour is a token that both states redefine. A new surface takes its colour from these tokens, never from a third palette.",
+            "section": "colors"
+          },
+          {
+            "name": "The Untouched Print Rule",
+            "body": "Nothing tints a developed photograph: the safelight colours the room, the rim and the liquid, never the image. Paper and tape keep their own colours in both lights.",
+            "section": "colors"
+          },
+          {
+            "name": "The Legible Room Rule",
+            "body": "Every text pair holds at least 4.5:1 in both lights. Measured in the build: muted on room 7.3:1 (4.98:1 at the pool's centre), tape-ink-2 on tape 6.2:1, lights-on muted on room 5.7:1, sign text on the red plate 4.5:1 at its lightest stop, lights-on sign text 4.5:1, loupe labels 5.2:1.",
+            "section": "colors"
+          },
+          {
+            "name": "The Grease Pencil Rule",
+            "body": "Permanent Marker is only for what a hand would write on tape: the print number, its title, the subtitle. Everything printed, signed or measured is Barlow Condensed.",
+            "section": "typography"
+          },
+          {
+            "name": "The One Light Rule",
+            "body": "The only radial gradient in the room is the safelight pool on the room itself. Trays, prints, tape, sign and tubs never carry a radial glow; their light comes from linear sheens and the rim's lit edge.",
+            "section": "elevation"
+          }
+        ],
+        "dos": [
+          "Do size every print from its own width-to-height ratio, in the tray, on the line, on the wall and in the loupe.",
+          "Do keep the photograph's colours untouched once developed; the safelight colours the room, not the image.",
+          "Do caption a print with \"No. n\" and only the title, place, year and camera details that exist.",
+          "Do take every colour from the safelight and lights-on tokens, and hold every text pair at 4.5:1 or more in both lights.",
+          "Do keep the ripple overscanned inside a clipped frame so the photo edge stays square.",
+          "Do give every new motion an instant, settled state under reduced motion."
+        ],
+        "donts": [
+          "Don't put a tint, overlay or colour filter over a developed photograph.",
+          "Don't crop or force a photograph into a fixed aspect ratio.",
+          "Don't show file names anywhere: not in captions, alt text or labels.",
+          "Don't cut torn or deckled edges with clip-path; paper and tape are straight-cut.",
+          "Don't draw stripes or textures with repeating gradients.",
+          "Don't put a radial glow on a surface; the safelight pool on the room is the only radial light.",
+          "Don't use hard offset shadows; shadows are soft and fall from real objects.",
+          "Don't bring homepage devices (spines, ticks, STIX, DejaVu, tab blue) into the darkroom."
+        ]
+      }
+    }
   }
 }
