@@ -72,7 +72,7 @@
 
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
-  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
+  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, patchNow = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
   var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false, patchOn = true, wakeSet = 1;
   function measure() {
     vw = window.innerWidth;
@@ -85,6 +85,7 @@
     pw = pw0 = patch.offsetWidth;
     ph = ph0 = patch.offsetHeight;
     patchK = -1;
+    patchNow = -1;
     ledH = below.firstElementChild.offsetHeight || ledH;
     capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
@@ -223,7 +224,7 @@
   }
   var fr = { L: 1, S: 1, rot: 0 }, frTo = { L: 1, S: 1, rot: 0 }, frDirty = true;
   var dragging = false, wheeling = false, hold = 0, subject = null, lockOn = null;
-  var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null;
+  var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null, heldPull = 0;
   var sharp = null, opening = false;
 
   // Frame a photograph: move it to the centre, close in until it fills the frame,
@@ -365,7 +366,11 @@
 
     // the lens pulls back with speed, and over a long glide
     var pull = clamp((spd - 1.5) / 20, 0, 1);
-    if (dragging) pull = Math.max(pull, 0.28);
+    // while the wall is held (the mouse button or the finger still down) the lens stays as far
+    // back as this drag has taken it, so pausing to look about does not close in; it closes
+    // in only once let go
+    if (dragging) { heldPull = Math.max(heldPull, pull, 0.28); pull = heldPull; }
+    else heldPull = 0;
     // Over a long glide across the wall the lens pulls back too; a step to a neighbour
     // does not, so the photograph eases straight to its new size with the frame lines.
     if (!moving) pull = Math.max(pull, clamp((dist * s - vw * 1.1) / (vw * 1.2), 0, 1) * 0.7);
@@ -405,9 +410,13 @@
     // they close round it; zoomed in, they stay and the photograph grows past them)
     var fa = calm || pinch ? 1 : ease(dt, 150), fz = sRest / sTo > 1 ? 1 : sRest / sTo;
     var fL = frTo.L * fz, fS = frTo.S * fz;
-    // the focus patch keeps its size against the frame lines (never smaller than a third)
-    var pk = Math.max(0.35, fz);
-    if (Math.abs(pk - patchK) > 0.002) {
+    // the focus patch keeps its size against the frame lines (never smaller than a third),
+    // and eases to it at the frame lines' own pace rather than jumping there
+    var pkGoal = Math.max(0.35, fz);
+    patchNow = patchNow < 0 ? pkGoal : patchNow + (pkGoal - patchNow) * fa;
+    if (Math.abs(patchNow - pkGoal) < 0.0005) patchNow = pkGoal;
+    var pk = patchNow;
+    if (Math.abs(pk - patchK) > 0.0005) {
       patchK = pk;
       pw = pw0 * pk;
       ph = ph0 * pk;

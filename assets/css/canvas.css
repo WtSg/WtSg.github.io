@@ -415,8 +415,12 @@ p { margin: 0; }
 .gl__led .vf-led__cell--n:first-child { padding-left: 0; border-left: 0; }
 /* the frame number out of all of them: 08/46 */
 .gl__led .vf-led__of { margin: 0 .18rem 0 .12rem; font-size: 1rem; color: var(--led-label); align-self: center; }
-/* the close-up never scrolls sideways */
-.gl[open] { overflow-x: hidden; }
+/* the close-up never scrolls sideways, and the page never zooms under it (a pinch zooms
+   into the photograph instead: gallery-loupe.js) */
+.gl[open] { overflow-x: hidden; touch-action: pan-x pan-y; }
+.gl .gl__stage { -webkit-user-select: none; user-select: none; }
+/* zoomed in, the photograph stays within its own room */
+.gl .gl__stage.is-zoomed { overflow: hidden; cursor: grab; }
 .gl .gl__title { font: 500 .95rem/1.3 var(--ui); }
 .gl .gl__meta { font: 400 .76rem/1.4 var(--mono); }
 .gl .gl__spec { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem 1rem; font: 400 .72rem/1.4 var(--mono); color: var(--muted); }
@@ -454,7 +458,7 @@ p { margin: 0; }
 }
 /* a tap is answered at once: the key gives under the finger, two quick taps are two
    steps (never a zoom), and the hover colour is for a mouse only, so it never sticks */
-.gl__controls, .gl .gl__btn, .gl__frm { touch-action: manipulation; }
+.gl__controls, .gl .gl__btn, .gl__frm { touch-action: pan-x pan-y; }
 .gl .gl__btn { -webkit-tap-highlight-color: transparent; transition: transform .12s ease-out, background-color .12s ease-out; }
 @media (hover: hover) { .gl .gl__btn:hover { color: var(--led); border-color: rgba(255, 74, 46, .45); } }
 .gl .gl__btn:active { transform: scale(.92); background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .32); transition-duration: 0s; }

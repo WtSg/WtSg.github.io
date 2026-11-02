@@ -252,6 +252,7 @@
     return "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(" + (r0.width / r1.width).toFixed(4) + ")";
   }
   api.open = function (i, from, focusBack, fromSrc) {
+    zoomOff();
     index = openedAt = i;
     opener = focusBack || (from && from.focus ? from : null);
     closing = false;
@@ -435,6 +436,8 @@
     Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
     frameSize();
     var r0 = index === openedAt ? rectOf(home) : null, rNow = rectOf(img), D = 380, E = "cubic-bezier(.4, 0, .2, 1)", last;
+    // a zoomed-in photograph: it shrinks home from the view it shows
+    zoomOff();
     // a pulled-down photograph: its pull becomes the start of its own movement home
     if (stage.style.transform) {
       stage.style.transform = "";
@@ -551,6 +554,7 @@
     anims[0].onfinish = s.done;
   }
   function go(n, d) {
+    zoomOff();
     if (api.onStep) api.onStep(n);
     index = n;
     var tok = ++goTok;
@@ -591,7 +595,7 @@
       return;
     }
     // a tap or click on the photograph, or the black round it, goes back to the wall
-    if (e.target === dialog || e.target === stage || e.target === img) close();
+    if (e.target === dialog || e.target === stage || e.target === img) { if (zoomed()) zoomTo(1, 0, 0, 220); else close(); }
   });
   dialog.addEventListener("keydown", function (e) {
     if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
@@ -600,6 +604,126 @@
   dialog.addEventListener("cancel", function (e) {
     if (!still()) { e.preventDefault(); close(); }
   });
+  /* ---------- Zooming into the photograph ---------- */
+  // A pinch (two fingers, a trackpad, or Ctrl and the wheel) zooms into the photograph itself,
+  // never the page. Zoomed in, a finger or the mouse moves it about, always covering its own
+  // frame; a tap, or pinching back, returns it whole. Paging and the swipe down wait until it
+  // is whole again. The zoom lives in the photograph's own scale and translate, apart from the
+  // transform that paging and opening move it by.
+  var canZoom = !!(window.CSS && CSS.supports && CSS.supports("scale", "2") && CSS.supports("translate", "1px 2px"));
+  var Z_MAX = 4, zm = { z: 1, x: 0, y: 0 }, zAnim = 0, pts = {}, pinch = null, gz = null;
+  function zoomed() { return zm.z > 1.001; }
+  function zoomSet(z, x, y) {
+    zm.z = z; zm.x = x; zm.y = y;
+    var on = z !== 1 || x !== 0 || y !== 0;
+    img.style.scale = on ? z.toFixed(4) : "";
+    img.style.translate = on ? x.toFixed(1) + "px " + y.toFixed(1) + "px" : "";
+    stage.classList.toggle("is-zoomed", zoomed());
+  }
+  // back to the whole photograph at once (before anything measures it)
+  function zoomOff() { cancelAnimationFrame(zAnim); if (zm.z !== 1 || zm.x || zm.y) zoomSet(1, 0, 0); }
+  // where the photograph sits unzoomed: its centre and size
+  function restBox() {
+    var r = img.getBoundingClientRect();
+    return { cx: r.left + r.width / 2 - zm.x, cy: r.top + r.height / 2 - zm.y, w: r.width / zm.z, h: r.height / zm.z };
+  }
+  // how far it may move at zoom z and still cover its frame
+  function limits(z, b) { return [Math.max(0, b.w * (z - 1) / 2), Math.max(0, b.h * (z - 1) / 2)]; }
+  // past the limit it gives, as a rubber band
+  function band(v, lim) { return v > lim ? lim + (v - lim) * 0.35 : v < -lim ? -lim + (v + lim) * 0.35 : v; }
+  function zoomTo(z, x, y, ms) {
+    cancelAnimationFrame(zAnim);
+    if (still() || !ms) { zoomSet(z, x, y); return; }
+    var a = { z: zm.z, x: zm.x, y: zm.y }, t0 = performance.now();
+    var stepZ = function (now) {
+      var t = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - t, 3);
+      zoomSet(a.z + (z - a.z) * e, a.x + (x - a.x) * e, a.y + (y - a.y) * e);
+      if (t < 1) zAnim = requestAnimationFrame(stepZ);
+    };
+    zAnim = requestAnimationFrame(stepZ);
+  }
+  // after a pinch or a move: within its limits, or whole again if barely zoomed
+  function settleZoom() {
+    if (zm.z < 1.04) { zoomTo(1, 0, 0, 220); return; }
+    var z = Math.min(Z_MAX, zm.z), k = z / zm.z, b = restBox(), lim = limits(z, b);
+    zoomTo(z, Math.max(-lim[0], Math.min(lim[0], zm.x * k)), Math.max(-lim[1], Math.min(lim[1], zm.y * k)), 240);
+  }
+  // zoom to z keeping the point (px, py) on the screen where it is
+  function zoomAt(z, px, py, b) {
+    b = b || restBox();
+    var ux = (px - b.cx - zm.x) / zm.z, uy = (py - b.cy - zm.y) / zm.z;
+    zoomSet(z, px - b.cx - z * ux, py - b.cy - z * uy);
+  }
+  // two fingers on the photograph
+  function pinchStart() {
+    if (g) { var t = g; g = null; if (t.pages) pageEnd(t, true); else if (t.axis === "down") unpull(); }
+    endSlide();
+    cancelAnimationFrame(zAnim);
+    var ids = Object.keys(pts), a = pts[ids[0]], c = pts[ids[1]], b = restBox();
+    var mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
+    pinch = { d0: Math.max(1, Math.hypot(a[0] - c[0], a[1] - c[1])), z0: zm.z, b: b, ux: (mx - b.cx - zm.x) / zm.z, uy: (my - b.cy - zm.y) / zm.z };
+    quietUntil = performance.now() + 600;
+  }
+  function pinchMove() {
+    var ids = Object.keys(pts);
+    if (ids.length < 2) return;
+    var a = pts[ids[0]], c = pts[ids[1]], mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
+    var z = pinch.z0 * Math.hypot(a[0] - c[0], a[1] - c[1]) / pinch.d0;
+    if (z < 1) z = 1 - (1 - z) * 0.4;
+    if (z > Z_MAX) z = Z_MAX + (z - Z_MAX) * 0.3;
+    zoomSet(z, mx - pinch.b.cx - z * pinch.ux, my - pinch.b.cy - z * pinch.uy);
+    quietUntil = performance.now() + 500;
+  }
+  if (canZoom) {
+    stage.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "touch" || closing) return;
+      pts[e.pointerId] = [e.clientX, e.clientY];
+      if (Object.keys(pts).length === 2 && !pinch) pinchStart();
+    }, true);
+    stage.addEventListener("pointermove", function (e) {
+      if (!pts[e.pointerId]) return;
+      pts[e.pointerId] = [e.clientX, e.clientY];
+      if (pinch) pinchMove();
+    }, true);
+    var lift = function (e) {
+      if (!pts[e.pointerId]) return;
+      delete pts[e.pointerId];
+      if (pinch && Object.keys(pts).length < 2) { pinch = null; quietUntil = performance.now() + 400; settleZoom(); }
+    };
+    stage.addEventListener("pointerup", lift, true);
+    stage.addEventListener("pointercancel", lift, true);
+    // a trackpad's pinch in Chrome and Firefox, or Ctrl and the wheel; zoomed in, the wheel moves it
+    stage.addEventListener("wheel", function (e) {
+      if (closing) return;
+      if (e.ctrlKey) {
+        e.preventDefault();
+        endSlide();
+        var b = restBox();
+        zoomAt(Math.max(1, Math.min(Z_MAX, zm.z * Math.exp(-e.deltaY * 0.01))), e.clientX, e.clientY, b);
+        var lim = limits(zm.z, b);
+        if (zm.z <= 1.001) zoomSet(1, 0, 0); else zoomSet(zm.z, Math.max(-lim[0], Math.min(lim[0], zm.x)), Math.max(-lim[1], Math.min(lim[1], zm.y)));
+      } else if (zoomed()) {
+        e.preventDefault();
+        var l2 = limits(zm.z, restBox());
+        zoomSet(zm.z, Math.max(-l2[0], Math.min(l2[0], zm.x - e.deltaX)), Math.max(-l2[1], Math.min(l2[1], zm.y - e.deltaY)));
+      }
+    }, { passive: false });
+    // Safari's own pinch (a Mac's trackpad; on an iPhone the fingers above already do it):
+    // never the page's zoom anywhere in the close-up
+    dialog.addEventListener("gesturestart", function (e) {
+      e.preventDefault();
+      gz = !closing && stage.contains(e.target) && !pinch && !Object.keys(pts).length ? { z0: zm.z, b: (endSlide(), restBox()) } : null;
+    }, { passive: false });
+    dialog.addEventListener("gesturechange", function (e) {
+      e.preventDefault();
+      if (!gz || pinch || Object.keys(pts).length) return;
+      zoomAt(Math.max(0.8, Math.min(Z_MAX * 1.2, gz.z0 * e.scale)), e.clientX, e.clientY, gz.b);
+    }, { passive: false });
+    dialog.addEventListener("gestureend", function (e) {
+      e.preventDefault();
+      if (gz) { gz = null; settleZoom(); }
+    }, { passive: false });
+  }
   // One gesture on the photograph, its direction settled after the first few pixels:
   // sideways steps to the next or the previous one; on a touch screen, down takes it
   // away, as a phone's photo viewer does: it follows the finger and shrinks a little,
@@ -623,7 +747,15 @@
     if (sinceOpen < 120 || (!keys && (sinceOpen < 450 || now < quietUntil))) { e.stopPropagation(); e.preventDefault(); }
   }, true);
   stage.addEventListener("pointerdown", function (e) {
-    if (e.button > 0 || closing || g) return;
+    if (e.button > 0 || closing || g || pinch || Object.keys(pts).length > 1) return;
+    if (e.pointerType === "mouse") e.preventDefault();
+    // zoomed in: the finger or the mouse moves the photograph about
+    if (zoomed()) {
+      cancelAnimationFrame(zAnim);
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: "pan", zx: zm.x, zy: zm.y, b: restBox(), moved: false };
+      try { stage.setPointerCapture(e.pointerId); } catch (x) {}
+      return;
+    }
     var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(dialog).backgroundColor);
     g = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: "", touch: e.pointerType !== "mouse",
       dy: 0, v: 0, ly: e.clientY, lt: performance.now(), bg: m ? m[1] + "," + m[2] + "," + m[3] : "" };
@@ -631,9 +763,16 @@
   stage.addEventListener("pointermove", function (e) {
     if (!g || e.pointerId !== g.id) return;
     var dx = e.clientX - g.x, dy = e.clientY - g.y, now = performance.now();
+    if (g.axis === "pan") {
+      if (Math.hypot(dx, dy) > 4) g.moved = true;
+      var lim = limits(zm.z, g.b);
+      zoomSet(zm.z, band(g.zx + dx, lim[0]), band(g.zy + dy, lim[1]));
+      return;
+    }
     if (!g.axis) {
       if (Math.hypot(dx, dy) < 10) return;
-      g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : dy > 0 && g.touch ? "down" : "none";
+      // down closes with a finger or with the mouse alike
+      g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : dy > 0 ? "down" : "none";
       // held only once it is a drag: a plain click keeps its own target (the photograph, or the black around it)
       try { stage.setPointerCapture(e.pointerId); } catch (x) {}
     }
@@ -699,6 +838,7 @@
     if (!g || e.pointerId !== g.id) return;
     var t = g, dx = e.clientX - t.x;
     g = null;
+    if (t.axis === "pan") { if (t.moved) quietUntil = performance.now() + 400; settleZoom(); return; }
     if (t.axis) quietUntil = performance.now() + 400;
     if (t.axis === "x") { pageEnd(t, cancelled); return; }
     if (t.axis !== "down") return;
@@ -719,6 +859,9 @@
   stage.addEventListener("pointercancel", function (e) { release(e, true); });
   dialog.addEventListener("close", function () {
     g = null;
+    pts = {};
+    pinch = null;
+    zoomOff();
     unpull();
     endSlide();
     ++goTok;

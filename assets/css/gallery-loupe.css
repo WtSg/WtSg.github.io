@@ -44,8 +44,8 @@ html.gl-open { overflow: hidden; }
   min-height: 0;
   margin: 0;
   perspective: 1400px;
-  /* the photograph takes its own swipes (sideways to step, down to close); a pinch still zooms */
-  touch-action: pinch-zoom;
+  /* the photograph takes its own gestures: sideways steps, down closes, a pinch zooms into it */
+  touch-action: none;
   /* and pulled down, it passes over the readout and the roll */
   position: relative;
   z-index: 2;
