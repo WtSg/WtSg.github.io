@@ -254,7 +254,6 @@
     var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(dialog).backgroundColor);
     g = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: "", touch: e.pointerType !== "mouse",
       dy: 0, v: 0, ly: e.clientY, lt: performance.now(), bg: m ? m[1] + "," + m[2] + "," + m[3] : "" };
-    try { stage.setPointerCapture(e.pointerId); } catch (x) {}
   });
   stage.addEventListener("pointermove", function (e) {
     if (!g || e.pointerId !== g.id) return;
@@ -262,6 +261,8 @@
     if (!g.axis) {
       if (Math.hypot(dx, dy) < 10) return;
       g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : dy > 0 && g.touch ? "down" : "none";
+      // held only once it is a drag: a plain click keeps its own target (the photograph, or the black around it)
+      try { stage.setPointerCapture(e.pointerId); } catch (x) {}
     }
     if (g.axis !== "down") return;
     // speed over the last moments, for a quick flick
