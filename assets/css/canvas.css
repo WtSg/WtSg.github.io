@@ -43,7 +43,6 @@
   --muted: #9a978f;
   --line: rgba(255, 247, 228, .95);
   --line-dim: rgba(255, 247, 228, .2);
-  --photo-r: 10px;   /* the framed photograph's rounded corners, as through the eyepiece */
   --led: #ff4a2e;
   --led-label: rgba(255, 74, 46, .72);
   --led-off: rgba(255, 74, 46, .12);
@@ -140,10 +139,6 @@ p { margin: 0; }
 .cv-on .cv-room { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .cv-plane.is-dragging .cv-item { cursor: grabbing; }
 .cv-item.is-sharp img { dynamic-range-limit: no-limit; }
-/* The photograph in the frame, as seen through the eyepiece, has rounded corners (the
-   square bright-line frame stays as it is); the rest of the wall stays square. */
-.cv-item, .cv-item img { transition: border-radius .35s ease-out; }
-.cv-item.is-sharp, .cv-item.is-sharp img { border-radius: var(--photo-r); }
 .cv-item img {
   display: block;
   /* HDR photographs glow only once framed and sharp, so the wall stays even while it moves */
@@ -187,7 +182,8 @@ p { margin: 0; }
   transform: translate(-50%, -50%);
   overflow: hidden;
   border: 1px solid var(--patch-edge);
-  border-radius: 1px;
+  /* a rangefinder's focus patch is a rounded rectangle; the frame lines round it stay square */
+  border-radius: .6rem;
   background: var(--patch-tint);
   transition: opacity .45s ease-out;
 }
@@ -375,7 +371,6 @@ p { margin: 0; }
   width: min(100% - 2.4rem, calc((100svh - 18.5rem) * var(--ar, 1.5)));
   background: #111;
   box-shadow: none;
-  border-radius: var(--photo-r);
 }
 /* The bright-line frame round it: a faint outline, bright corners. */
 .gl__frame {
@@ -534,7 +529,7 @@ p { margin: 0; }
   .vf-led__exif { gap: .8rem; }
   .vf-led b { font-size: 1.1rem; }
   .vf-led__cell--n { padding-left: .75rem; }
-  .vf-patch { width: 5.2rem; height: 3.3rem; }
+  .vf-patch { width: 5.2rem; height: 3.3rem; border-radius: .48rem; }
   .cv-on .cv-key { top: 4.4rem; }
 }
 @media (prefers-reduced-motion: reduce) {
