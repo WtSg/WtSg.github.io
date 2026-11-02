@@ -109,6 +109,11 @@
     }).join("");
   }
   var index = 0, openedAt = 0, opener = null, closing = false;
+  // Focus is shown and handed back only to someone using the keyboard: after a tap or a
+  // click, neither the Close key's ring nor the photograph's label should appear.
+  var keyed = false;
+  document.addEventListener("keydown", function () { keyed = true; }, true);
+  document.addEventListener("pointerdown", function () { keyed = false; }, true);
 
   function fill(i, fromSrc) {
     var p = photos[i];
@@ -148,6 +153,7 @@
     closing = false;
     fill(i, fromSrc);
     dialog.showModal();
+    if (!keyed && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     root.classList.add("gl-open");
     if (roll) { measureRoll(); centre(i, false); }
     if (still() || !img.animate) return;
@@ -444,6 +450,7 @@
     closing = false;
     root.classList.remove("gl-open");
     if (api.onClose) api.onClose(index, index !== openedAt);
-    if (opener && opener.focus) opener.focus({ preventScroll: true });
+    if (opener && opener.focus && keyed) opener.focus({ preventScroll: true });
+    else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   });
 })();
