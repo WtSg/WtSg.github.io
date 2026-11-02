@@ -275,7 +275,7 @@
       var r1 = rectOf(img);
       if (!r0 || !r1) return;
       var D = 560;
-      img.animate([{ transform: flip(r0, r1) }, { transform: "none" }], { duration: D, easing: SPRING });
+      img.animate([{ transform: flip(r0, r1) }, { transform: "none" }], { duration: D, easing: SPRING }).onfinish = peekShow;
       try { dialog.animate([{ clipPath: window_(r0, 14) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: D, easing: SPRING }); } catch (e) {}
       if (frameEl && frameEl.animate) frameEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1 }], { duration: D, easing: "ease-out" });
     });
@@ -433,6 +433,7 @@
     if (still() || !dialog.animate) { dialog.close(); return; }
     closing = true;
     endSlide();
+    peeks = null;
     Array.prototype.forEach.call(stage.querySelectorAll(".gl__img--side"), function (el) { el.remove(); });
     frameSize();
     var r0 = index === openedAt ? rectOf(home) : null, rNow = rectOf(img), D = 380, E = "cubic-bezier(.4, 0, .2, 1)", last;
@@ -521,6 +522,33 @@
   }
   // the slide under way, finished at once: its photograph shown, nothing left over
   function endSlide() { if (slide) slide.done(); }
+  // A glimpse of the photographs either side, dimmed at the edges where there is room (a
+  // phone has none): the very pictures a drag, an arrow or the trackpad brings in, so the
+  // one arriving comes from where it already shows, brightening as it comes.
+  var peeks = null;
+  function peekShow() {
+    peekDrop();
+    if (still() || photos.length < 2 || !dialog.open || closing || slide || g || zoomed() || !img.animate) return;
+    var N = photos.length, prev = sideOf((index - 1 + N) % N), next = sideOf((index + 1) % N), half = window.innerWidth / 2;
+    prev._off = offsetOf(prev, -1);
+    next._off = offsetOf(next, 1);
+    if (Math.abs(prev._off) - prev.getBoundingClientRect().width / 2 > half - 6) { prev.remove(); next.remove(); return; }
+    [prev, next].forEach(function (el) {
+      el.classList.add("gl__img--peek");
+      at(el, el._off);
+      el.animate([{ opacity: 0 }, { opacity: 0.3 }], { duration: 320, easing: "ease-out" });
+    });
+    peeks = { prev: prev, next: next, at: index };
+  }
+  function peekDrop() { if (peeks) { peeks.prev.remove(); peeks.next.remove(); peeks = null; } }
+  // the glimpses handed to a movement, at full brightness (only if they are this photograph's)
+  function peekTake() {
+    var p = peeks;
+    peeks = null;
+    if (p && p.at !== index) { p.prev.remove(); p.next.remove(); return null; }
+    if (p) { p.prev.classList.remove("gl__img--peek"); p.next.classList.remove("gl__img--peek"); }
+    return p;
+  }
   // Glide so that el (photograph n) lands in the middle, everything else moving with it by
   // the same distance; from holds where the shown one, el and the others start.
   function glide(n, el, others, from) {
@@ -549,19 +577,29 @@
       others.forEach(function (o) { o.remove(); });
       var drop = function () { el.remove(); };
       if (img.decode) img.decode().then(drop, drop); else drop();
+      peekShow();
     };
     slide = s;
     anims[0].onfinish = s.done;
   }
   function go(n, d) {
     zoomOff();
+    // the glimpses of the photograph being left: a step to its neighbour starts from one
+    var N = photos.length, pk = peekTake();
     if (api.onStep) api.onStep(n);
     index = n;
     var tok = ++goTok;
     mark(n);
     warmAround(n);
-    if (still() || !img.animate) { endSlide(); fill(n); return; }
-    var s = slide, el = sideOf(n);
+    if (still() || !img.animate) { if (pk) { pk.prev.remove(); pk.next.remove(); } endSlide(); fill(n); return; }
+    var s = slide;
+    if (pk && !s && (pk.at + d + N) % N === n) {
+      var near = d > 0 ? pk.next : pk.prev, far = d > 0 ? pk.prev : pk.next;
+      glide(n, near, [far], [0, near._off, far._off]);
+      return;
+    }
+    if (pk) { pk.prev.remove(); pk.next.remove(); }
+    var el = sideOf(n);
     // A step while one is still gliding runs on from where everything is: the photograph
     // arriving is where the next one is measured from, and nothing jumps.
     if (s) {
@@ -594,8 +632,13 @@
       else close();
       return;
     }
-    // a tap or click on the photograph, or the black round it, goes back to the wall
-    if (e.target === dialog || e.target === stage || e.target === img) { if (zoomed()) zoomTo(1, 0, 0, 220); else close(); }
+    // A tap or click on the photograph, or the black round it: the previous photograph on the
+    // left half, the next on the right (closing is a swipe down, the Close key or Escape).
+    // Zoomed in, it returns the photograph whole instead.
+    if (e.target === dialog || e.target === stage || e.target === img) {
+      if (zoomed()) zoomTo(1, 0, 0, 220);
+      else step(e.clientX < window.innerWidth / 2 ? -1 : 1);
+    }
   });
   dialog.addEventListener("keydown", function (e) {
     if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
@@ -693,6 +736,14 @@
     stage.addEventListener("pointerup", lift, true);
     stage.addEventListener("pointercancel", lift, true);
     // a trackpad's pinch in Chrome and Firefox, or Ctrl and the wheel; zoomed in, the wheel moves it
+    dialog.addEventListener("wheel", function (e) {
+      if (!e.ctrlKey || closing || stage.contains(e.target)) return;
+      e.preventDefault();
+      endSlide();
+      var b = restBox();
+      zoomAt(Math.max(1, Math.min(Z_MAX, zm.z * Math.exp(-e.deltaY * 0.01))), b.cx + zm.x, b.cy + zm.y, b);
+      if (zm.z <= 1.001) zoomSet(1, 0, 0);
+    }, { passive: false });
     stage.addEventListener("wheel", function (e) {
       if (closing) return;
       if (e.ctrlKey) {
@@ -706,23 +757,85 @@
         e.preventDefault();
         var l2 = limits(zm.z, restBox());
         zoomSet(zm.z, Math.max(-l2[0], Math.min(l2[0], zm.x - e.deltaX)), Math.max(-l2[1], Math.min(l2[1], zm.y - e.deltaY)));
+      } else {
+        e.preventDefault();
+        twoFingers(e);
       }
     }, { passive: false });
     // Safari's own pinch (a Mac's trackpad; on an iPhone the fingers above already do it):
     // never the page's zoom anywhere in the close-up
     dialog.addEventListener("gesturestart", function (e) {
       e.preventDefault();
-      gz = !closing && stage.contains(e.target) && !pinch && !Object.keys(pts).length ? { z0: zm.z, b: (endSlide(), restBox()) } : null;
+      gz = !closing && !pinch && !Object.keys(pts).length ? { z0: zm.z, b: (endSlide(), restBox()), inside: stage.contains(e.target) } : null;
     }, { passive: false });
     dialog.addEventListener("gesturechange", function (e) {
       e.preventDefault();
       if (!gz || pinch || Object.keys(pts).length) return;
-      zoomAt(Math.max(0.8, Math.min(Z_MAX * 1.2, gz.z0 * e.scale)), e.clientX, e.clientY, gz.b);
+      // over the photograph, about the fingers; elsewhere in the close-up, about its centre
+      zoomAt(Math.max(0.8, Math.min(Z_MAX * 1.2, gz.z0 * e.scale)), gz.inside ? e.clientX : gz.b.cx + zm.x, gz.inside ? e.clientY : gz.b.cy + zm.y, gz.b);
     }, { passive: false });
     dialog.addEventListener("gestureend", function (e) {
       e.preventDefault();
       if (gz) { gz = null; settleZoom(); }
     }, { passive: false });
+  }
+  /* ---------- Two fingers on a trackpad, as Photos on a Mac ---------- */
+  // Sideways the photographs follow the fingers and, let go, glide on to the next one or
+  // back, as a drag does; down pulls the photograph away and, far enough, back to the wall.
+  // A mouse wheel's notch steps instead. A trackpad is told from a mouse wheel as Chrome and
+  // Safari tell it (a trackpad's wheelDelta is three times its delta; a wheel's comes in 120s;
+  // Firefox's wheel counts lines); the rest of a scroll is taken as its start was.
+  var padUntil = 0, padIs = false;
+  function fromTrackpad(e) {
+    var now = performance.now();
+    if (now > padUntil) {
+      var w = e.wheelDeltaY;
+      padIs = e.deltaMode === 0 && ((e.deltaX !== 0 && !e.shiftKey) || (w ? Math.abs(w) === Math.abs(e.deltaY * 3) : Math.abs(e.deltaY) < 50));
+    }
+    padUntil = now + 180;
+    return padIs;
+  }
+  api.isTrackpad = fromTrackpad;
+  var wg = null, wheelStepAt = 0;
+  function twoFingers(e) {
+    var now = performance.now(), unit = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 300 : 1;
+    if (!fromTrackpad(e)) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && now - wheelStepAt > 260) { wheelStepAt = now; step(e.deltaY > 0 ? 1 : -1); }
+      return;
+    }
+    if (closing || g && g.id !== "pad") return;
+    if (!wg) wg = { ax: 0, ay: 0, axis: "", done: false };
+    clearTimeout(wg.t);
+    wg.t = setTimeout(padEnd, 120);
+    if (wg.done) return;
+    wg.ax -= e.deltaX * unit;
+    wg.ay -= e.deltaY * unit;
+    if (!wg.axis) {
+      if (Math.hypot(wg.ax, wg.ay) < 6) return;
+      wg.axis = Math.abs(wg.ax) >= Math.abs(wg.ay) ? "x" : wg.ay > 0 ? "down" : "none";
+      if (wg.axis === "down") {
+        var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(dialog).backgroundColor);
+        wg.bg = m ? m[1] + "," + m[2] + "," + m[3] : "";
+      }
+      if (wg.axis === "x") g = { id: "pad", x: 0, y: 0, axis: "x", touch: false };
+    }
+    if (wg.axis === "x" && g && g.id === "pad") {
+      pageMove({ clientX: wg.ax }, wg.ax, now);
+      // well on the way: it goes on now, and the rest of this scroll (its glide) is spent
+      if (g.pages && Math.abs(wg.ax) > g.pages.w * 0.35) { var t = g; g = null; wg.done = true; quietUntil = now + 400; pageEnd(t, false); }
+    } else if (wg.axis === "down") {
+      wg.dy = Math.max(0, wg.ay);
+      if (!still()) pull(wg.dy, Math.min(1, wg.dy / (window.innerHeight * 0.55)), wg.bg);
+      if (wg.dy > 140) { wg.done = true; close(); }
+    }
+  }
+  function padEnd() {
+    var t = wg;
+    wg = null;
+    if (!t || t.done) return;
+    quietUntil = performance.now() + 300;
+    if (t.axis === "x" && g && g.id === "pad") { var p = g; g = null; pageEnd(p, false); }
+    else if (t.axis === "down") { if (t.dy > 90) close(); else pullBack(t.dy || 0); }
   }
   // One gesture on the photograph, its direction settled after the first few pixels:
   // sideways steps to the next or the previous one; on a touch screen, down takes it
@@ -747,7 +860,7 @@
     if (sinceOpen < 120 || (!keys && (sinceOpen < 450 || now < quietUntil))) { e.stopPropagation(); e.preventDefault(); }
   }, true);
   stage.addEventListener("pointerdown", function (e) {
-    if (e.button > 0 || closing || g || pinch || Object.keys(pts).length > 1) return;
+    if (e.button > 0 || closing || g || wg || pinch || Object.keys(pts).length > 1) return;
     if (e.pointerType === "mouse") e.preventDefault();
     // zoomed in: the finger or the mouse moves the photograph about
     if (zoomed()) {
@@ -790,10 +903,12 @@
     if (still() || photos.length < 2 || !img.animate) return;
     if (!g.pages) {
       endSlide();
-      var N = photos.length, prev = sideOf((index - 1 + N) % N), next = sideOf((index + 1) % N);
+      var N = photos.length, pk = peekTake(), prev = pk ? pk.prev : sideOf((index - 1 + N) % N), next = pk ? pk.next : sideOf((index + 1) % N);
       warmAround(index);
-      prev._off = offsetOf(prev, -1);
-      next._off = offsetOf(next, 1);
+      if (!pk) {
+        prev._off = offsetOf(prev, -1);
+        next._off = offsetOf(next, 1);
+      }
       g.pages = { prev: prev, next: next, w: img.getBoundingClientRect().width, f0: sizeOf(img), fp: sizeOf(prev), fn: sizeOf(next) };
       g.vx = 0; g.lx = e.clientX; g.lt = now;
     }
@@ -827,10 +942,19 @@
     var tx = function (x) { return { transform: "translateX(" + x.toFixed(1) + "px)" }; }, opt = { duration: 260, easing: EASE };
     img.style.transform = "";
     img.animate([tx(dx), tx(0)], opt);
+    var left = 2;
     [P.prev, P.next].forEach(function (o) {
       at(o, o._off);
       var a = o.animate([tx(o._off + dx), tx(o._off)], opt);
-      a.onfinish = function () { o.remove(); };
+      a.onfinish = function () {
+        if (--left) return;
+        // still this photograph's: they stay on as its glimpses
+        if (dialog.open && !closing && !slide && !g && !peeks && !zoomed()) {
+          P.prev.classList.add("gl__img--peek");
+          P.next.classList.add("gl__img--peek");
+          peeks = { prev: P.prev, next: P.next, at: index };
+        } else { P.prev.remove(); P.next.remove(); }
+      };
     });
     frameTo(P.f0, opt, function () { frameSize(); });
   }
@@ -848,8 +972,11 @@
       return;
     }
     // not far enough: back into the frame
+    pullBack(t.dy);
+  }
+  function pullBack(dy) {
     if (still() || !stage.animate) { unpull(); return; }
-    var was = stage.style.transform, p = Math.min(1, t.dy / (window.innerHeight * 0.55)), bgWas = dialog.style.backgroundColor;
+    var was = stage.style.transform, p = Math.min(1, dy / (window.innerHeight * 0.55)), bgWas = dialog.style.backgroundColor;
     unpull();
     stage.animate([{ transform: was }, { transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
     rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 - p }, { opacity: 1 }], { duration: 240, easing: "ease-out" }); });
@@ -861,6 +988,7 @@
     g = null;
     pts = {};
     pinch = null;
+    peeks = null;
     zoomOff();
     unpull();
     endSlide();

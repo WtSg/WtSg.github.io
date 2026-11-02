@@ -145,6 +145,29 @@ p { margin: 0; }
   touch-action: none;
 }
 .cv-wall { position: absolute; inset: 0; transform-origin: 50% 50%; }
+/* The lens: toward the corners of the view the wall falls off a little darker and, once it
+   is still, a touch soft, as through a real lens; the middle, where the frame is, stays clear
+   and sharp. The softness is drawn only at rest: blurring a moving wall every frame costs
+   too much (canvas.js marks the plane is-still when the wall rests). */
+.cv-lens {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 72% 78% at 50% 50%, transparent 52%, rgba(0, 0, 0, .19) 78%, rgba(0, 0, 0, .34) 100%);
+}
+.cv-lens::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  -webkit-backdrop-filter: blur(1.6px);
+  backdrop-filter: blur(1.6px);
+  -webkit-mask-image: radial-gradient(ellipse 72% 78% at 50% 50%, transparent 55%, rgba(0, 0, 0, .6) 80%, #000 100%);
+  mask-image: radial-gradient(ellipse 72% 78% at 50% 50%, transparent 55%, rgba(0, 0, 0, .6) 80%, #000 100%);
+  transition: opacity .12s ease-out, visibility 0s .12s;
+}
+.cv-plane.is-still .cv-lens::after { opacity: 1; visibility: visible; transition: opacity .45s ease-out; }
 .cv-on .cv-plane.is-dragging { cursor: grabbing; }
 .cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: pointer; }
 /* Dragging the wall must never select it: Safari paints selected photographs with a
@@ -374,7 +397,10 @@ p { margin: 0; }
 }
 .gl__stage > * { grid-area: 1 / 1; }
 /* the neighbours that slide in beside the photograph when paging */
-.gl .gl__img--side { pointer-events: none; }
+.gl .gl__img--side { pointer-events: none; transition: opacity .3s ease-out; }
+/* a glimpse of the photographs either side, dimmed; none while zoomed in */
+.gl .gl__img--peek { opacity: .3; }
+.gl .gl__stage.is-zoomed .gl__img--peek { opacity: 0; }
 .gl .gl__img {
   width: min(100% - 2.4rem, calc((100vh - 18.5rem) * var(--ar, 1.5)));
   width: min(100% - 2.4rem, calc((100svh - 18.5rem) * var(--ar, 1.5)));

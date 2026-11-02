@@ -114,6 +114,10 @@
     wall = document.createElement("div");
     wall.className = "cv-wall";
     plane.appendChild(wall);
+    // the lens: its corners a touch soft and dark, as a real one draws them (canvas.css)
+    var lens = document.createElement("div");
+    lens.className = "cv-lens";
+    plane.appendChild(lens);
     items = [];
     baked = 0;
     cw = Lb * 1.16;
@@ -358,7 +362,7 @@
 
     if (calm || pinch) { ox = tx; oy = ty; }
     else if (!waking) {
-      var a = ease(dt, dragging ? 22 : opening ? 300 : 120);
+      var a = ease(dt, dragging || panning ? 22 : opening ? 300 : 120);
       ox += (tx - ox) * a;
       oy += (ty - oy) * a;
     }
@@ -386,6 +390,7 @@
     var bake = rest ? s : 0;
     if (bake !== baked) {
       baked = bake;
+      plane.classList.toggle("is-still", !!bake);
       wall.style.transform = bake ? "none" : "scale(" + s.toFixed(4) + ")";
       for (var b2 = 0; b2 < items.length; b2++) {
         var ib = items[b2], f = bake || 1;
@@ -497,7 +502,7 @@
   }
 
   /* ---------- Input: drag, inertia, scroll, keys ---------- */
-  var down = null, samples = [], wheelT = 0;
+  var down = null, samples = [], wheelT = 0, panning = false;
   function hideHint() { if (hint) hint.classList.add("is-gone"); }
   function takeOver() {
     hold = 0;
@@ -635,6 +640,22 @@
       }
       return;
     }
+    // Two fingers on a trackpad move the wall, as a drag does (the lens pulls back with the
+    // speed, and once they rest the nearest photograph is framed); a mouse wheel, or a pinch,
+    // zooms. The trackpad is told from the wheel by the close-up's own test.
+    if (!e.ctrlKey && G.isTrackpad && G.isTrackpad(e)) {
+      if (!panning) takeOver();
+      panning = true;
+      var px = e.deltaX * unit, py = e.deltaY * unit;
+      if (e.shiftKey && !e.deltaX) { px = py; py = 0; }
+      tx -= px / s;
+      ty -= py / s;
+      moved += Math.hypot(px, py);
+      wheeling = true;
+      clearTimeout(wheelT);
+      wheelT = setTimeout(function () { wheeling = false; panning = false; lockNearest(); }, 200);
+      return;
+    }
     // a pinch zooms faster per event than a wheel notch
     setZoom(zr() * Math.exp(-clamp(dy, -60, 60) * (e.ctrlKey ? 0.01 : 0.0045)), e.clientX, e.clientY);
     wheeling = true;
@@ -643,25 +664,27 @@
   }, { passive: false });
   // Safari on a Mac sends a trackpad pinch as gesture events. On touch screens the
   // pointers above do the pinch; there these only keep the page itself from zooming.
+  // Anywhere on the page (the name, the footer too) a pinch zooms the wall, never the page;
+  // with the close-up open, it zooms the photograph there (gallery-loupe.js).
   var gz = 1;
-  room.addEventListener("gesturestart", function (e) {
+  document.addEventListener("gesturestart", function (e) {
     e.preventDefault();
-    if (touchy) return;
+    if (touchy || root.classList.contains("gl-open")) return;
     gz = zr();
     takeOver();
-  });
-  room.addEventListener("gesturechange", function (e) {
+  }, { passive: false });
+  document.addEventListener("gesturechange", function (e) {
     e.preventDefault();
     if (touchy || root.classList.contains("gl-open")) return;
     setZoom(gz * e.scale, e.clientX, e.clientY);
     wheeling = true;
-  });
-  room.addEventListener("gestureend", function (e) {
+  }, { passive: false });
+  document.addEventListener("gestureend", function (e) {
     e.preventDefault();
-    if (touchy) return;
+    if (touchy || root.classList.contains("gl-open")) return;
     wheeling = false;
     lockNearest();
-  });
+  }, { passive: false });
   zoomBtns.forEach(function (b) {
     b.addEventListener("click", function () { zoomStep(b.getAttribute("data-cv-zoom") === "out" ? -1 : 1); });
   });
@@ -708,8 +731,8 @@
 
   /* ---------- Opening a photograph ---------- */
   // Zoomed out, a click zooms back in on the photograph clicked; at the framed size or
-  // closer, a click opens the close-up straight from where the photograph is, and behind
-  // it the wall frames that photograph, ready for when it closes.
+  // closer, a click on the framed photograph opens the close-up straight from where it is,
+  // and a click on one beside it brings that one into the frame.
   function shoot(it, back) {
     hideHint();
     hold = 0;
@@ -720,7 +743,8 @@
       lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
       return;
     }
-    var framed = subject === it && lockOn === it;
+    // a photograph beside the framed one is only brought into the frame; the framed one opens
+    if (lockOn !== it && subject !== it) { lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy }); return; }
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
     fire({ it: it, back: back });
   }
