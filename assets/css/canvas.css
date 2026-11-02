@@ -419,6 +419,8 @@ p { margin: 0; }
 /* a glimpse of the photographs either side, dimmed; none while zoomed in */
 .gl .gl__img--peek { opacity: .3; pointer-events: auto; cursor: pointer; }
 .gl .gl__stage.is-zoomed .gl__img--peek { opacity: 0; }
+/* pulled down to close, only the photograph goes with the finger (gallery-loupe.js) */
+.gl .gl__stage.is-pulled .gl__img--peek { opacity: 0; pointer-events: none; transition-duration: .15s; }
 .gl .gl__img {
   width: min(100% - 2.4rem, calc((100vh - 18.5rem) * var(--ar, 1.5)));
   width: min(100% - 2.4rem, calc((100svh - 18.5rem) * var(--ar, 1.5)));

@@ -853,9 +853,14 @@
   // everything else fades, and let go far or fast enough it leaves, else it springs back.
   var g = null, quietUntil = 0, openT = -1e9;
   function rest() { return Array.prototype.filter.call(dialog.children, function (c) { return c !== stage; }); }
+  // Only the photograph goes with the finger: the readout, the caption, the roll and the keys
+  // give way at once (gone a quarter of the way to closing), and so do the glimpses of the
+  // neighbours, so nothing is left under it or round it but the wall showing through.
+  function chrome(p) { return Math.max(0, 1 - p * 4); }
   function pull(dy, p, bg) {
     stage.style.transform = dy ? "translateY(" + dy.toFixed(1) + "px) scale(" + (1 - p * 0.14).toFixed(4) + ")" : "";
-    rest().forEach(function (c) { c.style.opacity = p ? (1 - p).toFixed(3) : ""; });
+    stage.classList.toggle("is-pulled", !!p);
+    rest().forEach(function (c) { c.style.opacity = p ? chrome(p).toFixed(3) : ""; });
     dialog.style.backgroundColor = p && bg ? "rgba(" + bg + "," + (1 - p * 0.8).toFixed(3) + ")" : "";
   }
   function unpull() {
@@ -989,7 +994,7 @@
     var was = stage.style.transform, p = Math.min(1, dy / (window.innerHeight * 0.55)), bgWas = dialog.style.backgroundColor;
     unpull();
     stage.animate([{ transform: was }, { transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
-    rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 - p }, { opacity: 1 }], { duration: 240, easing: "ease-out" }); });
+    rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: chrome(p) }, { opacity: 1 }], { duration: 240, easing: "ease-out" }); });
     if (bgWas && dialog.animate) dialog.animate([{ backgroundColor: bgWas }, { backgroundColor: getComputedStyle(dialog).backgroundColor }], { duration: 240, easing: "ease-out" });
   }
   stage.addEventListener("pointerup", function (e) { release(e, false); });
