@@ -1,0 +1,4 @@
+# Photography gallery, newest first.
+# Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
+# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, added.
+# You can edit a title, place or year here by hand; keep each photo on one line.

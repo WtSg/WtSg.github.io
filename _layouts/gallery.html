@@ -1,0 +1,102 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
+{%- assign photos = site.data.gallery -%}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
+
+  <title>Photography · {{ me.name }}</title>
+  <meta name="description" content="Photographs by {{ me.name }}. All rights reserved.">
+  <link rel="canonical" href="https://www.wshangguan.com/photography/">
+  <meta name="theme-color" content="#ffffff">
+
+  <link rel="preload" href="{{ base }}/assets/fonts/stix-two-text-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/dejavu-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/site.css">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="wrap masthead__inner">
+      <a class="wordmark" href="{{ base }}/">{{ me.name }}</a>
+      <nav aria-label="Site">
+        <ul>
+          <li><a href="{{ base }}/#research">Research</a></li>
+          <li><a href="{{ base }}/#work">Work</a></li>
+          <li><a href="{{ base }}/#publications">Publications</a></li>
+          <li><a href="{{ base }}/photography/" aria-current="page">Photography</a></li>
+        </ul>
+      </nav>
+      <a class="btn btn--small masthead__email" href="#contact" data-mail>Email</a>
+    </div>
+  </header>
+
+  <main id="main" class="gallery wrap">
+    <h1 class="gallery__title">Photography</h1>
+    {%- if photos and photos.size > 0 %}
+    <p class="gallery__lede">{{ photos.size }} photograph{% if photos.size != 1 %}s{% endif %}. Select one to view it larger.</p>
+
+    <div class="photos">
+      {%- for ph in photos %}
+      {%- assign t = ph.title | strip %}{% assign pl = ph.place | strip %}{% assign yr = ph.year | strip %}
+      <figure class="photo" id="p-{{ ph.id }}" data-full="{{ base }}{{ ph.src }}" data-w="{{ ph.w }}" data-h="{{ ph.h }}">
+        <button class="photo__open" type="button" aria-label="View {{ t | default: 'photograph' }} larger">
+          <img src="{{ base }}{{ ph.thumb }}" alt="{{ t | default: 'Photograph' }}{% if pl != "" %}, {{ pl }}{% endif %}" width="{{ ph.w }}" height="{{ ph.h }}" loading="lazy" decoding="async" draggable="false">
+        </button>
+        {%- if t != "" or pl != "" or yr != "" %}
+        <figcaption>
+          {%- if t != "" %}<span class="photo__title">{{ t }}</span>{% endif %}
+          {%- if pl != "" or yr != "" %}<span class="photo__meta">{{ pl }}{% if pl != "" and yr != "" %} · {% endif %}{{ yr }}</span>{% endif %}
+        </figcaption>
+        {%- endif %}
+      </figure>
+      {%- endfor %}
+    </div>
+
+    <dialog class="lightbox" aria-label="Photograph viewer">
+      <figure class="lightbox__figure">
+        <img class="lightbox__img" src="" alt="" draggable="false">
+        <figcaption class="lightbox__cap"></figcaption>
+      </figure>
+      <div class="lightbox__controls">
+        <button class="btn btn--line btn--small" type="button" data-lb="prev">Previous</button>
+        <span class="lightbox__count" aria-live="polite"></span>
+        <button class="btn btn--line btn--small" type="button" data-lb="next">Next</button>
+        <button class="btn btn--small" type="button" data-lb="close">Close</button>
+      </div>
+    </dialog>
+    {%- else %}
+    <figure class="fig2 gallery__empty">
+      <div class="axes">
+        <div class="axes__plot axes__plot--photo">
+          <canvas class="noise noise--static" data-noise="120x24" aria-hidden="true"></canvas>
+        </div>
+        {% include ticks.html w=120 h=24 xs="0,20,40,60,80,100" ys="0,10,20" %}
+      </div>
+      <figcaption><span class="figlabel">Figure 1.</span> The gallery at <i>t</i>&nbsp;=&nbsp;1: no photographs yet.</figcaption>
+    </figure>
+    {%- endif %}
+  </main>
+
+  <footer class="contact wrap gallery__footer" id="contact" aria-label="Copyright and contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <p class="gallery__rights">All photographs © {{ site.time | date: "%Y" }} {{ me.name }}. All rights reserved. Please ask before using any of them.</p>
+    <p class="links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/">Back to the homepage</a></p>
+  </footer>
+
+  <script src="{{ base }}/assets/js/site.js" defer></script>
+  <script src="{{ base }}/assets/js/gallery.js" defer></script>
+</body>
+</html>
