@@ -171,7 +171,7 @@
   var fr = { L: 1, S: 1, rot: 0 }, frTo = { L: 1, S: 1, rot: 0 }, frDirty = true;
   var dragging = false, wheeling = false, hold = 0, subject = null, lockOn = null;
   var fe = 22, focusedAt = 0, moved = 0, spd = 0, last = 0, maskA = 0.58, pendingShot = null;
-  var sharp = null;
+  var sharp = null, opening = false;
 
   // Frame a photograph: move it to the centre, close in until it fills the frame,
   // and set the frame lines around it (turned a quarter for a portrait one).
@@ -274,7 +274,7 @@
 
     if (calm) { ox = tx; oy = ty; }
     else if (!waking) {
-      var a = ease(dt, dragging ? 22 : 120);
+      var a = ease(dt, dragging ? 22 : opening ? 300 : 120);
       ox += (tx - ox) * a;
       oy += (ty - oy) * a;
     }
@@ -286,7 +286,7 @@
     if (!moving) pull = Math.max(pull, clamp((dist * s) / (vw * 0.5), 0, 1) * 0.7);
     var sGoal = sTo + (1 - sTo) * pull;
     if (calm) s = sTo;
-    else if (!waking) s += (sGoal - s) * ease(dt, 140);
+    else if (!waking) s += (sGoal - s) * ease(dt, opening ? 380 : 140);
     plane.style.transform = "scale(" + s.toFixed(4) + ")";
     for (var k = 0; k < items.length; k++) {
       var it = items[k], q = posOf(it, ox, oy);
@@ -329,7 +329,7 @@
     var goal = moving || waking ? 22 : clamp(dist * s * 0.08 + Math.abs(s - sTo) * 60 + frErr * 0.04, 0, 22);
     fe += (goal - fe) * (calm ? 1 : ease(dt, 150));
     var focused = !moving && !waking && fe < 0.5 && dist * s < 1 && Math.abs(s - sTo) < 0.004 && frErr < 0.6;
-    if (focused && !focusedAt) focusedAt = now;
+    if (focused && !focusedAt) { focusedAt = now; opening = false; }
     if (!focused) focusedAt = 0;
     var sharpNow = focused && now - focusedAt > 120;
     vf.classList.toggle("is-focused", sharpNow);
@@ -358,6 +358,7 @@
   function hideHint() { if (hint) hint.classList.add("is-gone"); }
   function takeOver() {
     hold = 0;
+    opening = false;
     hideHint();
     lockOn = null;
     pendingShot = null;
@@ -450,6 +451,7 @@
     if (dir) {
       e.preventDefault();
       hold = 0;
+      opening = false;
       hideHint();
       pendingShot = null;
       lock(neighbour(dir[0], dir[1]));
@@ -459,7 +461,7 @@
   });
   keys.forEach(function (b) {
     var i = +b.getAttribute("data-cv-i");
-    b.addEventListener("focus", function () { hold = 0; hideHint(); lockPhoto(i); });
+    b.addEventListener("focus", function () { hold = 0; opening = false; hideHint(); lockPhoto(i); });
     b.addEventListener("click", function () {
       if (!lockOn || lockOn.i !== i) lockPhoto(i);
       if (lockOn) shoot(lockOn, b);
@@ -470,6 +472,7 @@
   function shoot(it, back) {
     hideHint();
     hold = 0;
+    opening = false;
     if (subject === it && lockOn === it && vf.classList.contains("is-focused")) { fire({ it: it, back: back }); return; }
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
     pendingShot = { it: it, back: back };
@@ -505,8 +508,9 @@
     s = sTo;
   } else {
     // pulled right back over the wall, the first photograph off to one side
-    startAt(0, cw * 0.9, ch * 0.55);
+    startAt(0, cw * 1.3, ch * 0.8);
     s = 1;
+    opening = true;
     // lamp test: every segment and lamp lit for a moment, as a camera does when it wakes
     lampTest = true;
     vf.classList.add("is-test");

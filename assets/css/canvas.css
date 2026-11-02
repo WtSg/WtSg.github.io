@@ -46,8 +46,8 @@
   --led: #ff4a2e;
   --led-label: rgba(255, 74, 46, .72);
   --led-off: rgba(255, 74, 46, .12);
-  --patch-tint: rgba(255, 214, 128, .1);
-  --patch-edge: rgba(255, 232, 180, .5);
+  --patch-tint: rgba(255, 214, 128, .07);
+  --patch-edge: rgba(255, 232, 180, .42);
   --focus: #edebe6;
   --ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
   --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
