@@ -230,15 +230,75 @@
   dialog.addEventListener("cancel", function (e) {
     if (!still()) { e.preventDefault(); close(); }
   });
-  var sx = null;
-  stage.addEventListener("pointerdown", function (e) { sx = e.clientX; });
-  stage.addEventListener("pointerup", function (e) {
-    if (sx === null) return;
-    var dx = e.clientX - sx;
-    sx = null;
-    if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+  // One gesture on the photograph, its direction settled after the first few pixels:
+  // sideways steps to the next or the previous one; on a touch screen, down takes it
+  // away, as a phone's photo viewer does: it follows the finger and shrinks a little,
+  // everything else fades, and let go far or fast enough it leaves, else it springs back.
+  var g = null, quietUntil = 0;
+  function rest() { return Array.prototype.filter.call(dialog.children, function (c) { return c !== stage; }); }
+  function pull(dy, p, bg) {
+    stage.style.transform = dy ? "translateY(" + dy.toFixed(1) + "px) scale(" + (1 - p * 0.14).toFixed(4) + ")" : "";
+    rest().forEach(function (c) { c.style.opacity = p ? (1 - p).toFixed(3) : ""; });
+    dialog.style.backgroundColor = p && bg ? "rgba(" + bg + "," + (1 - p * 0.8).toFixed(3) + ")" : "";
+  }
+  function unpull() {
+    pull(0, 0);
+    if (stage.getAnimations) stage.getAnimations().forEach(function (a) { a.cancel(); });
+  }
+  // the click a drag ends with is not a tap: it must not close the close-up
+  dialog.addEventListener("click", function (e) {
+    if (performance.now() < quietUntil) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.button > 0 || closing || g) return;
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(dialog).backgroundColor);
+    g = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: "", touch: e.pointerType !== "mouse",
+      dy: 0, v: 0, ly: e.clientY, lt: performance.now(), bg: m ? m[1] + "," + m[2] + "," + m[3] : "" };
+    try { stage.setPointerCapture(e.pointerId); } catch (x) {}
   });
+  stage.addEventListener("pointermove", function (e) {
+    if (!g || e.pointerId !== g.id) return;
+    var dx = e.clientX - g.x, dy = e.clientY - g.y, now = performance.now();
+    if (!g.axis) {
+      if (Math.hypot(dx, dy) < 10) return;
+      g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : dy > 0 && g.touch ? "down" : "none";
+    }
+    if (g.axis !== "down") return;
+    // speed over the last moments, for a quick flick
+    g.v = g.v * 0.4 + 0.6 * ((e.clientY - g.ly) / Math.max(1, now - g.lt));
+    g.ly = e.clientY;
+    g.lt = now;
+    g.dy = Math.max(0, dy);
+    if (!still()) pull(g.dy, Math.min(1, g.dy / (window.innerHeight * 0.55)), g.bg);
+  });
+  function release(e, cancelled) {
+    if (!g || e.pointerId !== g.id) return;
+    var t = g, dx = e.clientX - t.x;
+    g = null;
+    if (t.axis) quietUntil = performance.now() + 400;
+    if (t.axis === "x") { if (!cancelled && Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); return; }
+    if (t.axis !== "down") return;
+    if (!cancelled && (t.dy > 90 || (t.v > 0.6 && t.dy > 30))) {
+      if (still() || !stage.animate) { unpull(); close(); return; }
+      var from = stage.style.transform;
+      stage.animate([{ transform: from }, { transform: "translateY(" + (t.dy + window.innerHeight * 0.4).toFixed(0) + "px) scale(.78)" }],
+        { duration: 260, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+      close();
+      return;
+    }
+    // not far enough: back into the frame
+    if (still() || !stage.animate) { unpull(); return; }
+    var was = stage.style.transform, p = Math.min(1, t.dy / (window.innerHeight * 0.55)), bgWas = dialog.style.backgroundColor;
+    unpull();
+    stage.animate([{ transform: was }, { transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
+    rest().forEach(function (c) { if (c.animate) c.animate([{ opacity: 1 - p }, { opacity: 1 }], { duration: 240, easing: "ease-out" }); });
+    if (bgWas && dialog.animate) dialog.animate([{ backgroundColor: bgWas }, { backgroundColor: getComputedStyle(dialog).backgroundColor }], { duration: 240, easing: "ease-out" });
+  }
+  stage.addEventListener("pointerup", function (e) { release(e, false); });
+  stage.addEventListener("pointercancel", function (e) { release(e, true); });
   dialog.addEventListener("close", function () {
+    g = null;
+    unpull();
     closing = false;
     root.classList.remove("gl-open");
     if (api.onClose) api.onClose(index, index !== openedAt);
