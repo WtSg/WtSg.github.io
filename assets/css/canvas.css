@@ -233,16 +233,18 @@ p { margin: 0; }
 .vf.is-focused .vf-patch { opacity: 0; transition-delay: .8s; }
 .vf-patch.is-empty { opacity: 0; transition-duration: .15s; }
 
-/* Under the frame: the LED readout, a caption when the photograph has one, the hint. */
-/* Zoomed out, it docks at the foot of the window instead (canvas.js sets --below-y). */
+/* Under the frame lines and as wide as they are: the LED readout, part of the viewfinder.
+   canvas.js sets its place (--below-y), its width (--led-w) and its scale (--led-u); every
+   size in it is in em of that scale, so it fits the frame lines at any size. The first
+   visit's hint sits under it. */
 .vf-below {
   left: 50%;
-  top: var(--below-y, calc(50% + var(--fy) + 1rem));
+  top: var(--below-y, calc(50% + var(--fy) + .6rem));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .65rem;
+  gap: .6rem;
 }
 .vf-led {
   display: flex;
@@ -267,7 +269,6 @@ p { margin: 0; }
 .vf-led__focus [data-lamp="c"] { width: .52rem; height: .52rem; border-radius: 50%; background: currentColor; }
 .vf-led__focus .is-on, .vf.is-test .vf-led__focus i { color: var(--led); }
 .vf-led__cell--n { padding-left: 1rem; border-left: 1px solid rgba(255, 74, 46, .28); }
-.vf-caption { font: 400 .76rem/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
 /* The camera maker's mark, in the ink colour and sized to the text beside it. */
 .gl-mark {
   display: inline-block;
@@ -305,18 +306,30 @@ p { margin: 0; }
   -webkit-mask: var(--mark) center / contain no-repeat;
   mask: var(--mark) center / contain no-repeat;
 }
-/* Docked at the foot of the window it sits over the wall, as an optical viewfinder's LEDs sit
-   over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
-.vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }
-.vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; }
-/* at the foot the readout stands alone, no caption under it; the first visit's hint floats
-   just above it until the wall is first touched */
-.vf.is-docked .vf-caption { display: none; }
-.vf.is-docked .cv-hint { position: absolute; left: 50%; bottom: calc(100% + .5rem); transform: translateX(-50%); }
-.vf.is-docked .cv-hint.is-gone { visibility: hidden; transition: opacity .6s, visibility 0s .6s; }
-.vf.is-docked .vf-led b { text-shadow: 0 0 .45rem rgba(255, 74, 46, .55); }
+/* On the wall the readout is a smoked-glass plate over the scene, as an optical
+   viewfinder's LEDs, the photographs showing through and the digits glowing. */
+.vf-below .vf-led {
+  box-sizing: border-box;
+  width: var(--led-w, auto);
+  justify-content: space-between;
+  gap: .6em;
+  padding: .42em .5em .4em;
+  border-radius: .22em;
+  font-size: var(--led-u, 12px);
+  background: rgba(4, 4, 4, .66);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .07);
+}
+.vf-below .vf-led__exif { gap: .6em; }
+.vf-below .vf-led__cell { gap: .22em; }
+.vf-below .vf-led b { font-size: 1.3em; text-shadow: 0 0 .35em rgba(255, 74, 46, .55); }
+.vf-below .vf-led em { font-size: .6em; }
+.vf-below .vf-led__focus { gap: .3em; }
+.vf-below .vf-led__focus svg { width: .5em; height: .64em; }
+.vf-below .vf-led__focus [data-lamp="c"] { width: .52em; height: .52em; }
+.vf-below .vf-led__cell--n { padding-left: .6em; }
+.vf-below .vf-led .vf-led__of { margin: 0 .12em 0 .08em; font-size: 1em; }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .vf.is-docked .vf-led, .vf.is-docked .vf-caption {
+  .vf-below .vf-led {
     background: rgba(4, 4, 4, .38);
     -webkit-backdrop-filter: blur(5px) brightness(.72);
     backdrop-filter: blur(5px) brightness(.72);
@@ -330,9 +343,7 @@ p { margin: 0; }
 .cv-on .cv-zoom {
   position: fixed;
   right: var(--gut);
-  /* lifted above the docked readout where they would meet (canvas.js) */
-  bottom: calc(var(--foot-h, 3rem) + .5rem + var(--zoom-lift, 0px));
-  transition: bottom .3s ease-out;
+  bottom: calc(var(--foot-h, 3rem) + .5rem);
   z-index: 21;
   display: flex;
   border-radius: .25rem;
@@ -580,7 +591,7 @@ html.cv-on { touch-action: pan-x pan-y; }
   .gl__frm img { height: 2.4rem; }
   .gl__gate { height: calc(2.4rem + 8px); }
   .gl__film { --strip-h: 3.8rem; }
-  /* narrow: the readout keeps to the screen, its digits and gaps shrinking with it */
+  /* narrow: the close-up's readout keeps to the screen, its digits and gaps shrinking with it */
   .vf-led { gap: min(.8rem, 2.2vw); padding: .45rem min(.65rem, 2vw) .42rem; }
   .vf-led__exif { gap: min(.8rem, 2.2vw); }
   .vf-led b { font-size: min(1.1rem, 4.3vw); }

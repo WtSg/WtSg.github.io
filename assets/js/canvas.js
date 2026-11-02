@@ -35,7 +35,7 @@
   var maskEl = vf.querySelector(".vf-mask");
   var patch = vf.querySelector(".vf-patch");
   var below = vf.querySelector(".vf-below");
-  var capEl = vf.querySelector("[data-vf-caption]");
+  var ledEl = below.querySelector(".vf-led");
   var exifEl = vf.querySelector("[data-led-exif]");
   var sLabel = vf.querySelector("[data-led-sl]");
   var hint = room.querySelector("[data-cv-hint]");
@@ -57,7 +57,6 @@
   patch.appendChild(ghost);
   var touchy = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   var zoomBtns = Array.prototype.slice.call(room.querySelectorAll("[data-cv-zoom]"));
-  var zoomEl = room.querySelector(".cv-zoom");
   if (hint && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) hint.textContent = "Drag to look around · pinch to zoom · tap to open";
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
@@ -75,8 +74,8 @@
 
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
-  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, patchNow = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
-  var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false, patchOn = true, wakeSet = 1;
+  var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, patchNow = -1, hintH = 16, footH = 40;
+  var ledEm = 0, ledHEm = 2.2, ledU = 0, ledW = 0, belowSet = -1, maskCut = "", baked = 0, patchOn = true, wakeSet = 1;
   function measure() {
     vw = window.innerWidth;
     vh = window.innerHeight;
@@ -89,14 +88,10 @@
     ph = ph0 = patch.offsetHeight;
     patchK = -1;
     patchNow = -1;
-    ledH = below.firstElementChild.offsetHeight || ledH;
-    capH = 16;
     hintH = hint ? hint.offsetHeight || hintH : 0;
     footH = foot ? foot.offsetHeight : 0;
     room.style.setProperty("--foot-h", footH + "px");
-    belowW = below.offsetWidth || belowW;
-    var zb = zoomEl && zoomEl.offsetWidth ? zoomEl.getBoundingClientRect() : null;
-    zoomBox = zb ? { l: zb.left, t: zb.top } : null;
+    ledEm = 0;
     maskCut = "";
   }
   // A photograph's size on screen when it is framed.
@@ -265,6 +260,8 @@
     return { f: f, s: sh, sl: sl, iso: digits(String(e.iso || "").replace(/^ISO\s*/i, "")), mm: digits(e.focal), n: pad(p.i + 1), of: pad(photos.length) };
   }
   function setLed(k, v) {
+    // a value of another length changes the readout's width: measure it again
+    if (led[k].textContent.length !== v.length) ledEm = 0;
     led[k].textContent = v;
     led[k].setAttribute("data-off", v.replace(/\d/g, "8"));
   }
@@ -275,12 +272,7 @@
     FIELDS.forEach(function (k) { cell[k].hidden = !v[k]; if (v[k]) any = true; });
     exifEl.hidden = !any;
     sLabel.textContent = v.sl;
-    // the caption: the camera's maker (its mark and name), then the title, place and year
-    var cap = [p.title, p.place, p.year].filter(Boolean).join(" · ");
-    var maker = p.exif && p.exif.camera && G.cameraHtml ? G.cameraHtml(p.exif.camera, true) : "";
-    capEl.innerHTML = maker + (maker && cap ? '<span class="vf-caption__sep"> · </span>' : "") + G.esc(cap);
-    capEl.hidden = !cap && !maker;
-    belowW = below.offsetWidth || belowW;
+    ledEm = 0;
     clearInterval(rollT);
     var live = FIELDS.filter(function (k) { return v[k]; }).concat("n");
     if (still()) { live.forEach(function (k) { setLed(k, v[k]); }); return; }
@@ -328,20 +320,38 @@
     maskEl.style.webkitClipPath = cut;
     maskEl.style.clipPath = cut;
   }
-  // Where the readout docks: above the footer, and above the zoom buttons where it would meet them.
-  // The readout keeps one place at every zoom, just above the footer, on its own (no caption),
-  // and where it would meet the - and + keys they step up above it (and above the first
-  // visit's hint, which floats over the readout until the wall is first touched).
-  function dockY(h) {
-    return Math.max(vh / 2, vh - footH - 12 - h);
+  // The readout is part of the viewfinder: as wide as the frame lines, its digits scaled to
+  // fit. Its natural width (in em of its scale) is measured once per photograph, as its
+  // values change, at a large scale where type scales evenly. The digits keep one size for
+  // every photograph whose values fit a full readout's width (LED_EM: F 2.8, 1/640, ISO 100,
+  // 75 MM, the lamps, 06/36); a longer one scales down to fit. Zoomed far out, it stops
+  // shrinking with the frame lines where its digits would be hard to read (LED_MIN), and
+  // round the smallest frame lines (a portrait photograph on a phone held sideways) it is
+  // never so narrow that they could not be read at all (LED_LEAST).
+  var LED_EM = 28.4, LED_MIN = 7, LED_LEAST = 6, ledFloor = -1;
+  function ledNatural() {
+    below.style.setProperty("--led-u", "100px");
+    ledEl.style.width = "max-content";
+    var r = ledEl.getBoundingClientRect();
+    ledEl.style.width = "";
+    below.style.setProperty("--led-u", (ledU || 12).toFixed(3) + "px");
+    // a hair of room: small type does not scale quite evenly, and the divider is 1px at any size
+    ledEm = (r.width / 100) * 1.015 + 0.15;
+    ledHEm = r.height / 100;
   }
-  var liftSet = -1;
-  function liftZoom(dock) {
-    var hinted = hint && !hint.classList.contains("is-gone");
-    var lift = dock && zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8 ? ledH + 10 + (hinted ? hintH + 8 : 0) : 0;
-    if (lift === liftSet) return;
-    liftSet = lift;
-    room.style.setProperty("--zoom-lift", lift + "px");
+  // w: the frame lines' width now; rest: their width with the wall at its framed scale
+  function fitLed(w, rest, fa) {
+    if (!ledEm) ledNatural();
+    var em = Math.max(ledEm, LED_EM);
+    var floorGoal = Math.max(Math.min(rest, LED_MIN * em), LED_LEAST * em);
+    ledFloor = ledFloor < 0 ? floorGoal : ledFloor + (floorGoal - ledFloor) * fa;
+    w = Math.max(w, ledFloor);
+    var u = w / em;
+    if (Math.abs(u - ledU) < 0.01 && Math.abs(w - ledW) < 0.3) return;
+    ledU = u;
+    ledW = w;
+    below.style.setProperty("--led-u", u.toFixed(3) + "px");
+    below.style.setProperty("--led-w", w.toFixed(1) + "px");
   }
 
   /* ---------- The frame loop ---------- */
@@ -463,21 +473,16 @@
       vf.style.setProperty("--fy", halfH.toFixed(1) + "px");
       cutMask(rad);
     }
-    // The readout sits under the frame lines; zoomed out, when they close round a small
-    // photograph among the others, it docks at the foot of the window, clear of the wall.
-    var radB = (fr.rot * Math.PI) / 180;
-    var underY = vh / 2 + (fr.L * Math.abs(Math.sin(radB)) + fr.S * Math.abs(Math.cos(radB))) / 2 + 16;
-    var dock = true;
-    if (dock !== docked) { docked = dock; vf.classList.toggle("is-docked", dock); }
-    liftZoom(dock);
-    var belowH = ledH + (capEl.hidden || dock ? 0 : capH + 10);
-    var bGoal = dock ? dockY(belowH) : underY;
-    belowY = belowY < 0 || calm ? bGoal : belowY + (bGoal - belowY) * ease(dt, 110);
-    if (Math.abs(belowY - belowSet) > 0.3) {
-      belowSet = belowY;
-      vf.style.setProperty("--below-y", belowY.toFixed(1) + "px");
+    // The readout sits just under the frame lines, as wide as they are (a portrait
+    // photograph's frame turns, and the readout's width goes from the long side to the short)
+    var radB = (fr.rot * Math.PI) / 180, turnB = clamp(fr.rot / 90, 0, 1);
+    var underY = vh / 2 + (fr.L * Math.abs(Math.sin(radB)) + fr.S * Math.abs(Math.cos(radB))) / 2 + 8;
+    fitLed(fr.L + (fr.S - fr.L) * turnB, frTo.L + (frTo.S - frTo.L) * clamp(frTo.rot / 90, 0, 1), fa);
+    if (Math.abs(underY - belowSet) > 0.3) {
+      belowSet = underY;
+      vf.style.setProperty("--below-y", underY.toFixed(1) + "px");
       // the hint goes when it would run into the footer
-      if (hint) hint.hidden = !dock && belowY + belowH + 10 + hintH > vh - footH - 6;
+      if (hint) hint.hidden = underY + ledU * ledHEm + 10 + hintH > vh - footH - 6;
     }
 
     // which photograph is in the frame now, and how far it is from focus
@@ -860,6 +865,8 @@
     }, 650);
   }
   requestAnimationFrame(frame);
+  // the readout's digits are in a web font: measure it again once that has come
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { ledEm = 0; });
   if (hint) setTimeout(hideHint, 9000);
   var rT = 0;
   window.addEventListener("resize", function () {

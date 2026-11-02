@@ -105,11 +105,11 @@
     }
     return null;
   }
-  // The camera as markup: the maker's mark in the ink colour and its name, then the model;
-  // makerOnly leaves the model out. Unknown makers stay as text.
-  function cameraHtml(camera, makerOnly) {
+  // The camera as markup: the maker's mark in the ink colour and its name, then the model.
+  // Unknown makers stay as text.
+  function cameraHtml(camera) {
     var m = makerOf(camera);
-    if (!m) return makerOnly ? "" : esc(camera);
+    if (!m) return esc(camera);
     var named = !m.file || m.sym;
     var mark = m.file
       ? '<span class="gl-mark' + (m.ar > 2 ? " gl-mark--wide" : "") + '" data-maker="' + esc(m.file) + '"' +
@@ -118,7 +118,7 @@
       : "";
     var name = named ? '<span class="gl-brand' + (m.type ? " gl-brand--" + m.type : "") + '">' + esc(m.name) + "</span>" : "";
     var maker = mark && name ? mark + " " + name : mark || name;
-    return makerOnly ? maker : maker + ' <span class="gl-model">' + esc(m.model) + "</span>";
+    return maker + ' <span class="gl-model">' + esc(m.model) + "</span>";
   }
 
   /* ---------- The close-up viewer ---------- */
@@ -131,7 +131,6 @@
     metaLine: metaLine,
     specLine: specLine,
     altText: altText,
-    cameraHtml: cameraHtml,
     open: function () {},
     rehome: function () {},
     go: function () {},
