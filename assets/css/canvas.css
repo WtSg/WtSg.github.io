@@ -248,7 +248,22 @@ p { margin: 0; }
 .gl-mark--wide { height: .8em; width: calc(.8em * var(--mark-ar, 1)); vertical-align: -.05em; }
 .gl-mark--word { width: auto; height: auto; background: none; -webkit-mask: none; mask: none; font: 600 .82em/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; vertical-align: baseline; }
 .gl .gl__spec [data-k="camera"] dd { color: var(--ink); }
-.gl-mark[aria-label="Leica"] { background: #e3001b; }
+/* Leica's red dot, its script in silver as on the camera: a silver disc under the red,
+   which the mark lets through only where the script is. */
+.gl-mark[aria-label="Leica"] {
+  position: relative;
+  -webkit-mask: none;
+  mask: none;
+  background: radial-gradient(circle closest-side, #f4f4f2 0, #c8c8c4 70%, #a9a9a4 86%, transparent 88%);
+}
+.gl-mark[aria-label="Leica"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #e3001b;
+  -webkit-mask: var(--mark) center / contain no-repeat;
+  mask: var(--mark) center / contain no-repeat;
+}
 /* Docked at the foot of the window it sits over the wall, as an optical viewfinder's LEDs sit
    over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
 .vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }

@@ -181,7 +181,7 @@
       });
       if (dialog.open) centre(i, true);
     }
-    if (api.onFill) api.onFill(i, p);
+    if (api.onFill) api.onFill(i, p, dialog.open);
     [i + 1, i - 1].forEach(function (k) {
       var n = new Image();
       n.src = photos[(k + photos.length) % photos.length].src;
@@ -379,23 +379,31 @@
   }
   function step(d) { go((index + d + photos.length) % photos.length, d); }
   api.go = function (n) { if (dialog.open && n !== index) go(n, n > index ? 1 : -1); };
+  // Stepping to another photograph: it is decoded first, so the swap never shows a blank
+  // frame, then a quick, quiet cross-fade (the opening's focus pull and frame lines are for
+  // the opening only), so turning the roll quickly stays calm.
+  var goSeq = 0;
   function go(n, d) {
     if (api.onStep) api.onStep(n);
-    if (still() || !img.animate) { index = n; fill(n); return; }
-    var out = img.animate([
-      { transform: "none", opacity: 1 },
-      { transform: "translateX(" + (-d * 4) + "%)", opacity: 0 }
-    ], { duration: 160, easing: "ease-in", fill: "forwards" });
-    out.onfinish = function () {
-      index = n;
-      fill(n);
-      out.cancel();
-      img.animate([
-        { transform: "translateX(" + (d * 4) + "%)", opacity: 0 },
-        { transform: "none", opacity: 1 }
-      ], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
-      focusPull(120);
-    };
+    index = n;
+    var want = ++goSeq;
+    if (still() || !img.animate) { fill(n); return; }
+    var pre = new Image();
+    pre.src = photos[n].src;
+    var ready = pre.decode ? pre.decode().catch(function () {}) : new Promise(function (r) { pre.onload = pre.onerror = r; });
+    ready.then(function () {
+      if (want !== goSeq || !dialog.open) return;
+      var out = img.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: "ease-in", fill: "forwards" });
+      out.onfinish = function () {
+        if (want !== goSeq) { out.cancel(); return; }
+        fill(n);
+        out.cancel();
+        img.animate([
+          { opacity: 0, transform: "translateX(" + (d * 1.5) + "%)" },
+          { opacity: 1, transform: "none" }
+        ], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" });
+      };
+    });
   }
 
   dialog.addEventListener("click", function (e) {
