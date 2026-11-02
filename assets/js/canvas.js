@@ -55,6 +55,7 @@
   patch.appendChild(ghost);
   var touchy = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   var zoomBtns = Array.prototype.slice.call(room.querySelectorAll("[data-cv-zoom]"));
+  var zoomEl = room.querySelector(".cv-zoom");
   if (hint && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) hint.textContent = "Drag to look around · pinch to zoom · tap to open";
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
@@ -73,6 +74,7 @@
   /* ---------- Sizes ---------- */
   var vw = 1, vh = 1, narrow = false, Lb = 200, cw = 1, ch = 1, W = 1, H = 1, items = [], wall = null;
   var pw = 0, ph = 0, pw0 = 0, ph0 = 0, patchK = -1, ledH = 30, capH = 16, hintH = 16, footH = 40;
+  var belowW = 420, zoomBox = null, belowY = -1, belowSet = -1, maskCut = "", baked = 0, docked = false;
   function measure() {
     vw = window.innerWidth;
     vh = window.innerHeight;
@@ -89,6 +91,10 @@
     hintH = hint ? hint.offsetHeight || hintH : 0;
     footH = foot ? foot.offsetHeight : 0;
     room.style.setProperty("--foot-h", footH + "px");
+    belowW = below.offsetWidth || belowW;
+    var zb = zoomEl && zoomEl.offsetWidth ? zoomEl.getBoundingClientRect() : null;
+    zoomBox = zb ? { l: zb.left, t: zb.top } : null;
+    maskCut = "";
   }
   // A photograph's size on screen when it is framed.
   function shown(p) {
@@ -109,6 +115,7 @@
     wall.className = "cv-wall";
     plane.appendChild(wall);
     items = [];
+    baked = 0;
     cw = Lb * 1.16;
     ch = Lb * 0.97;
     // the wall is wider and taller than the window, zoomed right out, by a few cells, so copies never pop
@@ -262,6 +269,7 @@
     var cap = [p.title, p.place, p.year].filter(Boolean).join(" · ");
     capEl.textContent = cap;
     capEl.hidden = !cap;
+    belowW = below.offsetWidth || belowW;
     clearInterval(rollT);
     var live = FIELDS.filter(function (k) { return v[k]; }).concat("n");
     if (still()) { live.forEach(function (k) { setLed(k, v[k]); }); return; }
@@ -284,16 +292,36 @@
   // The framed photograph, sharp: swap the thumbnail for the full image once it has decoded.
   function sharpen(it) {
     if (sharp === it) return;
-    if (sharp) sharp.img.src = photos[sharp.i].thumb;
+    if (sharp) { sharp.img.src = photos[sharp.i].thumb; sharp.el.classList.remove("is-sharp"); }
     sharp = it;
+    it.el.classList.add("is-sharp");
     var p = photos[it.i];
     if (!p.src || p.src === p.thumb) return;
-    if (shown(p).w * (window.devicePixelRatio || 1) <= (it.img.naturalWidth || 0) * 1.05) return;
+    if (it.w * s * (window.devicePixelRatio || 1) <= (it.img.naturalWidth || 0) * 1.05) return;
     var pre = new Image();
     pre.src = p.src;
     var swap = function () { if (sharp === it) it.img.src = p.src; };
     if (pre.decode) pre.decode().then(swap, function () {});
     else pre.onload = swap;
+  }
+
+  // The veil outside the frame: the window, with the frame (as turned) cut out of it.
+  function cutMask(rad) {
+    var c = Math.cos(rad), sn = Math.sin(rad), a = fr.L / 2, b = fr.S / 2, cx = vw / 2, cy = vh / 2;
+    var pts = [[-a, -b], [a, -b], [a, b], [-a, b]].map(function (p) {
+      return (cx + p[0] * c - p[1] * sn).toFixed(1) + "px " + (cy + p[0] * sn + p[1] * c).toFixed(1) + "px";
+    });
+    var cut = "polygon(evenodd, 0 0, " + vw + "px 0, " + vw + "px " + vh + "px, 0 " + vh + "px, 0 0, " + pts.join(", ") + ", " + pts[0] + ", 0 0)";
+    if (cut === maskCut) return;
+    maskCut = cut;
+    maskEl.style.webkitClipPath = cut;
+    maskEl.style.clipPath = cut;
+  }
+  // Where the readout docks: above the footer, and above the zoom buttons where it would meet them.
+  function dockY(h) {
+    var y = vh - footH - 14;
+    if (zoomBox && vw / 2 + belowW / 2 > zoomBox.l - 8) y = Math.min(y, zoomBox.t - 12);
+    return Math.max(vh / 2, y - h);
   }
 
   /* ---------- The frame loop ---------- */
@@ -336,15 +364,31 @@
     var sGoal = Math.max(S_MIN, (sTo + (1 - sTo) * pull) * z);
     if (calm || pinch) s = sGoal;
     else if (!waking) s += (sGoal - s) * ease(dt, opening ? 380 : 140);
-    wall.style.transform = "scale(" + s.toFixed(4) + ")";
+    // While the wall moves it is scaled as one layer. Once it rests, the scale goes into
+    // each photograph's own size instead, so each is drawn at the size it shows: Safari
+    // keeps a scaled layer at the resolution it was drawn at, and would show it soft.
+    var rest = !moving && !waking && !pinch && Math.abs(s - sGoal) < 2e-4;
+    if (rest) s = sGoal;
+    var bake = rest ? s : 0;
+    if (bake !== baked) {
+      baked = bake;
+      wall.style.transform = bake ? "none" : "scale(" + s.toFixed(4) + ")";
+      for (var b2 = 0; b2 < items.length; b2++) {
+        var ib = items[b2], f = bake || 1;
+        ib.el.style.width = (ib.w * f).toFixed(1) + "px";
+        ib.el.style.height = (ib.h * f).toFixed(1) + "px";
+        ib.px = 1e9;
+      }
+    } else if (!baked) wall.style.transform = "scale(" + s.toFixed(4) + ")";
     for (var k = 0; k < items.length; k++) {
       var it = items[k], q = posOf(it, ox, oy);
       it.x = q.x;
       it.y = q.y;
-      if (Math.abs(q.x - it.px) > 0.05 || Math.abs(q.y - it.py) > 0.05) {
-        it.px = q.x;
-        it.py = q.y;
-        it.el.style.transform = "translate3d(" + q.x.toFixed(2) + "px," + q.y.toFixed(2) + "px,0)";
+      var X = baked ? vw / 2 + (q.x - vw / 2) * baked : q.x, Y = baked ? vh / 2 + (q.y - vh / 2) * baked : q.y;
+      if (Math.abs(X - it.px) > 0.05 || Math.abs(Y - it.py) > 0.05) {
+        it.px = X;
+        it.py = Y;
+        it.el.style.transform = "translate3d(" + X.toFixed(2) + "px," + Y.toFixed(2) + "px,0)";
       }
     }
 
@@ -373,11 +417,22 @@
       var rad = (fr.rot * Math.PI) / 180;
       var halfH = (fr.L * Math.abs(Math.sin(rad)) + fr.S * Math.abs(Math.cos(rad))) / 2;
       vf.style.setProperty("--fy", halfH.toFixed(1) + "px");
+      cutMask(rad);
+    }
+    // The readout sits under the frame lines; zoomed out, when they close round a small
+    // photograph among the others, it docks at the foot of the window, clear of the wall.
+    var radB = (fr.rot * Math.PI) / 180;
+    var underY = vh / 2 + (fr.L * Math.abs(Math.sin(radB)) + fr.S * Math.abs(Math.cos(radB))) / 2 + 16;
+    var belowH = ledH + (capEl.hidden ? 0 : capH + 10);
+    var dock = fz < 0.97;
+    if (dock !== docked) { docked = dock; vf.classList.toggle("is-docked", dock); }
+    var bGoal = dock ? dockY(belowH) : underY;
+    belowY = belowY < 0 || calm ? bGoal : belowY + (bGoal - belowY) * ease(dt, 110);
+    if (Math.abs(belowY - belowSet) > 0.3) {
+      belowSet = belowY;
+      vf.style.setProperty("--below-y", belowY.toFixed(1) + "px");
       // the hint goes when it would run into the footer
-      if (hint) {
-        var bottom = vh / 2 + halfH + 16 + ledH + (capEl.hidden ? 0 : capH + 10) + 10 + hintH;
-        hint.hidden = bottom > vh - footH - 6;
-      }
+      if (hint) hint.hidden = belowY + belowH + 10 + hintH > vh - footH - 6;
     }
 
     // which photograph is in the frame now, and how far it is from focus
@@ -620,18 +675,22 @@
   });
 
   /* ---------- The shutter ---------- */
+  // One click opens the close-up straight from where the photograph is, zoomed out or
+  // not; behind it the wall frames that photograph, ready for when it closes.
   function shoot(it, back) {
     hideHint();
     hold = 0;
     opening = false;
-    if (subject === it && lockOn === it && vf.classList.contains("is-focused")) { fire({ it: it, back: back }); return; }
+    pendingShot = null;
+    var framed = subject === it && lockOn === it;
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
-    pendingShot = { it: it, back: back };
+    fire({ it: it, back: back }, !framed);
   }
-  function fire(shot) {
+  function fire(shot, quick) {
     var it = shot.it, back = shot.back || keys[it.i];
     var open = function () { G.open(it.i, it.img, back, it.img.currentSrc || it.img.src); };
-    if (still() || !shutter.animate) { open(); return; }
+    // the shutter only crosses the frame lines when it is their photograph that is taken
+    if (quick || still() || !shutter.animate) { open(); return; }
     // two curtains: the first closes across the frame, the second opens behind it
     shutter.animate([
       { clipPath: "inset(0 100% 0 0)" },

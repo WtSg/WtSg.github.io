@@ -91,6 +91,8 @@ p { margin: 0; }
 .cv-jump::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: var(--led); box-shadow: 0 0 .5rem rgba(255, 74, 46, .7); }
 .cv-jump:hover { color: var(--led); }
 .cv-count { position: absolute; top: var(--gut); right: var(--gut); font: 400 .78rem/1.3 var(--mono); color: var(--muted); }
+/* On a phone the links go under the name, clear of the count. */
+@media (max-width: 599px) { .cv-mark { flex-direction: column; gap: .65rem; } }
 .cv-foot {
   display: flex;
   flex-wrap: wrap;
@@ -133,8 +135,11 @@ p { margin: 0; }
 .cv-on .cv-plane.is-dragging { cursor: grabbing; }
 .cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: zoom-in; }
 .cv-plane.is-dragging .cv-item { cursor: grabbing; }
+.cv-item.is-sharp img { dynamic-range-limit: no-limit; }
 .cv-item img {
   display: block;
+  /* HDR photographs glow only once framed and sharp, so the wall stays even while it moves */
+  dynamic-range-limit: standard;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -156,8 +161,9 @@ p { margin: 0; }
    and turned for portrait photographs, by canvas.js. */
 .vf-frame { left: 50%; top: 50%; width: 60vw; height: 40vw; transform: translate(-50%, -50%); }
 .vf-frame::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--line-dim); }
-/* Outside the frame the wall reads darker while it is still, as through the eyepiece. */
-.vf-mask { position: absolute; inset: 0; outline: 200vmax solid #000; opacity: .58; }
+/* Outside the frame the wall reads darker while it is still, as through the eyepiece:
+   a plain veil over the window with the frame cut out of it (canvas.js sets the cut). */
+.vf-mask { inset: 0; background: #000; opacity: .58; }
 .vf-c { position: absolute; z-index: 1; width: clamp(1.1rem, 2.6vmin, 2rem); height: clamp(1.1rem, 2.6vmin, 2rem); border: 0 solid var(--line); }
 .vf-c--tl { left: -1px; top: -1px; border-left-width: 1.5px; border-top-width: 1.5px; }
 .vf-c--tr { right: -1px; top: -1px; border-right-width: 1.5px; border-top-width: 1.5px; }
@@ -182,15 +188,15 @@ p { margin: 0; }
   left: 0;
   top: 0;
   max-width: none;
-  opacity: .6;
-  mix-blend-mode: screen;
+  opacity: .5;
 }
 .vf.is-focused .vf-patch { opacity: 0; transition-delay: .8s; }
 
 /* Under the frame: the LED readout, a caption when the photograph has one, the hint. */
+/* Zoomed out, it docks at the foot of the window instead (canvas.js sets --below-y). */
 .vf-below {
   left: 50%;
-  top: calc(50% + var(--fy) + 1rem);
+  top: var(--below-y, calc(50% + var(--fy) + 1rem));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -221,6 +227,9 @@ p { margin: 0; }
 .vf-led__focus .is-on, .vf.is-test .vf-led__focus i { color: var(--led); }
 .vf-led__cell--n { padding-left: 1rem; border-left: 1px solid rgba(255, 74, 46, .28); }
 .vf-caption { font: 400 .76rem/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
+/* Docked at the foot of the window it sits over the wall: solid, and the caption on a plate. */
+.vf.is-docked .vf-led { background: #050505; box-shadow: 0 0 0 1px rgba(255, 255, 255, .07), 0 .8rem 2rem rgba(0, 0, 0, .7); }
+.vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; background: rgba(5, 5, 5, .88); }
 .cv-hint { font: 400 .72rem/1.3 var(--mono); color: var(--muted); white-space: nowrap; transition: opacity .6s; }
 .cv-hint.is-gone { opacity: 0; }
 
