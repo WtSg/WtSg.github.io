@@ -260,6 +260,8 @@
     return { f: f, s: sh, sl: sl, iso: digits(String(e.iso || "").replace(/^ISO\s*/i, "")), mm: digits(e.focal), n: pad(p.i + 1), of: pad(photos.length) };
   }
   function setLed(k, v) {
+    // a value of another length changes the readout's width: measure it again
+    if (led[k].textContent.length !== v.length) ledEm = 0;
     led[k].textContent = v;
     led[k].setAttribute("data-off", v.replace(/\d/g, "8"));
   }
@@ -323,8 +325,10 @@
   // values change, at a large scale where type scales evenly. The digits keep one size for
   // every photograph whose values fit a full readout's width (LED_EM: F 2.8, 1/640, ISO 100,
   // 75 MM, the lamps, 06/36); a longer one scales down to fit. Zoomed far out, it stops
-  // shrinking with the frame lines where its digits would be too small to read.
-  var LED_EM = 28.4, LED_MIN = 7, ledFloor = -1;
+  // shrinking with the frame lines where its digits would be hard to read (LED_MIN), and
+  // round the smallest frame lines (a portrait photograph on a phone held sideways) it is
+  // never so narrow that they could not be read at all (LED_LEAST).
+  var LED_EM = 28.4, LED_MIN = 7, LED_LEAST = 6, ledFloor = -1;
   function ledNatural() {
     below.style.setProperty("--led-u", "100px");
     ledEl.style.width = "max-content";
@@ -339,7 +343,7 @@
   function fitLed(w, rest, fa) {
     if (!ledEm) ledNatural();
     var em = Math.max(ledEm, LED_EM);
-    var floorGoal = Math.min(rest, LED_MIN * em);
+    var floorGoal = Math.max(Math.min(rest, LED_MIN * em), LED_LEAST * em);
     ledFloor = ledFloor < 0 ? floorGoal : ledFloor + (floorGoal - ledFloor) * fa;
     w = Math.max(w, ledFloor);
     var u = w / em;
