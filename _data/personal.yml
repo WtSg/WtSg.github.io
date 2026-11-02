@@ -104,7 +104,7 @@ education:
     degree: BEng, Communication Engineering
     dates: "2019"
 
-# Photography site: set `url` once it exists; until then the section shows a placeholder.
+# Photography: the homepage section links to the gallery at /photography/.
+# Set `url` only to send visitors to a separate, external photography site instead.
 photography:
   url:
-  note: My photography site is in development.
