@@ -241,6 +241,12 @@
       // some lenses report a constant aperture as a range ("E 28-75mm F2.8-2.8")
       info.lens = String(get(exif, 0xA434) || "").replace(/F(\d+(?:\.\d+)?)-\1(?![\d.])/, "F$1");
       if (info.lens === info.camera) info.lens = "";
+      // iPhones name themselves in the lens ("iPhone 13 Pro back triple camera 9mm f/2.8")
+      var phone = /^(iPhone[^,]*?|iPad[^,]*?)\s+((?:back|front)\b.*)$/i.exec(info.lens);
+      if (phone) {
+        if (!info.camera || /^apple$/i.test(info.camera) || info.camera.toLowerCase().indexOf(phone[1].toLowerCase()) >= 0) info.camera = phone[1];
+        info.lens = phone[2];
+      }
       var focal = get(exif, 0x920A), fnum = get(exif, 0x829D), exp = get(exif, 0x829A), iso = get(exif, 0x8827);
       if (focal) info.focal = Math.round(focal) + " mm";
       if (fnum) info.aperture = "f/" + Math.round(fnum * 10) / 10;
