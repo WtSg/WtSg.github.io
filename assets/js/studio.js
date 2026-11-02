@@ -373,13 +373,26 @@
     ctx.fillText(text, x, y);
     ctx.restore();
   }
+  // A canvas as JPEG bytes. Some browsers return nothing for a wide-colour canvas, or one
+  // too large for them: then the picture is copied into a plain sRGB canvas and tried again.
+  function blobOf(c, q) {
+    return new Promise(function (resolve) { c.toBlob(resolve, "image/jpeg", q); });
+  }
   function toJpegBytes(c, q) {
-    return new Promise(function (resolve, reject) {
-      c.toBlob(function (b) {
-        if (!b) return reject(new Error("encode"));
-        b.arrayBuffer().then(function (ab) { resolve(new Uint8Array(ab)); }, reject);
-      }, "image/jpeg", q);
-    });
+    if (!c.width || !c.height) return Promise.reject(new Error("encode: empty picture (" + c.width + " × " + c.height + ")"));
+    return blobOf(c, q).then(function (b) {
+      if (b) return b;
+      var plain = document.createElement("canvas");
+      plain.width = c.width; plain.height = c.height;
+      var x = plain.getContext("2d");
+      if (!x) throw new Error("encode: no canvas (" + c.width + " × " + c.height + ")");
+      x.drawImage(c, 0, 0);
+      return blobOf(plain, q).then(function (b2) {
+        plain.width = plain.height = 0;
+        if (!b2) throw new Error("encode (" + c.width + " × " + c.height + ")");
+        return b2;
+      });
+    }).then(function (b) { return b.arrayBuffer(); }).then(function (ab) { return new Uint8Array(ab); });
   }
   var fontReady = (document.fonts && document.fonts.load)
     ? document.fonts.load("400 24px \"DejaVu Sans\"").catch(function () {})
