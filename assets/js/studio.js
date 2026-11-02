@@ -454,16 +454,9 @@
     return (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase()
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "photo";
   }
-  // Use the file name as a starting title only when it reads like words
-  // ("Charles_River_dusk"), never for camera numbering ("B_4098", "IMG_1234", "DSC01234").
-  function titleFromName(name) {
-    var base = name.replace(/\.[^.]+$/, "");
-    if (/^(img|dsc|dscf|dscn|pxl|mvimg|_mg|p\d{3}|gopr|dji)[_-]?\d/i.test(base)) return "";
-    var letters = (base.match(/[A-Za-z\u00C0-\u024F\u4E00-\u9FFF]/g) || []).length;
-    var digits = (base.match(/\d/g) || []).length;
-    if (!/[A-Za-z\u00C0-\u024F]{3,}|[\u4E00-\u9FFF]/.test(base) || digits >= letters) return "";
-    return base.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-  }
+  // A file name is never a title (camera numbers, "All Photos 1 of 1 (1)", exports):
+  // the title starts empty and is only what is typed.
+  function titleFromName() { return ""; }
   function today() { var d = new Date(); return d.toISOString().slice(0, 10); }
   function newId(title) {
     var stamp = today().replace(/-/g, ""), rand = Math.random().toString(36).slice(2, 6);
