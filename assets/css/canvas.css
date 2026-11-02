@@ -163,15 +163,18 @@ p { margin: 0; }
 /* The bright-line frame: a faint full outline, bright corners. It is sized,
    and turned for portrait photographs, by canvas.js. */
 .vf-frame { left: 50%; top: 50%; width: 60vw; height: 40vw; transform: translate(-50%, -50%); }
-.vf-frame::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--line-dim); }
+/* A rangefinder's bright-line frame has rounded corners (--vf-r; canvas.js cuts the veil
+   to the same radius). */
+.vf { --vf-r: 10px; }
+.vf-frame::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--line-dim); border-radius: var(--vf-r); }
 /* Outside the frame the wall reads darker while it is still, as through the eyepiece:
    a plain veil over the window with the frame cut out of it (canvas.js sets the cut). */
 .vf-mask { inset: 0; background: #000; opacity: .58; }
 .vf-c { position: absolute; z-index: 1; width: clamp(1.1rem, 2.6vmin, 2rem); height: clamp(1.1rem, 2.6vmin, 2rem); border: 0 solid var(--line); }
-.vf-c--tl { left: -1px; top: -1px; border-left-width: 1.5px; border-top-width: 1.5px; }
-.vf-c--tr { right: -1px; top: -1px; border-right-width: 1.5px; border-top-width: 1.5px; }
-.vf-c--bl { left: -1px; bottom: -1px; border-left-width: 1.5px; border-bottom-width: 1.5px; }
-.vf-c--br { right: -1px; bottom: -1px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+.vf-c--tl { left: -1px; top: -1px; border-left-width: 1.5px; border-top-width: 1.5px; border-top-left-radius: var(--vf-r); }
+.vf-c--tr { right: -1px; top: -1px; border-right-width: 1.5px; border-top-width: 1.5px; border-top-right-radius: var(--vf-r); }
+.vf-c--bl { left: -1px; bottom: -1px; border-left-width: 1.5px; border-bottom-width: 1.5px; border-bottom-left-radius: var(--vf-r); }
+.vf-c--br { right: -1px; bottom: -1px; border-right-width: 1.5px; border-bottom-width: 1.5px; border-bottom-right-radius: var(--vf-r); }
 
 /* The focus patch: a ghost of the picture slides into register as it settles. */
 .vf-patch {
@@ -231,6 +234,21 @@ p { margin: 0; }
 .vf-led__focus .is-on, .vf.is-test .vf-led__focus i { color: var(--led); }
 .vf-led__cell--n { padding-left: 1rem; border-left: 1px solid rgba(255, 74, 46, .28); }
 .vf-caption { font: 400 .76rem/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
+/* The camera maker's mark, in the ink colour and sized to the text beside it; a maker with
+   no mark has its name set as a wordmark. */
+.gl-mark {
+  display: inline-block;
+  height: 1.2em;
+  width: calc(1.2em * var(--mark-ar, 1));
+  vertical-align: -.25em;
+  background: currentColor;
+  -webkit-mask: var(--mark) center / contain no-repeat;
+  mask: var(--mark) center / contain no-repeat;
+}
+.gl-mark--wide { height: .8em; width: calc(.8em * var(--mark-ar, 1)); vertical-align: -.05em; }
+.gl-mark--word { width: auto; height: auto; background: none; -webkit-mask: none; mask: none; font: 600 .82em/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; vertical-align: baseline; }
+.gl .gl__spec [data-k="camera"] dd { color: var(--ink); }
+.gl-mark[aria-label="Leica"] { background: #e3001b; }
 /* Docked at the foot of the window it sits over the wall, as an optical viewfinder's LEDs sit
    over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
 .vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }
@@ -356,15 +374,16 @@ p { margin: 0; }
     .gl .gl__img, .gl__frame { width: min(100cqw - 2.4rem, (100cqh - 2.6rem) * var(--ar, 1.5)); }
   }
 }
-.gl__frame::before, .gl__frame::after { content: ""; position: absolute; inset: -.9rem; }
+.gl__frame::before, .gl__frame::after { content: ""; position: absolute; inset: -.9rem; border-radius: 12px; }
 .gl__frame::after { border: 1px solid var(--line-dim); }
+/* the bright corners: the rounded outline, shown only at its four corners */
 .gl__frame::before {
-  --c: linear-gradient(var(--line), var(--line));
-  background:
-    var(--c) left top / var(--corner) 1.5px no-repeat, var(--c) left top / 1.5px var(--corner) no-repeat,
-    var(--c) right top / var(--corner) 1.5px no-repeat, var(--c) right top / 1.5px var(--corner) no-repeat,
-    var(--c) left bottom / var(--corner) 1.5px no-repeat, var(--c) left bottom / 1.5px var(--corner) no-repeat,
-    var(--c) right bottom / var(--corner) 1.5px no-repeat, var(--c) right bottom / 1.5px var(--corner) no-repeat;
+  --m: linear-gradient(#000, #000);
+  border: 1.5px solid var(--line);
+  -webkit-mask: var(--m) left top / var(--corner) var(--corner) no-repeat, var(--m) right top / var(--corner) var(--corner) no-repeat,
+    var(--m) left bottom / var(--corner) var(--corner) no-repeat, var(--m) right bottom / var(--corner) var(--corner) no-repeat;
+  mask: var(--m) left top / var(--corner) var(--corner) no-repeat, var(--m) right top / var(--corner) var(--corner) no-repeat,
+    var(--m) left bottom / var(--corner) var(--corner) no-repeat, var(--m) right bottom / var(--corner) var(--corner) no-repeat;
 }
 
 /* Under it: the LED readout, the caption, and the camera and lens. */
