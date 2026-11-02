@@ -252,6 +252,17 @@
     <section class="section wrap" id="photography" aria-labelledby="photography-h">
       <h2 id="photography-h">Photography</h2>
       {%- assign fig_n = fig_n | plus: 1 %}
+      {%- assign gallery = site.data.gallery %}
+      {%- if gallery and gallery.size > 0 %}
+      <figure class="fig2 fig2--photos">
+        <a class="photo-strip" href="{{ base }}/photography/" aria-label="Open the photography gallery">
+          {%- for ph in gallery limit: 4 %}
+          <span class="photo-strip__frame"><img src="{{ base }}{{ ph.thumb }}" alt="{{ ph.title | strip | default: 'Photograph' }}" loading="lazy" decoding="async" draggable="false"></span>
+          {%- endfor %}
+        </a>
+        <figcaption><span class="figlabel">Figure {{ fig_n }}.</span> Latest photographs. <a href="{{ base }}/photography/">See all {{ gallery.size }} in the gallery</a>.</figcaption>
+      </figure>
+      {%- else %}
       <figure class="fig2">
         <div class="axes">
           <div class="axes__plot axes__plot--photo">
@@ -270,6 +281,7 @@
           {%- endif %}
         </figcaption>
       </figure>
+      {%- endif %}
     </section>
     {%- endif %}
   </main>
