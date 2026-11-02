@@ -1,7 +1,8 @@
 /*
  * Endless canvas, seen through a rangefinder.
- * - The photographs hang on a wall that repeats in every direction. Drag it,
- *   scroll it or use the arrow keys; it carries on with inertia.
+ * - The photographs hang on a wall that repeats in every direction. Drag it or
+ *   use the arrow keys; it carries on with inertia. Ctrl (or Cmd) + wheel moves
+ *   to the next or the previous photograph.
  * - The faster it moves, the further the lens pulls back: a hard swipe shows
  *   the whole wall, a gentle drag stays close.
  * - When it slows, the nearest photograph glides into the bright-line frame
@@ -13,7 +14,7 @@
  * - The LED readout counts the frame and shows the photograph's real settings
  *   when it has them; its digits roll as the frame changes.
  * - Click (or Enter) fires a focal-plane shutter and opens the photograph.
- * - Zoom: pinch with two fingers, pinch a trackpad, Ctrl + scroll, the - and +
+ * - Zoom: the mouse wheel, a pinch with two fingers or on a trackpad, the - and +
  *   buttons or keys (0 resets). Out, more of the wall shows and the frame lines
  *   close round the photograph; in, the photograph grows past them. It still
  *   comes to rest on the nearest photograph.
@@ -503,28 +504,43 @@
   }
   plane.addEventListener("pointerup", pointerEnd);
   plane.addEventListener("pointercancel", pointerEnd);
+  // The wheel zooms, about the pointer. With Ctrl (or Cmd) held, each notch moves to the
+  // next or the previous photograph. A trackpad pinch also arrives as Ctrl + wheel, but
+  // without the key really held, so it is told apart by the key itself and zooms.
+  var keyHeld = false, stepAcc = 0, stepLast = 0, stepAt = 0;
+  function stepPhoto(dir) {
+    var cur = lockOn ? lockOn.i : subject ? subject.i : 0;
+    hold = 0;
+    opening = false;
+    hideHint();
+    pendingShot = null;
+    lockPhoto(mod(cur + dir, N));
+  }
+  window.addEventListener("keydown", function (e) { if (e.key === "Control" || e.key === "Meta") keyHeld = true; });
+  window.addEventListener("keyup", function (e) { if (e.key === "Control" || e.key === "Meta") keyHeld = false; });
+  window.addEventListener("blur", function () { keyHeld = false; });
   window.addEventListener("wheel", function (e) {
     if (root.classList.contains("gl-open")) return;
     e.preventDefault();
-    if (e.ctrlKey) {
-      // Ctrl + scroll, and a trackpad pinch (which browsers send as Ctrl + scroll), zoom
-      var zu = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 300 : 1;
-      setZoom(zr() * Math.exp(-clamp(e.deltaY * zu, -60, 60) * 0.005), e.clientX, e.clientY);
-      wheeling = true;
-      clearTimeout(wheelT);
-      wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 220);
+    var unit = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 300 : 1;
+    var dy = (e.deltaY || (e.shiftKey ? e.deltaX : 0)) * unit, now = performance.now();
+    if ((e.ctrlKey || e.metaKey) && keyHeld) {
+      // a notch (or a steady scroll) at a time, not every event of it
+      if (now - stepLast > 320) stepAcc = 0;
+      stepLast = now;
+      stepAcc += dy;
+      if (Math.abs(stepAcc) >= 40 && now - stepAt > 260) {
+        stepPhoto(stepAcc > 0 ? 1 : -1);
+        stepAcc = 0;
+        stepAt = now;
+      }
       return;
     }
-    takeOver();
-    var unit = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? vh : 1;
-    var dx = e.deltaX * unit, dy = e.deltaY * unit;
-    if (e.shiftKey && !dx) { dx = dy; dy = 0; }
-    tx -= dx / s;
-    ty -= dy / s;
-    moved += Math.hypot(dx, dy) * 0.6;
+    // a pinch zooms faster per event than a wheel notch
+    setZoom(zr() * Math.exp(-clamp(dy, -60, 60) * (e.ctrlKey ? 0.01 : 0.0045)), e.clientX, e.clientY);
     wheeling = true;
     clearTimeout(wheelT);
-    wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 170);
+    wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 220);
   }, { passive: false });
   // Safari on a Mac sends a trackpad pinch as gesture events. On touch screens the
   // pointers above do the pinch; there these only keep the page itself from zooming.
