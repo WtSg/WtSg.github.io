@@ -68,9 +68,9 @@ permalink: /studio/
     <section class="studio__step" aria-labelledby="add-h">
       <h2 id="add-h">2. Add photos</h2>
       <label class="drop" id="drop" for="files">
-        <input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple>
+        <input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif,.avif" multiple>
         <span class="drop__main">Choose photos, or drop them here</span>
-        <span class="drop__sub">JPEG, PNG or WebP. HEIC works in Safari.</span>
+        <span class="drop__sub">JPEG, HEIC, AVIF, PNG or WebP, HDR photos included. HEIC opens best in Safari.</span>
       </label>
       <label class="check"><input id="watermark" type="checkbox" checked> Add a subtle “© {{ site.time | date: "%Y" }} {{ me.name }}” watermark</label>
       <ol id="queue" class="queue" aria-label="Photos to publish"></ol>

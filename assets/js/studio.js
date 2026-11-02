@@ -173,6 +173,22 @@
     } catch (e) {}
     return "";
   }
+  // True when the file is an HDR photo: a gain-map image (Ultra HDR / Adobe gain map
+  // JPEG, Apple HEIC with an HDR gain map) or a PQ / HLG encoded AVIF or HEIC.
+  function detectHdr(buf) {
+    try {
+      var bytes = new Uint8Array(buf);
+      var text = new TextDecoder("latin1").decode(bytes);
+      if (/hdrgm:|hdrgainmap|urn:iso:std:iso:ts:21496|HDRGainMap/i.test(text)) return true;
+      var i = text.indexOf("nclx");
+      while (i >= 0) {
+        var transfer = (bytes[i + 6] << 8) | bytes[i + 7];      // after primaries (u16)
+        if (transfer === 16 || transfer === 18) return true;    // PQ (16) or HLG (18)
+        i = text.indexOf("nclx", i + 4);
+      }
+    } catch (e) {}
+    return false;
+  }
   function exifSegment(artist, copyright) {
     var enc = function (s) {
       var ascii = s.replace(/[^\x20-\x7E]/g, "");
@@ -224,23 +240,32 @@
       im.src = url;
     });
   }
+  // Draw in Display P3 where the browser supports it, so wide-colour and HDR photos
+  // keep their colour; the encoder then tags the JPEG with a Display P3 profile.
+  var COLOR_SPACE = (function () {
+    try {
+      var ctx = document.createElement("canvas").getContext("2d", { colorSpace: "display-p3" });
+      return ctx && ctx.getContextAttributes && ctx.getContextAttributes().colorSpace === "display-p3" ? "display-p3" : "srgb";
+    } catch (e) { return "srgb"; }
+  })();
   function canvas(w, h) { var c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+  function ctx2d(c) { return c.getContext("2d", { colorSpace: COLOR_SPACE }) || c.getContext("2d"); }
   // Halve repeatedly, then do the final step, for clean downscaling in every browser.
   function scaleTo(src, sw, sh, w, h) {
     var cur = src, cw = sw, ch = sh;
     while (cw / 2 >= w && ch / 2 >= h) {
-      var half = canvas(Math.round(cw / 2), Math.round(ch / 2)), hc = half.getContext("2d");
+      var half = canvas(Math.round(cw / 2), Math.round(ch / 2)), hc = ctx2d(half);
       hc.imageSmoothingEnabled = true; hc.imageSmoothingQuality = "high";
       hc.drawImage(cur, 0, 0, half.width, half.height);
       cur = half; cw = half.width; ch = half.height;
     }
-    var out = canvas(w, h), ctx = out.getContext("2d");
+    var out = canvas(w, h), ctx = ctx2d(out);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
     ctx.drawImage(cur, 0, 0, w, h);
     return out;
   }
   function drawWatermark(c) {
-    var ctx = c.getContext("2d"), L = Math.max(c.width, c.height);
+    var ctx = ctx2d(c), L = Math.max(c.width, c.height);
     var size = Math.max(11, Math.round(L * 0.0125)), pad = Math.round(L * 0.018);
     ctx.save();
     ctx.font = "400 " + size + "px \"DejaVu Sans\", Verdana, sans-serif";
@@ -304,8 +329,8 @@
 
   // ---------- queue UI ----------
   function addFiles(list) {
-    var files = Array.prototype.filter.call(list, function (f) { return /^image\//.test(f.type) || /\.(heic|heif)$/i.test(f.name); });
-    if (!files.length) { setStatus(publishStatus, "Those files aren't photos. Choose JPEG, PNG or WebP images.", "error"); return; }
+    var files = Array.prototype.filter.call(list, function (f) { return /^image\//.test(f.type) || /\.(heic|heif|avif|jpe?g|png|webp)$/i.test(f.name); });
+    if (!files.length) { setStatus(publishStatus, "Those files aren't photos. Choose JPEG, HEIC, AVIF, PNG or WebP images.", "error"); return; }
     setStatus(publishStatus, "");
     files.forEach(function (file) {
       var item = { key: Math.random().toString(36).slice(2), file: file, name: file.name, title: titleFromName(file.name), place: "", year: "", status: "preparing" };
@@ -324,10 +349,12 @@
     if (!item) return;
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
-    var yearP = item.year ? Promise.resolve(item.year)
-      : item.file.slice(0, 262144).arrayBuffer().then(readExifYear).catch(function () { return ""; });
-    Promise.all([prepare(item), yearP]).then(function (r) {
-      if (!item.year && r[1]) item.year = r[1];
+    var headP = item.file.slice(0, 524288).arrayBuffer().then(function (buf) {
+      return { year: readExifYear(buf), hdr: detectHdr(buf) };
+    }).catch(function () { return { year: "", hdr: false }; });
+    Promise.all([prepare(item), headP]).then(function (r) {
+      if (!item.year && r[1].year) item.year = r[1].year;
+      item.hdr = r[1].hdr;
       item.status = "ready";
     }, function () {
       item.status = "error";
@@ -364,10 +391,13 @@
     var meta = document.createElement("p");
     meta.className = "queue__meta";
     if (item.status === "error") {
-      meta.textContent = item.name + ": this browser can't read it. For HEIC, use Safari or export the photo as JPEG.";
+      meta.textContent = item.name + ": this browser can't read it. For HEIC or HDR photos, use Safari, or export the photo as JPEG.";
       meta.classList.add("is-error");
     } else if (item.status === "ready") {
-      meta.textContent = item.name + " → " + item.w + " × " + item.h + ", " + kb(item.full.length) + " (from " + kb(item.file.size) + "). Location and camera data removed.";
+      meta.textContent = item.name + " → " + item.w + " × " + item.h + ", " + kb(item.full.length) + " (from " + kb(item.file.size) + "). Location and camera data removed." +
+        (item.hdr ? (COLOR_SPACE === "display-p3"
+          ? " HDR photo: published as a standard web image that keeps its wide colour."
+          : " HDR photo: published as a standard web image.") : "");
     } else {
       meta.textContent = item.name + " · preparing…";
     }
@@ -606,7 +636,7 @@
   });
 
   // Exposed for automated checks only; does nothing on its own.
-  window.__galleryStudio = { exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, parseGallery: parseGallery, serializeGallery: serializeGallery };
+  window.__galleryStudio = { colorSpace: COLOR_SPACE, detectHdr: detectHdr, exifSegment: exifSegment, insertSegment: insertSegment, readExifYear: readExifYear, parseGallery: parseGallery, serializeGallery: serializeGallery };
 
   // ---------- start ----------
   var saved = readToken();
