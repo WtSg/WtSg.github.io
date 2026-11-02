@@ -19,7 +19,7 @@
  * Apple's gain map means: HDR = SDR x (1 + (headroom - 1) x linear(g)). It is
  * rewritten exactly into the ISO form (log2 gain, gamma 1) pixel by pixel.
  *
- * Exposes window.StudioHDR = { read, join, decodeHeif }.
+ * Exposes window.StudioHDR = { read, join, decodeHeif, exifRanges }.
  */
 (function () {
   "use strict";
@@ -423,6 +423,7 @@
   }
   // A frame's luma (or full colour) as 8-bit RGBA, straight from its planes: no colour management.
   async function framePixels(frame, full, lumaOnly) {
+    if (frame.rgba) return rgbaPixels(frame, lumaOnly);
     var fmt = frame.format;
     if (!fmt) return null;
     var w = frame.visibleRect.width, h = frame.visibleRect.height, buf = new Uint8Array(frame.allocationSize());
@@ -477,11 +478,144 @@
     if (M) cs.matrix = M;
     return cs;
   }
+  /* ---------- AV1 without WebCodecs ---------- */
+  // Safari decodes AV1 in WebCodecs only on some chips, and never the 4:4:4 "High" profile
+  // of Lightroom's HDR AVIF. There each tile is wrapped as a one-picture AVIF of its own and
+  // read by libavif compiled to WebAssembly (avif/, jSquash's build), tile by tile so a
+  // 50-megapixel photo never sits whole in its memory. It loads only when needed.
+  // The decoding runs in workers (avif/worker.js), a few tiles at once on a machine with
+  // the cores for it, so the page keeps moving; where a worker can't start, on the page.
+  var HERE = (document.currentScript && document.currentScript.src) || location.href, avifLib = null, onTile = null;
+  var pool = [], noWorkers = typeof Worker === "undefined", jobs = {}, jobNo = 0;
+  function avifDecoder() {
+    if (!avifLib) {
+      avifLib = import(new URL("avif/decode.js", HERE).href).then(function (m) { return m.default; });
+      avifLib.catch(function () { avifLib = null; });
+    }
+    return avifLib;
+  }
+  function onPage(bytes, depth) {
+    return avifDecoder().then(function (decode) { return decode(bytes, { bitDepth: depth }); },
+      function (e) { throw fail("the AV1 decoder did not load (" + ((e && e.message) || e) + ")"); });
+  }
+  // As many workers as tiles can usefully run side by side: half the cores, at most 4 (2 on phones).
+  function lanes() {
+    if (noWorkers) return 1;
+    var cores = navigator.hardwareConcurrency || 2, phone = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    return Math.max(1, Math.min(phone ? 2 : 4, cores >> 1));
+  }
+  function worker(n) {
+    if (noWorkers) return null;
+    if (pool[n]) return pool[n];
+    var w;
+    try { w = new Worker(new URL("avif/worker.js", HERE).href, { type: "module" }); }
+    catch (e) { noWorkers = true; return null; }
+    w.onmessage = function (e) {
+      var j = jobs[e.data.id];
+      if (!j) return;
+      delete jobs[e.data.id];
+      if (e.data.ok) j.resolve(e.data); else j.reject(new Error(e.data.error));
+    };
+    // the worker itself could not run (no module workers, or blocked): every waiting job goes to the page
+    w.onerror = function (e) {
+      if (e && e.preventDefault) e.preventDefault();
+      noWorkers = true;
+      stopWorkers();
+    };
+    return (pool[n] = w);
+  }
+  // Ends the workers, and their memory with them.
+  function stopWorkers() {
+    pool.forEach(function (w) { try { w.terminate(); } catch (e) {} });
+    pool = [];
+    Object.keys(jobs).forEach(function (k) { var j = jobs[k]; delete jobs[k]; j.reject(new Error("no worker")); });
+  }
+  function decodeAvif(n, bytes, depth) {
+    var w = worker(n);
+    if (!w) return onPage(bytes, depth);
+    return new Promise(function (resolve, reject) {
+      var id = ++jobNo;
+      jobs[id] = { resolve: resolve, reject: reject };
+      w.postMessage({ id: id, bytes: bytes, depth: depth });
+    }).catch(function (e) {
+      if (noWorkers) return onPage(bytes, depth);
+      throw e;
+    });
+  }
+  function be(n, bytes) { var a = new Uint8Array(bytes); for (var i = bytes - 1; i >= 0; i--) { a[i] = n % 256; n = Math.floor(n / 256); } return a; }
+  function box(type, parts) { var body = concat(parts); return concat([be(body.length + 8, 4), ascii(type), body]); }
+  function fullBox(type, ver, parts) { return box(type, [new Uint8Array([ver, 0, 0, 0])].concat(parts)); }
+  // One coded AV1 picture as a minimal AVIF file: its configuration, size, bit depth and
+  // colour (colr: the tile's own, else its grid's), then the coded data.
+  function oneAvif(h, tile, sz, colr) {
+    var cfg = prop(tile, "av1C");
+    if (!cfg) throw fail("no decoder configuration");
+    var c = h.u8.subarray(cfg.data, cfg.end), d = c[2], depth = d & 64 ? (d & 32 ? 12 : 10) : 8, mono = (d & 16) !== 0;
+    var props = [box("av1C", [c]), fullBox("ispe", 0, [be(sz.w, 4), be(sz.h, 4)]),
+      fullBox("pixi", 0, [new Uint8Array(mono ? [1, depth] : [3, depth, depth, depth])])];
+    if (colr) props.push(box("colr", [h.u8.subarray(colr.data, colr.end)]));
+    var assoc = [0x81];
+    for (var i = 2; i <= props.length; i++) assoc.push(i);
+    var data = itemData(h, tile);
+    var ftyp = box("ftyp", [ascii("avif"), be(0, 4), ascii("avifmif1miaf")]);
+    var meta = function (at) {
+      return fullBox("meta", 0, [
+        fullBox("hdlr", 0, [be(0, 4), ascii("pict"), be(0, 12), new Uint8Array(1)]),
+        fullBox("pitm", 0, [be(1, 2)]),
+        fullBox("iloc", 0, [new Uint8Array([0x44, 0]), be(1, 2), be(1, 2), be(0, 2), be(1, 2), be(at, 4), be(data.length, 4)]),
+        fullBox("iinf", 0, [be(1, 2), fullBox("infe", 2, [be(1, 2), be(0, 2), ascii("av01"), new Uint8Array(1)])]),
+        box("iprp", [box("ipco", props), fullBox("ipma", 0, [be(1, 4), be(1, 2), new Uint8Array([assoc.length].concat(assoc))])])
+      ]);
+    };
+    var head = ftyp.length + meta(0).length + 8;
+    return { bytes: concat([ftyp, meta(head), be(data.length + 8, 4), ascii("mdat"), data]), depth: depth };
+  }
+  // The same tiles as decodeTiles, through WebAssembly. Each arrives as RGBA in the
+  // picture's own primaries and transfer (no colour management): 8-bit, or at the coded
+  // depth when deep is set; the frame-like object says which.
+  async function decodeTilesAv1(h, ids, item, deep, at, onFrame) {
+    try { return await av1Tiles(h, ids, item, deep, at, onFrame); } finally { stopWorkers(); }
+  }
+  async function av1Tiles(h, ids, item, deep, at, onFrame) {
+    var colrOf = function (t) { return prop(t, "colr") || prop(item, "colr"); };
+    var tell = function (k) { if (onTile) { try { onTile(k, ids.length); } catch (e) {} } };
+    var next = 0, done = 0, failed = false;
+    var lane = async function (n) {
+      while (next < ids.length && !failed) {
+        var k = next++, t = h.items[ids[k]], sz = size(h, t), img = null;
+        if (!sz) throw fail("AV1 tile without a size");
+        var one = oneAvif(h, t, sz, colrOf(t)), depth = deep ? one.depth : 8;
+        var why = "";
+        try { img = await decodeAvif(n, one.bytes.buffer, depth); } catch (e) { if (e && e.hdr) throw e; why = (e && e.message) || String(e); }
+        if (!img || !img.data) throw fail("the AV1 decoder could not read tile " + (k + 1) + " of " + ids.length + (why ? " (" + why + ")" : ""));
+        if (failed) return;
+        var xy = at(k);
+        await onFrame({ rgba: img.data, depth: depth, visibleRect: { width: img.width, height: img.height } }, xy[0], xy[1]);
+        tell(++done);
+      }
+    };
+    tell(0);
+    var all = [];
+    for (var n = 0; n < Math.min(lanes(), ids.length); n++) all.push(lane(n).catch(function (e) { failed = true; throw e; }));
+    await Promise.all(all);
+  }
+  // Decoded RGBA (from the WebAssembly path) as an 8-bit ImageData, or its first channel as grey.
+  function rgbaPixels(f, lumaOnly) {
+    var w = f.visibleRect.width, h = f.visibleRect.height, src = f.rgba, k = 255 / ((1 << f.depth) - 1);
+    if (f.depth === 8 && !lumaOnly) return new ImageData(new Uint8ClampedArray(src.buffer, src.byteOffset, w * h * 4), w, h);
+    var out = new Uint8ClampedArray(w * h * 4);
+    for (var i = 0; i < out.length; i += 4) {
+      out[i] = src[i] * k; out[i + 1] = (lumaOnly ? src[i] : src[i + 1]) * k; out[i + 2] = (lumaOnly ? src[i] : src[i + 2]) * k; out[i + 3] = 255;
+    }
+    return new ImageData(out, w, h);
+  }
+
   // Decodes a coded HEVC (or AV1) image item, a single image or a grid of tiles, handing
   // each decoded tile to onFrame(frame, x, y) as it arrives; the tile is released right
-  // after, so a hardware decoder never runs out of frames on a large grid.
+  // after, so a hardware decoder never runs out of frames on a large grid. AV1 the browser
+  // cannot decode goes to WebAssembly instead (see decodeTilesAv1). mode: "draw" (colour-
+  // managed), "raw" or "luma" (gain maps, 8-bit), "linear" (PQ/HLG at full depth).
   async function decodeTiles(h, item, mode, onFrame) {
-    if (typeof VideoDecoder === "undefined" || typeof EncodedVideoChunk === "undefined") throw fail("no WebCodecs");
     var g = item.type === "grid" ? grid(h, item) : null, ids = g ? g.tiles : [item.id];
     if (!ids.length) throw fail("empty grid");
     var tile = h.items[ids[0]], av1 = tile && tile.type === "av01";
@@ -494,16 +628,23 @@
     var cs = videoColorSpace(nc);
     if (cs) config.colorSpace = cs;
     else if (mode === "draw") config.colorSpace = { primaries: "smpte432", transfer: "iec61966-2-1", matrix: "smpte170m", fullRange: true };
-    var support = await VideoDecoder.isConfigSupported(config);
-    if (!support || !support.supported) throw fail("this browser cannot decode " + config.codec);
     var ts = size(h, tile), W = g ? g.w : (size(h, item) || ts).w, H = g ? g.h : (size(h, item) || ts).h;
     var cols = g ? g.cols : 1, tw = ts ? ts.w : W, th = ts ? ts.h : H;
+    var at = function (k) { return [(k % cols) * tw, Math.floor(k / cols) * th]; };
+    var wasm = function () { return decodeTilesAv1(h, ids, item, mode === "linear", at, onFrame).then(function () { return { w: W, h: H, nc: nc }; }); };
+    var webCodecs = typeof VideoDecoder !== "undefined" && typeof EncodedVideoChunk !== "undefined";
+    var support = null;
+    if (webCodecs) { try { support = await VideoDecoder.isConfigSupported(config); } catch (e) { support = null; } }
+    if (!support || !support.supported) {
+      if (av1) return wasm();
+      throw fail(webCodecs ? "this browser cannot decode " + config.codec : "no WebCodecs");
+    }
     var pending = [], error = null, count = 0;
     var dec = new VideoDecoder({
       output: function (f) {
         count++;
-        var k = f.timestamp, x = (k % cols) * tw, y = Math.floor(k / cols) * th;
-        pending.push(Promise.resolve().then(function () { return onFrame(f, x, y); }).then(
+        var xy = at(f.timestamp);
+        pending.push(Promise.resolve().then(function () { return onFrame(f, xy[0], xy[1]); }).then(
           function (v) { try { f.close(); } catch (e) {} return v; },
           function (e) { try { f.close(); } catch (e2) {} throw e; }));
       },
@@ -520,6 +661,10 @@
       if (error) throw error;
       if (count !== ids.length) throw fail("decoded " + count + " of " + ids.length + " tiles");
       return { w: W, h: H, nc: nc };
+    } catch (e) {
+      // a decoder that said yes and then failed before a single tile: AV1 can still go the other way
+      if (av1 && !count) { if (dec.state !== "closed") dec.close(); return wasm(); }
+      throw e;
     } finally {
       if (dec.state !== "closed") dec.close();
     }
@@ -538,6 +683,16 @@
       if (mode !== "draw") {
         var px = await framePixels(f, nc ? nc.full : true, mode === "luma");
         if (px) { ctx.putImageData(px, x, y); return; }
+      }
+      if (f.rgba) {
+        // WebAssembly's pixels are in the picture's own colour: tag them so drawing converts
+        var p3 = nc && nc.primaries === 12, t = canvas(f.visibleRect.width, f.visibleRect.height);
+        var tx = p3 ? t.getContext("2d", { colorSpace: "display-p3" }) || t.getContext("2d") : t.getContext("2d");
+        var id = rgbaPixels(f, false);
+        if (p3) { try { id = new ImageData(id.data, id.width, id.height, { colorSpace: "display-p3" }); } catch (e) {} }
+        tx.putImageData(id, 0, 0);
+        ctx.drawImage(t, x, y);
+        return;
       }
       ctx.drawImage(f, x, y);
     });
@@ -585,7 +740,36 @@
     var M = yuvMatrix(info.matrix), pq = info.transfer === 16, luma = LUMA[info.prim];
     // a big photo shrinking a lot is read at every other pixel: still several samples per output pixel
     var stride = s <= 0.4 ? 2 : 1;
-    await decodeTiles(h, item, "raw", async function (f, x0, y0) {
+    // one pixel's R'G'B' (0..1, in the transfer's encoding) into linear light, summed into its output pixel
+    var add = function (R, G, B, gx, oy) {
+      var r, gg, b;
+      if (pq) { r = lut(PQ, R); gg = lut(PQ, G); b = lut(PQ, B); }
+      else {
+        // HLG: scene light, then the reference OOTF for a 1000 cd/m2 display (system gamma 1.2)
+        r = lut(HLG, R); gg = lut(HLG, G); b = lut(HLG, B);
+        var ys = luma[0] * r + luma[1] * gg + luma[2] * b, k = ys > 0 ? 1000 / 203 * Math.pow(ys, 0.2) : 0;
+        r *= k; gg *= k; b *= k;
+      }
+      var o = oy * ow + Math.min(ow - 1, (gx * s) | 0);
+      acc[o * 3] += r; acc[o * 3 + 1] += gg; acc[o * 3 + 2] += b; cnt[o]++;
+    };
+    await decodeTiles(h, item, "linear", async function (f, x0, y0) {
+      if (f.rgba) {
+        // from WebAssembly: R'G'B' already, at the coded depth
+        var px = f.rgba, top = (1 << f.depth) - 1, tw = f.visibleRect.width, th = f.visibleRect.height;
+        for (var ty = 0; ty < th; ty += stride) {
+          var py = y0 + ty;
+          if (py >= sz.h) break;
+          var poy = Math.min(oh - 1, (py * s) | 0);
+          for (var tx = 0; tx < tw; tx += stride) {
+            var px0 = x0 + tx;
+            if (px0 >= sz.w) break;
+            var j = (ty * tw + tx) * 4;
+            add(px[j] / top, px[j + 1] / top, px[j + 2] / top, px0, poy);
+          }
+        }
+        return;
+      }
       var fmt = f.format;
       if (!fmt || /^(RGB|BGR)/.test(fmt)) throw fail("unreadable HDR frame format " + fmt);
       var w = f.visibleRect.width, hh = f.visibleRect.height, buf = new Uint8Array(f.allocationSize()), L = await f.copyTo(buf);
@@ -607,19 +791,8 @@
             cb = ((deep ? buf[o1] | (buf[o1 + 1] << 8) : buf[o1]) - cMid) / cDiv;
             cr = ((deep ? buf[o1 + 2] | (buf[o1 + 3] << 8) : buf[o1 + 1]) - cMid) / cDiv;
           } else { cb = (read(1, cxp, cyp) - cMid) / cDiv; cr = (read(2, cxp, cyp) - cMid) / cDiv; }
-          var R, G, B;
-          if (M) { R = Y + M[0] * cr; G = Y - M[1] * cb - M[2] * cr; B = Y + M[3] * cb; }
-          else { G = Y; B = cb + 0.5; R = cr + 0.5; }
-          var r, gg, b;
-          if (pq) { r = lut(PQ, R); gg = lut(PQ, G); b = lut(PQ, B); }
-          else {
-            // HLG: scene light, then the reference OOTF for a 1000 cd/m2 display (system gamma 1.2)
-            r = lut(HLG, R); gg = lut(HLG, G); b = lut(HLG, B);
-            var ys = luma[0] * r + luma[1] * gg + luma[2] * b, k = ys > 0 ? 1000 / 203 * Math.pow(ys, 0.2) : 0;
-            r *= k; gg *= k; b *= k;
-          }
-          var o = oy * ow + Math.min(ow - 1, (gx * s) | 0);
-          acc[o * 3] += r; acc[o * 3 + 1] += gg; acc[o * 3 + 2] += b; cnt[o]++;
+          if (M) add(Y + M[0] * cr, Y - M[1] * cb - M[2] * cr, Y + M[3] * cb, gx, oy);
+          else add(cr + 0.5, Y, cb + 0.5, gx, oy);
         }
       }
     });
@@ -806,10 +979,32 @@
   // was made against (at most opts.maxEdge, in opts.colorSpace), which must be published
   // in place of the browser's own rendering. Rejects (with .hdr set) when the photo has
   // HDR this browser cannot read.
+  // opts.onProgress(done, total), if given, hears of each tile the slow WebAssembly
+  // decoder finishes (one photo is read at a time).
   async function read(file, baseAspect, opts) {
     var buf = await file.arrayBuffer(), u8 = new Uint8Array(buf);
-    if (u8.length > 12 && isHeif(u8)) return readHeif(buf, baseAspect, opts);
-    if (u8[0] === 0xFF && u8[1] === 0xD8) return readJpegGainMap(buf, baseAspect);
+    onTile = (opts && opts.onProgress) || null;
+    try {
+      if (u8.length > 12 && isHeif(u8)) return await readHeif(buf, baseAspect, opts);
+      if (u8[0] === 0xFF && u8[1] === 0xD8) return await readJpegGainMap(buf, baseAspect);
+      return null;
+    } finally { onTile = null; }
+  }
+
+  // Where a HEIF's (HEIC's, AVIF's) Exif item lies, as [start, end) byte ranges of the file,
+  // from the index at its head (buf: the file's first bytes); null when it has none there.
+  // The item is a 4-byte offset, then the TIFF block (after "Exif\0\0" in Apple's files).
+  function exifRanges(buf) {
+    var u8 = new Uint8Array(buf), h = null;
+    if (u8.length < 12 || !isHeif(u8)) return null;
+    try { h = parseHeif(buf); } catch (e) { return null; }
+    if (!h) return null;
+    var ids = Object.keys(h.items);
+    for (var i = 0; i < ids.length; i++) {
+      var it = h.items[ids[i]], base = it.method === 1 ? (h.idat ? h.idat[0] : -1) : 0;
+      if (it.type !== "Exif" || it.method === 2 || !it.extents.length || base < 0) continue;
+      return it.extents.map(function (e) { return [base + e[0], base + e[0] + (e[1] || 1048576)]; });
+    }
     return null;
   }
 
@@ -901,5 +1096,5 @@
     return concat([pre].concat(extra, [xmp, ver, mpf, rest, secondary]));
   }
 
-  window.StudioHDR = { read: read, join: join, decodeHeif: decodeHeif, _test: { parseHeif: parseHeif, parseIso: parseIso, encodeIso: encodeIso, readJpeg: readJpeg, appleTable: appleTable, appleHeadroomFromExif: appleHeadroomFromExif, hevcCodec: hevcCodec, av1Codec: av1Codec, decodeItem: decodeItem, decodeLinear: decodeLinear, hdrToGainMap: hdrToGainMap, grid: grid, gainXmp: gainXmp, isHeif: isHeif, tiffIn: tiffIn } };
+  window.StudioHDR = { read: read, join: join, decodeHeif: decodeHeif, exifRanges: exifRanges, _test: { parseHeif: parseHeif, parseIso: parseIso, encodeIso: encodeIso, readJpeg: readJpeg, appleTable: appleTable, appleHeadroomFromExif: appleHeadroomFromExif, hevcCodec: hevcCodec, av1Codec: av1Codec, decodeItem: decodeItem, decodeLinear: decodeLinear, hdrToGainMap: hdrToGainMap, grid: grid, gainXmp: gainXmp, isHeif: isHeif, tiffIn: tiffIn } };
 })();
