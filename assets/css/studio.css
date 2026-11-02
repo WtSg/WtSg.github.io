@@ -159,6 +159,8 @@ body.st {
 .st .queue__preview { border: 0; background: #050505; color: var(--ink-3); font-family: var(--mono); }
 .st .queue__meta { color: var(--ink-2); font: 400 .78rem/1.55 var(--mono); }
 .st .queue__meta.is-error { color: #ff8a73; }
+/* already published (or already in the list): said plainly, in the readout's amber */
+.st .queue__dup { margin: .1rem 0 .2rem; color: #f0933a; font: 400 .78rem/1.5 var(--mono); }
 
 /* The published photos: frames on a strip of film, numbered on the edge. */
 .st .pubs {
