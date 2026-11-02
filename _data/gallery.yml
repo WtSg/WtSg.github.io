@@ -2,3 +2,4 @@
 # Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
 # Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, added.
 # You can edit a title, place or year here by hand; keep each photo on one line.
+- {"id":"20261102-b-4098-6dha","src":"/img/gallery/20261102-b-4098-6dha.jpg","thumb":"/img/gallery/20261102-b-4098-6dha-thumb.jpg","w":1500,"h":2000,"title":"B 4098","place":"","year":"","camera":"","added":"2026-11-02"}
