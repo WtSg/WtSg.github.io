@@ -143,6 +143,12 @@ permalink: /studio/
     <section class="studio__step" aria-labelledby="pub-h">
       <h2 id="pub-h"><span class="st-no" aria-hidden="true">04</span><span class="st-h">Published photos</span></h2>
       <p id="pub-empty" class="studio__help">Sign in to see the photos already in your gallery.</p>
+      <div id="pub-dates" class="studio__dates" hidden>
+        <p id="dates-info" class="studio__help"></p>
+        <button id="dates-pick" class="btn btn--line btn--small" type="button">Choose originals</button>
+        <input id="dates-files" type="file" accept="image/*,.heic,.heif,.avif,.jxl,.dng" multiple hidden>
+        <p id="dates-status" class="studio__status" role="status" aria-live="polite"></p>
+      </div>
       <ol id="pub-list" class="pubs" aria-label="Published photos"></ol>
     </section>
   </main>

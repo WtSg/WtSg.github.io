@@ -57,6 +57,7 @@
   var filesInput = $("files"), drop = $("drop"), watermarkBox = $("watermark");
   var queueList = $("queue"), publishBtn = $("publish"), publishStatus = $("publish-status");
   var pubList = $("pub-list"), pubEmpty = $("pub-empty");
+  var datesBox = $("pub-dates"), datesInfo = $("dates-info"), datesBtn = $("dates-pick"), datesInput = $("dates-files"), datesStatus = $("dates-status");
 
   var token = null;
   var settings = loadSettings();
@@ -127,9 +128,9 @@
 
   // ---------- gallery.yml (one JSON flow mapping per line, valid YAML) ----------
   var DEFAULT_HEADER = [
-    "# Photography gallery, newest first.",
+    "# Photography gallery, in the order the photos were taken, the newest first.",
     "# Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.",
-    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.",
+    "# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, taken, exif, added.",
     "# You can edit a title, place or year here by hand; keep each photo on one line."
   ];
   function parseGallery(text) {
@@ -141,20 +142,25 @@
     });
     return { header: header.length ? header : DEFAULT_HEADER, entries: entries };
   }
-  // The gallery's order: the newest year first; within a year, the latest added first
-  // (the order they already have, kept: the sort is stable). No year goes last.
-  function byYear(entries) {
-    var yr = function (e) { var y = parseInt(e.year, 10); return isNaN(y) ? -1 : y; };
-    return entries.map(function (e, k) { return { e: e, k: k }; })
-      .sort(function (a, b) { return yr(b.e) - yr(a.e) || a.k - b.k; })
+  // The gallery's order: when each photo was taken, the newest first (never when its file
+  // was last edited or when it was added). A photo with no date taken goes by its year,
+  // after those of that year that have one, in the order it already has (the sort is
+  // stable); no year at all goes last.
+  function sortKey(e) {
+    if (/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(e.taken || "")) return e.taken;
+    return /^\d{4}$/.test(e.year || "") ? e.year + "-00" : "";
+  }
+  function byTaken(entries) {
+    return entries.map(function (e, k) { return { e: e, k: k, s: sortKey(e) }; })
+      .sort(function (a, b) { return a.s < b.s ? 1 : a.s > b.s ? -1 : a.k - b.k; })
       .map(function (x) { return x.e; });
   }
   function serializeGallery(header, entries) {
     var lines = header.slice();
-    byYear(entries).forEach(function (e) {
+    byTaken(entries).forEach(function (e) {
       lines.push("- " + JSON.stringify({
         id: e.id, src: e.src, thumb: e.thumb, w: e.w, h: e.h,
-        title: e.title || "", place: e.place || "", year: e.year || "",
+        title: e.title || "", place: e.place || "", year: e.year || "", taken: e.taken || undefined,
         exif: e.exif || undefined, camera: e.camera || undefined, added: e.added || ""
       }));
     });
@@ -169,13 +175,14 @@
       });
   }
 
-  // ---------- EXIF: read the year and camera details; write Artist + Copyright ----------
-  // Reads a JPEG's EXIF for the capture year and a one-line camera summary
+  // ---------- EXIF: read when it was taken and the camera details; write Artist + Copyright ----------
+  // Reads a JPEG's EXIF for when it was taken (the year, the date, and to the second, for
+  // the gallery's order) and a one-line camera summary
   // ("ILCE-7M4 · FE 35mm F1.8 · 35 mm · f/2 · 1/250 s · ISO 100"). Only these
   // values are kept, for captions; the published file never carries them.
   // tiffAt, when given, is where the TIFF block starts in buf (an Exif item or box read on its own).
   function readExifInfo(buf, tiffAt) {
-    var info = { found: false, year: "", date: "", lat: null, lon: null, camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
+    var info = { found: false, year: "", date: "", taken: "", lat: null, lon: null, camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
     try {
       var v = new DataView(buf), bytes = new Uint8Array(buf), t = -1;
       if (tiffAt !== undefined) {
@@ -228,9 +235,13 @@
       var exif = ifd0[0x8769] !== undefined ? entries(u32(ifd0[0x8769] + 8)) : {};
       var get = function (map, tag) { return map[tag] !== undefined ? value(map[tag]) : null; };
       info.found = true;
-      var date = String(get(exif, 0x9003) || get(ifd0, 0x0132) || "");
+      // when it was taken (DateTimeOriginal, else DateTimeDigitized), never DateTime, which
+      // is when the file was last changed (an edit, an export)
+      var date = String(get(exif, 0x9003) || get(exif, 0x9004) || "");
       if (/^\d{4}/.test(date) && date.slice(0, 4) !== "0000") info.year = date.slice(0, 4);
       if (/^\d{4}:\d\d:\d\d/.test(date) && info.year) info.date = date.slice(0, 10).replace(/:/g, "-");
+      var tk = /^(\d{4}):(\d\d):(\d\d)[ T](\d\d):(\d\d):(\d\d)/.exec(date);
+      if (tk && info.year) info.taken = tk[1] + "-" + tk[2] + "-" + tk[3] + "T" + tk[4] + ":" + tk[5] + ":" + tk[6];
       // Where it was taken: only to look up the town for the Place field; never published.
       if (ifd0[0x8825] !== undefined) {
         var gps = entries(u32(ifd0[0x8825] + 8));
@@ -683,6 +694,7 @@
       var x = r[1].exif;
       if (!item.year && x.year) item.year = x.year;
       item.date = x.date;
+      item.taken = x.taken;
       item.placeTried = true;
       if (!item.place && r[2]) { item.place = r[2]; item.placeAuto = true; }
       item.exif = exifOf(x);
@@ -846,7 +858,7 @@
       it.id = id;
       return { id: id, src: "/" + IMG_DIR + id + ".jpg", thumb: "/" + IMG_DIR + id + "-thumb.jpg", w: it.w, h: it.h,
                title: it.title || "", place: it.place || "", year: /^\d{4}$/.test(it.year || "") ? it.year : "",
-               exif: settings.camera ? (it.exif || null) : null, added: added };
+               taken: it.taken || undefined, exif: settings.camera ? (it.exif || null) : null, added: added };
     });
     var n = items.length, nextPublished = null;
     commitChanges("Add " + n + " photo" + (n === 1 ? "" : "s") + " to the gallery", function () {
@@ -872,7 +884,7 @@
       });
     }).then(function () {
       items.forEach(function (it, i) { entries[i].localPreview = it.preview; entries[i].print = it.print; });
-      published = byYear(nextPublished);
+      published = byTaken(nextPublished);
       queue = queue.filter(function (q) { return items.indexOf(q) < 0; });
       queueList.querySelectorAll(".queue__item").forEach(function (li) {
         if (!queue.some(function (q) { return q.key === li.getAttribute("data-key"); })) li.remove();
@@ -923,10 +935,11 @@
     busy = true; updatePublish();
     li.classList.add("is-busy");
     setStatus(publishStatus, "Reading the camera details…");
-    var details = null, year = "", place = "", next = null;
+    var details = null, year = "", taken = "", place = "", next = null;
     readFileExif(file).then(function (r) {
       details = exifOf(r.exif);
       year = r.exif.year || "";
+      taken = r.exif.taken || "";
       if (!details) {
         var e0 = new Error("no camera details"); e0.noDetails = true; throw e0;
       }
@@ -940,6 +953,7 @@
             if (e.id !== entry.id) return e;
             var u = Object.assign({}, e, { exif: details });
             if (!/^\d{4}$/.test(u.year || "") && /^\d{4}$/.test(year)) u.year = year;
+            if (taken) u.taken = taken;
             if (!u.place && place) u.place = place;
             return u;
           });
@@ -948,7 +962,7 @@
       });
     }).then(function () {
       busy = false;
-      published = next;
+      published = byTaken(next);
       renderPublished();
       setStatus(publishStatus, "Camera details added: " + exifLine(details) + (place ? ". Place: " + place : "") + ". Your gallery updates in about a minute.", "done");
       updatePublish();
@@ -961,7 +975,81 @@
     });
   }
 
+  // ---------- when photos already published were taken ----------
+  // For photos published before the studio kept when they were taken: their originals,
+  // chosen all at once, are matched to them by file name (each photo's id is made from its
+  // file's name), and only when each was taken is read, here on this device. One change
+  // saves them all, and the gallery takes the order they were taken in.
+  function idStem(id) { return String(id || "").replace(/^\d{8}-/, "").replace(/-[a-z0-9]{4}$/, ""); }
+  function renderDates() {
+    var missing = published.filter(function (e) { return !e.taken; }).length;
+    datesBox.hidden = !token || !published.length;
+    datesInfo.textContent = missing
+      ? missing + " of your " + published.length + " published photo" + (published.length === 1 ? " has" : "s have") + " no date taken yet, so " + (missing === 1 ? "it goes" : "they go") + " by year. Choose their originals (all at once is fine): each is matched to its photo by file name, and only when it was taken is read, on this device, and saved."
+      : "Every published photo has its date taken: the gallery is in the order they were taken, the newest first.";
+    datesBtn.disabled = busy;
+  }
+  function addDatesTaken(files) {
+    if (busy || !token || !files.length) return;
+    var stems = {};
+    published.forEach(function (e) { var k = idStem(e.id); (stems[k] = stems[k] || []).push(e.id); });
+    var jobs = [], unmatched = 0;
+    Array.prototype.forEach.call(files, function (f) {
+      var ids = stems[slugify(f.name.replace(/\.[^.]+$/, ""))];
+      if (ids) jobs.push({ f: f, ids: ids }); else unmatched++;
+    });
+    if (!jobs.length) {
+      setStatus(datesStatus, "None of these files has the name of a published photo. Choose the originals the photos were published from.", "error");
+      return;
+    }
+    busy = true; updatePublish(); renderDates();
+    var found = {}, undated = 0, done = 0, next = null, n = 0;
+    var chain = Promise.resolve();
+    jobs.forEach(function (j) {
+      chain = chain.then(function () {
+        setStatus(datesStatus, "Reading " + (++done) + " of " + jobs.length + "…");
+        return readFileExif(j.f).then(function (r) {
+          var x = r.exif;
+          if (!x.taken) { undated++; return; }
+          j.ids.forEach(function (id) { found[id] = { taken: x.taken, year: x.year, exif: exifOf(x) }; });
+        });
+      });
+    });
+    chain.then(function () {
+      n = Object.keys(found).length;
+      if (!n) { var e0 = new Error("no dates"); e0.noDates = true; throw e0; }
+      setStatus(datesStatus, "Saving " + n + " date" + (n === 1 ? "" : "s") + " taken…");
+      return commitChanges("Add when " + n + " photo" + (n === 1 ? " was" : "s were") + " taken", function () {
+        return fetchGallery().then(function (g) {
+          next = g.entries.map(function (e) {
+            var d = found[e.id];
+            if (!d) return e;
+            var u = Object.assign({}, e, { taken: d.taken });
+            if (!/^\d{4}$/.test(u.year || "") && d.year) u.year = d.year;
+            if (!u.exif && d.exif && settings.camera) u.exif = d.exif;
+            return u;
+          });
+          return [{ path: DATA_PATH, mode: "100644", type: "blob", content: serializeGallery(g.header, next) }];
+        });
+      });
+    }).then(function () {
+      busy = false;
+      published = byTaken(next);
+      renderPublished(); updatePublish();
+      var notes = [];
+      if (undated) notes.push(undated + " had no date taken in it");
+      if (unmatched) notes.push(unmatched + " matched no published photo");
+      setStatus(datesStatus, "Saved when " + n + " photo" + (n === 1 ? " was" : "s were") + " taken" + (notes.length ? " (" + notes.join("; ") + ")" : "") + ". The gallery is now in that order; it updates in about a minute.", "done");
+    }).catch(function (err) {
+      busy = false;
+      renderDates(); updatePublish();
+      if (err && err.noDates) setStatus(datesStatus, "None of the matching files has a date taken in it. Choose the originals from the camera or from Photos (not an exported or shared copy).", "error");
+      else setStatus(datesStatus, explain(err, "change"), "error");
+    });
+  }
+
   function renderPublished() {
+    renderDates();
     pubList.innerHTML = "";
     pubEmpty.hidden = published.length > 0;
     if (!published.length) pubEmpty.textContent = token ? "No photos yet. Add some above." : "Sign in to see the photos already in your gallery.";
@@ -1072,6 +1160,12 @@
     drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("is-over"); });
   });
   drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+  datesBtn.addEventListener("click", function () { if (!busy) datesInput.click(); });
+  datesInput.addEventListener("change", function () {
+    var list = datesInput.files ? Array.prototype.slice.call(datesInput.files) : [];
+    datesInput.value = "";
+    addDatesTaken(list);
+  });
   publishBtn.addEventListener("click", publish);
   // ---------- settings ----------
   function loadSettings() {

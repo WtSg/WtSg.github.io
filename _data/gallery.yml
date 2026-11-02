@@ -1,6 +1,6 @@
-# Photography gallery: the newest year first; within a year, the latest added first.
+# Photography gallery, in the order the photos were taken, the newest first (a photo with no date taken goes by its year).
 # Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
-# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.
+# Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, taken, exif, added.
 # You can edit a title, place or year here by hand; keep each photo on one line.
 - {"id":"20261102-b-3788-r6cz","src":"/img/gallery/20261102-b-3788-r6cz.jpg","thumb":"/img/gallery/20261102-b-3788-r6cz-thumb.jpg","w":1500,"h":2000,"title":"","place":"","year":"2026","exif":{"camera":"Hasselblad X2D II 100C","lens":"XCD 35-100E","focal":"80 mm","aperture":"f/4","shutter":"1/800 s","iso":"ISO 50"},"added":"2026-11-02"}
 - {"id":"20261102-b-3805-ky82","src":"/img/gallery/20261102-b-3805-ky82.jpg","thumb":"/img/gallery/20261102-b-3805-ky82-thumb.jpg","w":1500,"h":2000,"title":"","place":"","year":"2026","exif":{"camera":"Hasselblad X2D II 100C","lens":"XCD 35-100E","focal":"45 mm","aperture":"f/11","shutter":"1/80 s","iso":"ISO 50"},"added":"2026-11-02"}

@@ -163,6 +163,9 @@ body.st {
 .st .queue__dup { margin: .1rem 0 .2rem; color: #f0933a; font: 400 .78rem/1.5 var(--mono); }
 
 /* The published photos: frames on a strip of film, numbered on the edge. */
+/* when the photos already published were taken: their originals, matched by name */
+.st .studio__dates { display: grid; justify-items: start; gap: .6rem; margin: 0 0 1.2rem; }
+.st .studio__dates .studio__help { margin: 0; }
 .st .pubs {
   grid-template-columns: none;
   grid-auto-flow: column;
