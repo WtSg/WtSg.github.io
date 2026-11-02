@@ -16,8 +16,11 @@
  * - Click (or Enter) opens the photograph, growing out of the wall as an app opens from its icon.
  * - Zoom: the mouse wheel, a pinch with two fingers or on a trackpad, the - and +
  *   buttons or keys (0 resets). Out, more of the wall shows and the frame lines
- *   close round the photograph; in, the photograph grows past them. It still
- *   comes to rest on the nearest photograph.
+ *   close round the photograph. In, it goes no further than the framed size: a
+ *   pinch or the wheel can stretch the photograph a little past the frame lines,
+ *   against a growing resistance, and once let go it is pulled back into them
+ *   (the close-up is there for a closer look). It still comes to rest on the
+ *   nearest photograph.
  * - Reduced motion: no inertia, speed zoom or turn; frames change at once.
  */
 (function () {
@@ -196,14 +199,20 @@
   /* ---------- State ---------- */
   var ox = 0, oy = 0, tx = 0, ty = 0, vx = 0, vy = 0, s = 1, sTo = 1;
   // Zoom by hand: a factor on the framed scale. Out as far as the wall at S_MIN of its
-  // pulled-back size, in to Z_MAX times the framed photograph.
-  var S_MIN = 0.6, Z_MAX = 2.6, zoom = 1, pinch = null;
-  function zr() { return clamp(zoom, S_MIN / sTo, Z_MAX); }
+  // pulled-back size; in, no further than the framed photograph (1). A pinch or the wheel
+  // may stretch past that while it lasts, against a resistance that grows the further it
+  // goes (never more than OVER beyond the frame lines), and is pulled back on letting go.
+  var S_MIN = 0.6, OVER = 0.25, zoom = 1, pinch = null;
+  function zr() {
+    var z = Math.max(zoom, S_MIN / sTo);
+    return z > 1 ? 1 + OVER * (1 - 1 / ((z - 1) / OVER + 1)) : z;
+  }
   function restScale() { return Math.max(S_MIN, sTo * zr()); }
-  // Zoom about a point on the screen (the fingers, the pointer), or the centre.
-  function setZoom(z, mx, my) {
+  // Zoom about a point on the screen (the fingers, the pointer), or the centre. A stretch
+  // (a pinch or the wheel, under way) may go past the framed size; anything else stops there.
+  function setZoom(z, mx, my, stretch) {
     var s0 = restScale();
-    zoom = clamp(z, S_MIN / sTo, Z_MAX);
+    zoom = clamp(z, S_MIN / sTo, stretch ? 4 : 1);
     var s1 = restScale();
     if (mx != null) {
       tx += (mx - vw / 2) * (1 / s1 - 1 / s0);
@@ -219,8 +228,14 @@
   function zoomState() {
     zoomBtns.forEach(function (b) {
       var out = b.getAttribute("data-cv-zoom") === "out";
-      b.disabled = out ? zr() <= S_MIN / sTo + 1e-3 : zr() >= Z_MAX - 1e-3;
+      b.disabled = out ? zr() <= S_MIN / sTo + 1e-3 : zr() >= 1 - 1e-3;
     });
+  }
+  // the pinch or the wheel let go: a photograph stretched past the frame lines is pulled back
+  function pullBack() {
+    if (zoom <= 1) return;
+    zoom = 1;
+    zoomState();
   }
   function zoomStep(dir) {
     setZoom(zr() * (dir > 0 ? 1.4 : 1 / 1.4));
@@ -578,7 +593,7 @@
     if (pinch) {
       var two = twoPoints();
       if (!two) return;
-      setZoom(zr() * (two.d / pinch.d), two.x, two.y);
+      setZoom(Math.max(zoom, S_MIN / sTo) * (two.d / pinch.d), two.x, two.y, true);
       var sNow = restScale();
       tx += (two.x - pinch.x) / sNow;
       ty += (two.y - pinch.y) / sNow;
@@ -631,7 +646,7 @@
   function pointerEnd(e) {
     delete ptrs[e.pointerId];
     if (pinch) {
-      if (!twoPoints()) { pinch = null; lockNearest(); }
+      if (!twoPoints()) { pinch = null; pullBack(); lockNearest(); }
       return;
     }
     endDrag(e);
@@ -687,10 +702,10 @@
       return;
     }
     // a pinch zooms faster per event than a wheel notch
-    setZoom(zr() * Math.exp(-clamp(dy, -60, 60) * (e.ctrlKey ? 0.01 : 0.0045)), e.clientX, e.clientY);
+    setZoom(Math.max(zoom, S_MIN / sTo) * Math.exp(-clamp(dy, -60, 60) * (e.ctrlKey ? 0.01 : 0.0045)), e.clientX, e.clientY, true);
     wheeling = true;
     clearTimeout(wheelT);
-    wheelT = setTimeout(function () { wheeling = false; lockNearest(); }, 220);
+    wheelT = setTimeout(function () { wheeling = false; pullBack(); lockNearest(); }, 220);
   }, { passive: false });
   // Safari on a Mac sends a trackpad pinch as gesture events. On touch screens the
   // pointers above do the pinch; there these only keep the page itself from zooming.
@@ -700,19 +715,20 @@
   document.addEventListener("gesturestart", function (e) {
     e.preventDefault();
     if (touchy || root.classList.contains("gl-open")) return;
-    gz = zr();
+    gz = Math.max(zoom, S_MIN / sTo);
     takeOver();
   }, { passive: false });
   document.addEventListener("gesturechange", function (e) {
     e.preventDefault();
     if (touchy || root.classList.contains("gl-open")) return;
-    setZoom(gz * e.scale, e.clientX, e.clientY);
+    setZoom(gz * e.scale, e.clientX, e.clientY, true);
     wheeling = true;
   }, { passive: false });
   document.addEventListener("gestureend", function (e) {
     e.preventDefault();
     if (touchy || root.classList.contains("gl-open")) return;
     wheeling = false;
+    pullBack();
     lockNearest();
   }, { passive: false });
   zoomBtns.forEach(function (b) {
