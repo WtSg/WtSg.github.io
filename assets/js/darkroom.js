@@ -557,9 +557,12 @@
 
     // Scrolling moves through the prints: one step of the page per print.
     var wrapTop = 0, stepPx = 1, queued = false;
+    // One print per snap point, so the page comes to rest exactly on a finished print.
+    // The spacing is in svh, so it holds still while a phone's toolbar slides in and out.
+    var snaps = stageWrap.querySelectorAll(".dr-snap");
     function measure() {
       wrapTop = stageWrap.getBoundingClientRect().top + window.pageYOffset;
-      stepPx = N > 1 ? Math.max(1, (stageWrap.offsetHeight - window.innerHeight) / (N - 1)) : 1;
+      stepPx = snaps.length > 1 ? Math.max(1, snaps[1].offsetTop - snaps[0].offsetTop) : 1;
     }
     function indexFromScroll() {
       if (N < 2) return 0;

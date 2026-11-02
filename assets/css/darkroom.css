@@ -812,7 +812,8 @@ body[data-lights="on"] .dr-bench {
   --step: 150svh;
   position: relative;
   height: calc(100vh + (var(--n) - 1) * 150vh);
-  height: calc(100svh + (var(--n) - 1) * var(--step));
+  /* lvh: the last print can still be scrolled to with a phone's toolbar out of the way */
+  height: calc(100lvh + (var(--n) - 1) * var(--step));
 }
 /* The page comes to rest on a finished print: one snap point per print. */
 html.has-3d { scroll-snap-type: y proximity; }

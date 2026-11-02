@@ -693,8 +693,9 @@ export function start(o) {
     const h = 1.5;
     const cg = new THREE.CylinderGeometry(0.06, 0.62, h, 48, 1, true);
     cg.translate(0, -h / 2, 0);
+    // Light adds up in any order, so one pass draws both faces of the beams (one shader, not two).
     const cm = new THREE.ShaderMaterial({
-      uniforms: hazeU, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+      uniforms: hazeU, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, blending: THREE.AdditiveBlending,
       vertexShader: hazeVert, fragmentShader: hazeFrag
     });
     const cone = new THREE.Mesh(cg, cm);
@@ -961,7 +962,7 @@ export function start(o) {
   scene.add(projPlane);
   const beamU = { uColor: { value: new THREE.Color(1, 0.8, 0.55) }, uAmt: { value: 0 } };
   const beam = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.ShaderMaterial({
-    uniforms: beamU, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    uniforms: beamU, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, blending: THREE.AdditiveBlending,
     vertexShader: `varying float vY; varying float vX; varying vec3 vN; varying vec3 vV;
       void main(){
         vY = uv.y;
@@ -1098,7 +1099,7 @@ export function start(o) {
     beamGeo.translate(0, -0.85, 0);
     const hallBeamU = { uColor: { value: new THREE.Color(1, 0.13, 0.05) }, uAmt: { value: 0.11 }, uFogNear: { value: 2 }, uFogFar: { value: 9 } };
     const hallBeams = new THREE.InstancedMesh(beamGeo, new THREE.ShaderMaterial({
-      uniforms: hallBeamU, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+      uniforms: hallBeamU, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, blending: THREE.AdditiveBlending,
       vertexShader: `uniform float uFogNear; uniform float uFogFar; varying float vY; varying vec3 vN; varying vec3 vV; varying float vFog;
         void main(){
           vY = uv.y;
@@ -1447,6 +1448,10 @@ export function start(o) {
   const IN = { take0: 0.1, take1: 0.2, exp0: 0.28, exp1: 0.44, slide0: 0.47, drop0: 0.54, drop1: 0.58, dev0: 0.6, dev1: 0.97 };
   const INTRO_MS = 8200;
   let target = 0, pos = 0, intro = reduce ? 1 : 0, introStart = -1;
+  // The pace a print goes through the process when the page runs ahead of the scene:
+  // prints per second, so about five seconds a print.
+  const PLAY = 0.2;
+  let posV = 0;
   let lightsOn = false, lightE = 0, lightM = 0, appliedM = -1, flickerUntil = 0, lightWaiters = [], litAt = -1e9;
   let shown = -1, hudKey = "";
   let prevI = 0, prevF = 0, prevQ = 0;
@@ -1791,9 +1796,25 @@ export function start(o) {
     U.time.value = reduce ? 40 : sec;
     grain.uniforms.uTime.value = reduce ? 0 : sec;
 
-    // The path position eases after the scroll so scrubbing feels like film, not steps.
-    pos = reduce ? target : pos + (target - pos) * (1 - Math.exp(-dt / 110));
-    if (Math.abs(target - pos) < 0.0005) pos = target;
+    // The path follows the scroll like film through a gate. Slow scrubbing is followed
+    // closely, but a flick of the page doesn't skip through the process: it plays at
+    // its own pace, hurrying only to make up a long way. Under the tubes the scroll
+    // walks the drying room instead, and is followed at once.
+    if (reduce) {
+      pos = target;
+      posV = 0;
+    } else if (lightsOn || lightE > 0) {
+      pos += (target - pos) * (1 - Math.exp(-dt / 110));
+      posV = 0;
+    } else {
+      const gap = target - pos, vmax = PLAY * Math.max(1, Math.abs(gap));
+      const want = clamp(gap * 4, -vmax, vmax), acc = (vmax / 0.4) * ds;
+      posV += clamp(want - posV, -acc, acc);
+      pos += posV * ds;
+      // never past where the page is
+      if ((target - pos) * gap <= 0) { pos = target; posV = 0; }
+    }
+    if (Math.abs(target - pos) < 0.0005) { pos = target; posV = 0; }
     if (intro < 1 && introStart >= 0) intro = clamp((now - introStart) / INTRO_MS, 0, 1);
     const q = intro;
 
@@ -2002,7 +2023,12 @@ export function start(o) {
     if (running) {
       if (direct) renderer.render(scene, camera);
       else composer.render();
-      if (health.from >= 0 && ++health.frames >= health.from && t >= health.after) checkHealth(t);
+      if (health.reading) {
+        if (finishRead()) { health.reading = false; judge(t); }
+      } else if (health.from >= 0 && ++health.frames >= health.from && t >= health.after) {
+        if (startRead()) judge(t);
+        else health.reading = true;
+      }
     }
   }
 
@@ -2021,26 +2047,53 @@ export function start(o) {
     ["post-processing", () => { direct = true; }]
   ];
   // A check comes once `from` frames have been drawn and the clock has passed `after`.
-  const health = { frames: 0, from: 4, after: 0, passes: 0, step: coarse ? 1 : 0, dropped: coarse ? ["refraction"] : [], shares: [] };
-  const patch = new Uint8Array(16 * 16 * 4);
-  function litShare() {
+  const health = { frames: 0, from: 4, after: 0, passes: 0, reading: false, step: coarse ? 1 : 0, dropped: coarse ? ["refraction"] : [], shares: [] };
+  // Nine 16 px patches at the quarter points of the frame. With WebGL 2 they are copied
+  // into a buffer on the GPU and read once the GPU signals it has finished, so the page
+  // never waits on the GPU; WebGL 1 reads them at once.
+  const PATCH_BYTES = 16 * 16 * 4, pixels = new Uint8Array(PATCH_BYTES * 9);
+  const gl2 = renderer.capabilities.isWebGL2;
+  let packBuf = null, fence = null;
+  function startRead() {
     renderer.setRenderTarget(null);
-    if (renderer.capabilities.isWebGL2) renderer.state.bindFramebuffer(glc.READ_FRAMEBUFFER, null);
-    const w = glc.drawingBufferWidth, h = glc.drawingBufferHeight;
-    let lit = 0, n = 0;
-    for (let gy = 1; gy <= 3; gy++) {
-      for (let gx = 1; gx <= 3; gx++) {
-        glc.readPixels(Math.round((gx * w) / 4) - 8, Math.round((gy * h) / 4) - 8, 16, 16, glc.RGBA, glc.UNSIGNED_BYTE, patch);
-        for (let k = 0; k < patch.length; k += 4) {
-          n++;
-          // the film grain alone reaches about 6; the darkest healthy view has 13% of its pixels above 14
-          if (Math.max(patch[k], patch[k + 1], patch[k + 2]) > 14) lit++;
-        }
-      }
+    if (gl2) {
+      renderer.state.bindFramebuffer(glc.READ_FRAMEBUFFER, null);
+      if (!packBuf) {
+        packBuf = glc.createBuffer();
+        glc.bindBuffer(glc.PIXEL_PACK_BUFFER, packBuf);
+        glc.bufferData(glc.PIXEL_PACK_BUFFER, pixels.byteLength, glc.STREAM_READ);
+      } else glc.bindBuffer(glc.PIXEL_PACK_BUFFER, packBuf);
     }
-    return lit / n;
+    const w = glc.drawingBufferWidth, h = glc.drawingBufferHeight;
+    for (let k = 0; k < 9; k++) {
+      const x = Math.round((((k % 3) + 1) * w) / 4) - 8, y = Math.round(((Math.floor(k / 3) + 1) * h) / 4) - 8;
+      if (gl2) glc.readPixels(x, y, 16, 16, glc.RGBA, glc.UNSIGNED_BYTE, k * PATCH_BYTES);
+      else glc.readPixels(x, y, 16, 16, glc.RGBA, glc.UNSIGNED_BYTE, pixels.subarray(k * PATCH_BYTES, (k + 1) * PATCH_BYTES));
+    }
+    if (!gl2) return true;
+    glc.bindBuffer(glc.PIXEL_PACK_BUFFER, null);
+    fence = glc.fenceSync(glc.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    glc.flush();
+    return false;
   }
-  function checkHealth(t) {
+  function finishRead() {
+    if (fence && glc.clientWaitSync(fence, 0, 0) === glc.TIMEOUT_EXPIRED) return false;
+    if (fence) glc.deleteSync(fence);
+    fence = null;
+    glc.bindBuffer(glc.PIXEL_PACK_BUFFER, packBuf);
+    glc.getBufferSubData(glc.PIXEL_PACK_BUFFER, 0, pixels);
+    glc.bindBuffer(glc.PIXEL_PACK_BUFFER, null);
+    return true;
+  }
+  function litShare() {
+    let lit = 0;
+    for (let k = 0; k < pixels.length; k += 4) {
+      // the film grain alone reaches about 6; the darkest healthy view has 13% of its pixels above 14
+      if (Math.max(pixels[k], pixels[k + 1], pixels[k + 2]) > 14) lit++;
+    }
+    return lit / (pixels.length / 4);
+  }
+  function judge(t) {
     const share = litShare();
     health.shares.push(Math.round(share * 1000) / 1000);
     if (share >= 0.02) {
@@ -2111,6 +2164,15 @@ export function start(o) {
   const opening = (async () => {
     await whenReady(prints[0]);
     if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 600))]);
+    // Build every shader the process will need now, hidden parts included, while the
+    // room is still: phones build them slowly, and a step that waited for its shaders
+    // the first time it came into view would stall.
+    // (Built for where the room is drawn: the post-processing buffer, unless it has been given up.)
+    try {
+      renderer.setRenderTarget(direct ? null : composer.readBuffer);
+      renderer.compile(scene, camera);
+    } catch (e) { /* they are built when first drawn instead */ }
+    renderer.setRenderTarget(null);
     if (intro < 1) introStart = now + (reduce ? 0 : 400);
   })();
   setLightMix(0);
