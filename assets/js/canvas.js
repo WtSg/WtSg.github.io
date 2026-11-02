@@ -307,20 +307,12 @@
   }
 
   // The veil outside the frame: the window, with the frame (as turned) cut out of it.
-  // The frame's corners are rounded (--vf-r, 10px in canvas.css): so is the cut, where a
-  // path can be a clip; elsewhere it is the plain rectangle.
-  var VF_R = 10, pathClip = !!(window.CSS && CSS.supports && CSS.supports("clip-path", 'path(evenodd, "M0 0H1V1Z")'));
   function cutMask(rad) {
-    var c = Math.cos(rad), sn = Math.sin(rad), a = fr.L / 2, b = fr.S / 2, cx = vw / 2, cy = vh / 2, cut;
-    var at = function (x, y) { return (cx + x * c - y * sn).toFixed(1) + " " + (cy + x * sn + y * c).toFixed(1); };
-    if (pathClip) {
-      var r = Math.max(0, Math.min(VF_R, a, b)), arc = " A" + r + " " + r + " 0 0 1 ";
-      cut = 'path(evenodd, "M0 0H' + vw + "V" + vh + "H0Z M" + at(-a + r, -b) + " L" + at(a - r, -b) + arc + at(a, -b + r) +
-        " L" + at(a, b - r) + arc + at(a - r, b) + " L" + at(-a + r, b) + arc + at(-a, b - r) + " L" + at(-a, -b + r) + arc + at(-a + r, -b) + ' Z")';
-    } else {
-      var pts = [[-a, -b], [a, -b], [a, b], [-a, b]].map(function (p) { return at(p[0], p[1]).replace(" ", "px ") + "px"; });
-      cut = "polygon(evenodd, 0 0, " + vw + "px 0, " + vw + "px " + vh + "px, 0 " + vh + "px, 0 0, " + pts.join(", ") + ", " + pts[0] + ", 0 0)";
-    }
+    var c = Math.cos(rad), sn = Math.sin(rad), a = fr.L / 2, b = fr.S / 2, cx = vw / 2, cy = vh / 2;
+    var pts = [[-a, -b], [a, -b], [a, b], [-a, b]].map(function (p) {
+      return (cx + p[0] * c - p[1] * sn).toFixed(1) + "px " + (cy + p[0] * sn + p[1] * c).toFixed(1) + "px";
+    });
+    var cut = "polygon(evenodd, 0 0, " + vw + "px 0, " + vw + "px " + vh + "px, 0 " + vh + "px, 0 0, " + pts.join(", ") + ", " + pts[0] + ", 0 0)";
     if (cut === maskCut) return;
     maskCut = cut;
     maskEl.style.webkitClipPath = cut;
