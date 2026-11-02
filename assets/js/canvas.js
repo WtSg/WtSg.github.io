@@ -109,6 +109,81 @@
   }
 
   /* ---------- The wall ---------- */
+  // Which photograph hangs in which cell. Every photograph about equally often (shuffled
+  // rounds of all of them), and then its copies moved as far apart as the wall allows,
+  // measured as the wall is hung (odd rows half a cell over) and as it wraps round, so the
+  // photographs above, below and beside any one are others, never itself again (the owner:
+  // "upper and down don't show the same image, to maximize the possibility people see
+  // different images"). Swaps that leave both photographs clear of their copies, at the
+  // widest spacing that can be met, starting from about the most the wall's room allows.
+  function arrange(cols, rows, r) {
+    var cells = cols * rows, order = [];
+    while (order.length < cells) {
+      var batch = photos.map(function (p, n) { return n; });
+      for (var k = batch.length - 1; k > 0; k--) {
+        var j = Math.floor(r() * (k + 1)), t = batch[k];
+        batch[k] = batch[j];
+        batch[j] = t;
+      }
+      order = order.concat(batch);
+    }
+    order.length = cells;
+    if (N < 2) return order;
+    var X = [], Y = [], where = [], most = 1, n, m;
+    for (n = 0; n < cells; n++) {
+      var row = Math.floor(n / cols);
+      X.push(((n % cols) + (row % 2) * 0.5) * cw);
+      Y.push(row * ch);
+    }
+    for (n = 0; n < N; n++) where.push([]);
+    for (n = 0; n < cells; n++) where[order[n]].push(n);
+    for (n = 0; n < N; n++) most = Math.max(most, where[n].length);
+    if (most < 2) return order;
+    // the distance between two cells, wrapping round, in rows
+    function d2(a, b) {
+      var dx = Math.abs(X[a] - X[b]) % W, dy = Math.abs(Y[a] - Y[b]) % H;
+      dx = Math.min(dx, W - dx);
+      dy = Math.min(dy, H - dy);
+      return (dx * dx + dy * dy) / (ch * ch);
+    }
+    // would photograph i at cell at be nearer than R to one of its copies (not counting cell skip)?
+    function near(i, at, skip, R2) {
+      for (var q = 0; q < where[i].length; q++) {
+        var c = where[i][q];
+        if (c !== at && c !== skip && d2(at, c) < R2) return true;
+      }
+      return false;
+    }
+    function swap(a, b) {
+      var i = order[a], j = order[b];
+      where[i][where[i].indexOf(a)] = b;
+      where[j][where[j].indexOf(b)] = a;
+      order[a] = j;
+      order[b] = i;
+    }
+    var R = Math.min(Math.sqrt((W * H) / (ch * ch) / most), Math.max(W, H) / ch / 2);
+    for (; R >= 1; R -= 0.5) {
+      var R2 = R * R, clear = false;
+      for (var it = 0; it < cells * 12; it++) {
+        var bad = -1;
+        for (var q2 = 0; q2 < cells; q2++) {
+          var c2 = (it + q2) % cells;
+          if (near(order[c2], c2, -1, R2)) { bad = c2; break; }
+        }
+        if (bad < 0) { clear = true; break; }
+        var i0 = order[bad], moved = false;
+        for (var tries = 0; tries < 40 && !moved; tries++) {
+          m = Math.floor(r() * cells);
+          if (order[m] === i0) continue;
+          if (!near(i0, m, bad, R2) && !near(order[m], bad, m, R2)) { swap(bad, m); moved = true; }
+        }
+        // nowhere clear for it: a random move, to shake the wall out of a knot
+        if (!moved) { m = Math.floor(r() * cells); if (order[m] !== i0) swap(bad, m); }
+      }
+      if (clear) break;
+    }
+    return order;
+  }
   function build() {
     measure();
     plane.textContent = "";
@@ -130,22 +205,7 @@
     if (rows % 2) rows++;
     W = cols * cw;
     H = rows * ch;
-    var cells = cols * rows, r = rng(7), order = [];
-    while (order.length < cells) {
-      var batch = photos.map(function (p, n) { return n; });
-      for (var k = batch.length - 1; k > 0; k--) {
-        var j = Math.floor(r() * (k + 1)), t = batch[k];
-        batch[k] = batch[j];
-        batch[j] = t;
-      }
-      if (order.length && N > 1 && batch[0] === order[order.length - 1]) batch.push(batch.shift());
-      order = order.concat(batch);
-    }
-    order.length = cells;
-    // keep a photograph from sitting straight under its own copy
-    for (var c2 = cols; c2 < cells - 1; c2++) {
-      if (N > 2 && order[c2] === order[c2 - cols]) { var tmp = order[c2]; order[c2] = order[c2 + 1]; order[c2 + 1] = tmp; }
-    }
+    var cells = cols * rows, r = rng(7), order = arrange(cols, rows, r);
     var sizes = [1, 0.76, 0.9, 0.68, 0.85, 0.96, 0.8];
     for (var n = 0; n < cells; n++) {
       var c = n % cols, row = Math.floor(n / cols), i = order[n], p = photos[i];
