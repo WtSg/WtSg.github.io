@@ -510,7 +510,10 @@
     }
 
     if (sharpNow && lockOn === subject) sharpen(subject);
-    if (focused && pendingShot && now - focusedAt > 60) { var shot = pendingShot; pendingShot = null; fire(shot); }
+    // a photograph clicked beside the framed one opens once it is in the middle (not waiting
+    // for the focus to settle)
+    var arrived = pendingShot && !moving && lockOn === pendingShot.it && dist * s < 12 && Math.abs(s - sGoal) < 0.02;
+    if (pendingShot && (arrived || (focused && now - focusedAt > 60))) { var shot = pendingShot; pendingShot = null; fire(shot); }
   }
 
   /* ---------- Input: drag, inertia, scroll, keys ---------- */
@@ -744,7 +747,7 @@
   /* ---------- Opening a photograph ---------- */
   // Zoomed out, a click opens the photograph clicked; at the framed size or closer, a click
   // on the framed photograph opens the close-up straight from where it is, and a click on
-  // one beside it brings that one into the frame.
+  // one beside it glides it into the frame and then opens it.
   function shoot(it, back) {
     hideHint();
     hold = 0;
@@ -752,8 +755,9 @@
     pendingShot = null;
     // zoomed out, a click opens the photograph clicked straight away
     if (zr() < 0.97) { fire({ it: it, back: back }); return; }
-    // a photograph beside the framed one is only brought into the frame; the framed one opens
-    if (lockOn !== it && subject !== it) { lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy }); return; }
+    // a photograph beside the framed one glides into the frame and opens as it arrives; the
+    // framed one opens at once (a drag or a zoom in the meantime cancels the opening)
+    if (lockOn !== it && subject !== it) { lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy }); pendingShot = { it: it, back: back }; return; }
     if (lockOn !== it) lock({ it: it, x: it.x, y: it.y, dx: ox, dy: oy });
     fire({ it: it, back: back });
   }
