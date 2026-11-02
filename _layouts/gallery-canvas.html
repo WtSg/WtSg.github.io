@@ -7,7 +7,8 @@
 <html lang="en" class="no-js">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- comment -%} The page itself never zooms: a pinch zooms the wall or the photograph (canvas.js, gallery-loupe.js) {%- endcomment %}
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <script>document.documentElement.className = "js";</script>
   <title>Photography · {{ me.name }}</title>
   {%- if page.noindex %}
@@ -58,7 +59,7 @@
             <span class="vf-led__cell" data-cell="mm"><b data-led="mm"></b><em>MM</em></span>
           </span>
           <span class="vf-led__focus"><i data-lamp="l"><svg viewBox="0 0 8 10" focusable="false"><path d="M1 0 8 5 1 10z"/></svg></i><i data-lamp="c"></i><i data-lamp="r"><svg viewBox="0 0 8 10" focusable="false"><path d="M7 0 0 5 7 10z"/></svg></i></span>
-          <span class="vf-led__cell vf-led__cell--n"><b data-led="n" data-off="88">01</b></span>
+          <span class="vf-led__cell vf-led__cell--n"><b data-led="n" data-off="88">01</b><em class="vf-led__of">/</em><b data-led="of" data-off="88">{% if photos.size < 10 %}0{% endif %}{{ photos.size }}</b></span>
         </div>
         <p class="vf-caption" data-vf-caption hidden></p>
         <p class="cv-hint" data-cv-hint>Drag to look around · scroll to zoom · click to open</p>
