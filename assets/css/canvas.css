@@ -227,9 +227,18 @@ p { margin: 0; }
 .vf-led__focus .is-on, .vf.is-test .vf-led__focus i { color: var(--led); }
 .vf-led__cell--n { padding-left: 1rem; border-left: 1px solid rgba(255, 74, 46, .28); }
 .vf-caption { font: 400 .76rem/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
-/* Docked at the foot of the window it sits over the wall: solid, and the caption on a plate. */
-.vf.is-docked .vf-led { background: #050505; box-shadow: 0 0 0 1px rgba(255, 255, 255, .07), 0 .8rem 2rem rgba(0, 0, 0, .7); }
-.vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; background: rgba(5, 5, 5, .88); }
+/* Docked at the foot of the window it sits over the wall, as an optical viewfinder's LEDs sit
+   over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
+.vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }
+.vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; }
+.vf.is-docked .vf-led b { text-shadow: 0 0 .45rem rgba(255, 74, 46, .55); }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .vf.is-docked .vf-led, .vf.is-docked .vf-caption {
+    background: rgba(4, 4, 4, .38);
+    -webkit-backdrop-filter: blur(5px) brightness(.72);
+    backdrop-filter: blur(5px) brightness(.72);
+  }
+}
 .cv-hint { font: 400 .72rem/1.3 var(--mono); color: var(--muted); white-space: nowrap; transition: opacity .6s; }
 .cv-hint.is-gone { opacity: 0; }
 
