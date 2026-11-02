@@ -134,6 +134,9 @@ p { margin: 0; }
 .cv-wall { position: absolute; inset: 0; transform-origin: 50% 50%; }
 .cv-on .cv-plane.is-dragging { cursor: grabbing; }
 .cv-item { position: absolute; left: 0; top: 0; background: #161616; cursor: zoom-in; }
+/* Dragging the wall must never select it: Safari paints selected photographs with a
+   light veil, which washed the whole wall out on a fast drag. */
+.cv-on .cv-room { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .cv-plane.is-dragging .cv-item { cursor: grabbing; }
 .cv-item.is-sharp img { dynamic-range-limit: no-limit; }
 .cv-item img {
@@ -343,6 +346,15 @@ p { margin: 0; }
   width: min(100% - 2.4rem, calc((100svh - 18.5rem) * var(--ar, 1.5)));
   aspect-ratio: var(--ar, 1.5);
   pointer-events: none;
+}
+/* Where container queries work, the photograph is sized from the room its row really has
+   (the readout, caption and roll below take what they need first), its frame lines .9rem
+   outside it, and a clear gap before the readout. Phones stack the rows instead (below). */
+@supports (container-type: size) {
+  @media (min-width: 701px) {
+    .gl__stage { container-type: size; }
+    .gl .gl__img, .gl__frame { width: min(100cqw - 2.4rem, (100cqh - 2.6rem) * var(--ar, 1.5)); }
+  }
 }
 .gl__frame::before, .gl__frame::after { content: ""; position: absolute; inset: -.9rem; }
 .gl__frame::after { border: 1px solid var(--line-dim); }
