@@ -2,5 +2,6 @@
 # Written by the Gallery Studio (www.wshangguan.com/studio/): one photo per line.
 # Each line is a YAML flow mapping with id, src, thumb, w, h, title, place, year, exif, added.
 # You can edit a title, place or year here by hand; keep each photo on one line.
+- {"id":"20261102-b-0728-q0t2","src":"/img/gallery/20261102-b-0728-q0t2.jpg","thumb":"/img/gallery/20261102-b-0728-q0t2-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"","added":"2026-11-02"}
 - {"id":"20261102-all-photos-1-of-1-1-c9e7","src":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7.jpg","thumb":"/img/gallery/20261102-all-photos-1-of-1-1-c9e7-thumb.jpg","w":2000,"h":1500,"title":"","place":"","year":"2025","exif":{"camera":"iPhone 13 Pro","lens":"back triple camera 9mm f/2.8","focal":"9 mm","aperture":"f/2.8","shutter":"1/950 s","iso":"ISO 32"},"added":"2026-11-02"}
 - {"id":"20261102-dsc6268-2-6yah","src":"/img/gallery/20261102-dsc6268-2-6yah.jpg","thumb":"/img/gallery/20261102-dsc6268-2-6yah-thumb.jpg","w":2000,"h":1333,"title":"","place":"","year":"2022","exif":{"camera":"SONY ILCE-7M3","lens":"E 28-75mm F2.8","focal":"75 mm","aperture":"f/5.6","shutter":"1/800 s","iso":"ISO 100"},"added":"2026-11-02"}
