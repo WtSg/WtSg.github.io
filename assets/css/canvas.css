@@ -622,3 +622,40 @@ html.cv-on { touch-action: pan-x pan-y; }
   .gl .gl__spec dt { flex: none; }
   .gl .gl__spec dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* A wide but short screen (a phone turned on its side): the photograph takes the whole
+   height on the left, and the readout, the caption, the roll and the keys stand in a column
+   beside it, instead of squeezing it to a strip above them. The photograph and the ones
+   that slide in keep to their own side. */
+@media (min-width: 560px) and (max-height: 560px) and (orientation: landscape) {
+  .gl[open] {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 21rem);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "stage info" "stage controls";
+    align-content: stretch;
+    gap: .5rem 1rem;
+    padding: max(.5rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+  }
+  .gl__stage { overflow: hidden; }
+  .gl__frame::before, .gl__frame::after { inset: -.6rem; }
+  .gl__info { align-self: end; justify-self: stretch; min-width: 0; gap: .35rem; }
+  .gl__led .vf-led { gap: .55rem; padding: .35rem .5rem; }
+  .gl__led .vf-led__exif { gap: .55rem; }
+  .gl__led .vf-led b { font-size: 1rem; }
+  .gl__led .vf-led .vf-led__of { font-size: .85rem; }
+  .gl__led .vf-led__cell--n { padding-left: .5rem; }
+  .gl .gl__spec { flex-direction: column; flex-wrap: nowrap; align-items: center; gap: .1rem; }
+  .gl .gl__spec div { max-width: 100%; min-width: 0; }
+  .gl .gl__spec dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gl__controls { grid-template-columns: auto 1fr auto; grid-template-areas: "roll roll roll" "prev close next"; gap: .45rem; }
+  .gl .gl__btn--close { justify-self: center; }
+  .gl__film { --strip-h: 3.4rem; }
+  .gl__frm img { height: 2.1rem; }
+  .gl__gate { height: calc(2.1rem + 8px); }
+}
+@supports (container-type: size) {
+  @media (min-width: 560px) and (max-height: 560px) and (orientation: landscape) {
+    .gl__stage { container-type: size; }
+    .gl .gl__img, .gl__frame { width: min(100cqw - 2.2rem, (100cqh - 2.2rem) * var(--ar, 1.5)); }
+  }
+}
