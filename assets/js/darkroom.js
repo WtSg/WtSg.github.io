@@ -490,6 +490,11 @@
     var hudTimer = stage.querySelector("[data-hud-timer]");
     var hudCount = stage.querySelector("[data-hud-count]");
     var hudHint = stage.querySelector("[data-hud-hint]");
+    var hudLabel = stage.querySelector("[data-hud-label]");
+    var hudTry = stage.querySelector("[data-hud-try]");
+    var hallHint = stage.querySelector("[data-hall-hint]");
+    var touch = mq("(pointer: coarse)").matches;
+    if (hallHint && touch) hallHint.textContent = "Swipe sideways to wander · scroll to go deeper · tap a print to look closely";
     var lookBtn = stage.querySelector('[data-hud="look"]');
     var N = trays.length;
     var photos = trays.map(function (t) {
@@ -499,7 +504,7 @@
         ar: parseFloat(t.style.getPropertyValue("--ar")) || 1.5
       };
     });
-    var shownIdx = -1, wanted = 0;
+    var shownIdx = -1, wanted = 0, tried = false;
     function fmt(s) { return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
     function showTape(i) {
       var tape = trays[i].querySelector(".tape");
@@ -528,7 +533,20 @@
           showTape(s.index);
           hudCount.textContent = (s.index + 1) + " / " + N;
         }
-        hudTimer.textContent = fmt(s.seconds || 0);
+        // The timer follows the work: exposure counting down, then developer, stop, fixer.
+        if (hudLabel) hudLabel.textContent = s.label || "Dev";
+        hudTimer.textContent = s.kind === "exp" ? (+s.value || 0).toFixed(1) : s.kind === "none" ? "" : fmt(s.value || 0);
+        // Once the first print is up, a one-time nudge to try the trays by hand.
+        if (!tried && hudTry && s.label === "Dev" && s.value >= 90 && !lit) {
+          tried = true;
+          hudTry.textContent = touch ? "Tap a tray to rock it · tap the enlarger to switch it on" : "Drag a tray to rock it · press the enlarger to switch it on";
+          hudTry.hidden = false;
+          setTimeout(function () { hudTry.classList.add("is-gone"); }, 7000);
+        }
+      },
+      onUse: function (what) {
+        if (what === "wander" && hallHint) hallHint.classList.add("is-gone");
+        else if (hudTry) hudTry.classList.add("is-gone");
       },
       onPick: function (i, rect) { openLoupe(i, rect, lookBtn); }
     });

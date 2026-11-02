@@ -99,15 +99,17 @@
         <canvas class="dr-canvas" aria-hidden="true"></canvas>
         <div class="dr-hud">
           <div class="dr-hud__tape tape" aria-live="polite"></div>
-          <p class="dr-hud__timer" aria-hidden="true">Dev <b data-hud-timer>0:00</b></p>
+          <p class="dr-hud__timer" aria-hidden="true"><span data-hud-label>Exp</span> <b data-hud-timer>8.0</b></p>
           <div class="dr-hud__nav">
             <button class="dr-hud__btn" type="button" data-hud="prev" aria-label="Previous print">{% include gl-icon.html name="prev" %}</button>
             <span class="dr-hud__count" data-hud-count>1 / {{ photos.size }}</span>
             <button class="dr-hud__btn" type="button" data-hud="next" aria-label="Next print">{% include gl-icon.html name="next" %}</button>
             <button class="dr-hud__btn dr-hud__btn--look" type="button" data-hud="look">{% include gl-icon.html name="loupe" %}<span class="dr-hud__look-text">Look closely</span></button>
           </div>
-          <p class="dr-hud__hint" data-hud-hint>Scroll to develop the next print</p>
+          <p class="dr-hud__hint" data-hud-hint>Scroll to make the next print</p>
+          <p class="dr-hud__try" data-hud-try hidden></p>
         </div>
+        <p class="dr-hall-hint" data-hall-hint aria-hidden="true">Drag to wander the drying room · click a print to look closely</p>
         <!-- Every print, for keyboards and screen readers: focusing one brings it to the tray -->
         <ol class="dr-keys">
           {%- for ph in photos %}
