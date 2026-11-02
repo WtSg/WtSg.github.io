@@ -6,8 +6,9 @@
  *   - decode (EXIF orientation applied) and resize to <= 2000px on the long edge,
  *     plus a <= 900px thumbnail;
  *   - re-encode as JPEG, which drops every original metadata block (GPS included);
- *   - keep HDR: when the photo carries an HDR gain map (iPhone HEIC, Ultra HDR JPEG),
- *     resize the gain map with it and write it into the JPEG (studio-hdr.js);
+ *   - keep HDR (studio-hdr.js): a photo with a gain map (iPhone HEIC, Ultra HDR JPEG)
+ *     keeps it, resized with the photo; a PQ or HLG photo (HDR AVIF or HEIF) becomes an
+ *     SDR picture plus a gain map made from its full brightness; either way one JPEG;
  *   - embed a small EXIF block holding only Artist and Copyright;
  *   - optionally draw a subtle "© year name" watermark in the bottom-right corner.
  * Publishing writes the images to img/gallery/ and prepends one line per photo to
@@ -360,16 +361,20 @@
       var bmp = res[0];
       var sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
       // The HDR gain map, if the photo has one this browser can read.
-      var gmP = HDR ? HDR.read(item.file, sw / sh).catch(function (e) {
+      var gmP = HDR ? HDR.read(item.file, sw / sh, { maxEdge: s.edge, colorSpace: COLOR_SPACE }).catch(function (e) {
         item.hdrProblem = (e && e.message) || "unreadable";
         if (window.console) console.warn("Gallery Studio: the HDR gain map of " + item.name + " was not kept (" + item.hdrProblem + ").");
         return null;
       }) : Promise.resolve(null);
       return gmP.then(function (gm) {
+        // A PQ or HLG photo comes back with its own SDR picture, the one its gain map was made against.
+        var src = gm && gm.base ? gm.base : bmp;
+        if (src !== bmp) { if (bmp.close) bmp.close(); sw = src.width; sh = src.height; }
+        if (gm && !gm.canvas) { item.hdrSource = gm.source; gm = null; }
         var k = Math.min(1, s.edge / Math.max(sw, sh));
         var w = Math.round(sw * k), h = Math.round(sh * k);
-        var full = scaleTo(bmp, sw, sh, w, h);
-        if (bmp.close) bmp.close();
+        var full = scaleTo(src, sw, sh, w, h);
+        if (src.close) src.close();
         if (s.wmOn) drawWatermark(full, s);
         var t = Math.min(1, THUMB_EDGE / Math.max(w, h));
         var tw = Math.round(w * t), th = Math.round(h * t);
@@ -391,6 +396,7 @@
             item.thumb = insertSegment(out[1], seg);
           }
           item.hdrKept = !!gm;
+          if (gm) item.hdrSource = gm.source;
           item.w = w; item.h = h;
           item.preview = URL.createObjectURL(new Blob([item.thumb], { type: "image/jpeg" }));
         });
@@ -496,8 +502,11 @@
       meta.classList.add("is-error");
     } else if (item.status === "ready") {
       meta.textContent = item.name + " → " + item.w + " × " + item.h + ", " + kb(item.full.length) + " (from " + kb(item.file.size) + "). Location and camera data removed." +
-        (item.hdrKept ? " HDR photo: kept in HDR, with its gain map. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere."
-          : item.hdr ? " HDR photo: this browser couldn't read its HDR gain map, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + ". Safari on a Mac or iPhone keeps HDR." : "") +
+        (item.hdrKept ? (item.hdrSource === "pq" || item.hdrSource === "hlg"
+            ? " HDR photo (" + item.hdrSource.toUpperCase() + "): kept in HDR as a JPEG with a gain map, made from its full brightness. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere."
+            : " HDR photo: kept in HDR, with its gain map. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere.")
+          : item.hdrSource ? " HDR photo (" + item.hdrSource.toUpperCase() + "), but nothing in it is brighter than white, so it is published as a standard image."
+          : item.hdr ? " HDR photo: this browser couldn't read its HDR, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + ". Safari on a Mac or iPhone keeps HDR." : "") +
         (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "");
     } else {
       meta.textContent = item.name + " · preparing…";

@@ -477,10 +477,10 @@
     if (M) cs.matrix = M;
     return cs;
   }
-  // Decodes a coded HEVC (or AV1) image item, a single image or a grid of tiles, onto a canvas.
-  // mode "luma" keeps the raw luma (a greyscale gain map), "raw" the raw colour (a colour
-  // gain map), "draw" lets the browser colour-manage (the photograph itself).
-  async function decodeItem(h, item, mode, colorSpace) {
+  // Decodes a coded HEVC (or AV1) image item, a single image or a grid of tiles, handing
+  // each decoded tile to onFrame(frame, x, y) as it arrives; the tile is released right
+  // after, so a hardware decoder never runs out of frames on a large grid.
+  async function decodeTiles(h, item, mode, onFrame) {
     if (typeof VideoDecoder === "undefined" || typeof EncodedVideoChunk === "undefined") throw fail("no WebCodecs");
     var g = item.type === "grid" ? grid(h, item) : null, ids = g ? g.tiles : [item.id];
     if (!ids.length) throw fail("empty grid");
@@ -497,32 +497,195 @@
     var support = await VideoDecoder.isConfigSupported(config);
     if (!support || !support.supported) throw fail("this browser cannot decode " + config.codec);
     var ts = size(h, tile), W = g ? g.w : (size(h, item) || ts).w, H = g ? g.h : (size(h, item) || ts).h;
-    var out = canvas(W, H), ctx = mode === "draw" && colorSpace ? (out.getContext("2d", { colorSpace: colorSpace }) || out.getContext("2d")) : out.getContext("2d");
-    var frames = [], error = null;
-    var dec = new VideoDecoder({ output: function (f) { frames.push(f); }, error: function (e) { error = e; } });
+    var cols = g ? g.cols : 1, tw = ts ? ts.w : W, th = ts ? ts.h : H;
+    var pending = [], error = null, count = 0;
+    var dec = new VideoDecoder({
+      output: function (f) {
+        count++;
+        var k = f.timestamp, x = (k % cols) * tw, y = Math.floor(k / cols) * th;
+        pending.push(Promise.resolve().then(function () { return onFrame(f, x, y); }).then(
+          function (v) { try { f.close(); } catch (e) {} return v; },
+          function (e) { try { f.close(); } catch (e2) {} throw e; }));
+      },
+      error: function (e) { error = e; }
+    });
     try {
       dec.configure(config);
-      ids.forEach(function (id, k) {
-        dec.decode(new EncodedVideoChunk({ type: "key", timestamp: k, data: itemData(h, h.items[id]) }));
-      });
-      await dec.flush();
-      if (error) throw error;
-      if (frames.length !== ids.length) throw fail("decoded " + frames.length + " of " + ids.length + " tiles");
-      frames.sort(function (a, b) { return a.timestamp - b.timestamp; });
-      var cols = g ? g.cols : 1, tw = ts ? ts.w : W, th = ts ? ts.h : H;
-      for (var k = 0; k < frames.length; k++) {
-        var f = frames[k], x = (k % cols) * tw, y = Math.floor(k / cols) * th;
-        if (mode !== "draw") {
-          var px = await framePixels(f, nc ? nc.full : true, mode === "luma");
-          if (px) ctx.putImageData(px, x, y);
-          else ctx.drawImage(f, x, y);
-        } else ctx.drawImage(f, x, y);
+      for (var k = 0; k < ids.length; k++) {
+        dec.decode(new EncodedVideoChunk({ type: "key", timestamp: k, data: itemData(h, h.items[ids[k]]) }));
+        if (dec.decodeQueueSize > 3) await new Promise(function (r) { setTimeout(r, 0); });
       }
-      return out;
+      await dec.flush();
+      await Promise.all(pending);
+      if (error) throw error;
+      if (count !== ids.length) throw fail("decoded " + count + " of " + ids.length + " tiles");
+      return { w: W, h: H, nc: nc };
     } finally {
-      frames.forEach(function (f) { try { f.close(); } catch (e) {} });
       if (dec.state !== "closed") dec.close();
     }
+  }
+  // The item as a canvas: raw luma or colour for a gain map, colour-managed for a photograph.
+  async function decodeItem(h, item, mode, colorSpace) {
+    var out = null, ctx = null, nc = null;
+    var g = item.type === "grid" ? grid(h, item) : null, sz = g ? { w: g.w, h: g.h } : size(h, item);
+    if (!sz) { var t0 = h.items[(g ? g.tiles : [item.id])[0]]; sz = t0 && size(h, t0); }
+    if (!sz) throw fail("no image size");
+    out = canvas(sz.w, sz.h);
+    ctx = mode === "draw" && colorSpace ? (out.getContext("2d", { colorSpace: colorSpace }) || out.getContext("2d")) : out.getContext("2d");
+    var first = h.items[(g ? g.tiles : [item.id])[0]];
+    nc = nclx(h, first) || nclx(h, item);
+    await decodeTiles(h, item, mode, async function (f, x, y) {
+      if (mode !== "draw") {
+        var px = await framePixels(f, nc ? nc.full : true, mode === "luma");
+        if (px) { ctx.putImageData(px, x, y); return; }
+      }
+      ctx.drawImage(f, x, y);
+    });
+    return out;
+  }
+
+  /* ---------- PQ and HLG: HDR without a gain map ---------- */
+  var PQ = (function () {
+    var m1 = 2610 / 16384, m2 = 2523 / 4096 * 128, c1 = 3424 / 4096, c2 = 2413 / 4096 * 32, c3 = 2392 / 4096 * 32, t = new Float32Array(4097);
+    for (var i = 0; i <= 4096; i++) {
+      var e = Math.pow(i / 4096, 1 / m2);
+      t[i] = 10000 * Math.pow(Math.max(e - c1, 0) / (c2 - c3 * e), 1 / m1) / 203;   // display light, SDR white = 1
+    }
+    return t;
+  })();
+  var HLG = (function () {
+    var a = 0.17883277, b = 0.28466892, c = 0.55991073, t = new Float32Array(4097);
+    for (var i = 0; i <= 4096; i++) { var e = i / 4096; t[i] = e <= 0.5 ? e * e / 3 : (Math.exp((e - c) / a) + b) / 12; }  // scene light 0..1
+    return t;
+  })();
+  function lut(t, v) { v = v <= 0 ? 0 : v >= 1 ? 1 : v; var x = v * 4096, i = x | 0; return i >= 4096 ? t[4096] : t[i] + (t[i + 1] - t[i]) * (x - i); }
+  // Luminance weights and conversions between BT.2020, Display P3 and BT.709 (linear light).
+  var LUMA = { 2020: [0.2627, 0.678, 0.0593], p3: [0.22897, 0.69174, 0.07929], 709: [0.2126, 0.7152, 0.0722] };
+  var TO = {
+    "2020>p3": [1.3435783, -0.2821797, -0.0613986, -0.0652974, 1.0757879, -0.0104905, 0.0028217, -0.0195984, 1.0167767],
+    "2020>709": [1.6604910, -0.5876411, -0.0728499, -0.1245505, 1.1328999, -0.0083494, -0.0181508, -0.1005789, 1.1187297],
+    "p3>709": [1.2249401, -0.2249404, 0, -0.0420569, 1.0420571, 0, -0.0196376, -0.0786361, 1.0982735],
+    "709>p3": [0.8224621, 0.1775380, 0, 0.0331941, 0.9668058, 0, 0.0170827, 0.0723974, 0.9105199],
+    "p3>p3": [1, 0, 0, 0, 1, 0, 0, 0, 1], "709>709": [1, 0, 0, 0, 1, 0, 0, 0, 1]
+  };
+  // Y'CbCr to R'G'B' for a matrix code (ISO 23091-2): [cr->R, cb->G, cr->G, cb->B]
+  function yuvMatrix(code) {
+    if (code === 1) return [1.5748, 0.18733, 0.46813, 1.8556];
+    if (code === 5 || code === 6) return [1.402, 0.344136, 0.714136, 1.772];
+    if (code === 0) return null;                                    // RGB stored as G, B, R planes
+    return [1.4746, 0.16455, 0.57135, 1.8814];                      // BT.2020 (non-constant luminance)
+  }
+  // Decodes a PQ or HLG picture at full precision, averaged down to fit maxEdge, as linear
+  // light in its own primaries with SDR reference white (203 cd/m2) at 1.0.
+  async function decodeLinear(h, item, info, maxEdge) {
+    var g = item.type === "grid" ? grid(h, item) : null, sz = g ? { w: g.w, h: g.h } : size(h, item);
+    if (!sz) throw fail("no image size");
+    var s = Math.min(1, maxEdge / Math.max(sz.w, sz.h)), ow = Math.max(1, Math.round(sz.w * s)), oh = Math.max(1, Math.round(sz.h * s));
+    var acc = new Float32Array(ow * oh * 3), cnt = new Uint16Array(ow * oh);
+    var M = yuvMatrix(info.matrix), pq = info.transfer === 16, luma = LUMA[info.prim];
+    // a big photo shrinking a lot is read at every other pixel: still several samples per output pixel
+    var stride = s <= 0.4 ? 2 : 1;
+    await decodeTiles(h, item, "raw", async function (f, x0, y0) {
+      var fmt = f.format;
+      if (!fmt || /^(RGB|BGR)/.test(fmt)) throw fail("unreadable HDR frame format " + fmt);
+      var w = f.visibleRect.width, hh = f.visibleRect.height, buf = new Uint8Array(f.allocationSize()), L = await f.copyTo(buf);
+      var depth = /P12/.test(fmt) ? 12 : /P10/.test(fmt) ? 10 : 8, deep = depth > 8, one = (1 << depth) - 1, unit = 1 << (depth - 8);
+      var full = info.full !== undefined ? info.full : (f.colorSpace && f.colorSpace.fullRange) || false;
+      var yOff = full ? 0 : 16 * unit, yDiv = full ? one : 219 * unit, cMid = 128 * unit, cDiv = full ? one : 224 * unit;
+      var nv = /^NV12/.test(fmt), sx = /^I444/.test(fmt) ? 1 : 2, sy = /^I420|^NV12/.test(fmt) ? 2 : 1;
+      var read = function (plane, px, py) { var Lp = L[plane], o = Lp.offset + py * Lp.stride + px * (deep ? 2 : 1); return deep ? buf[o] | (buf[o + 1] << 8) : buf[o]; };
+      for (var y = 0; y < hh; y += stride) {
+        var gy = y0 + y;
+        if (gy >= sz.h) break;
+        var oy = Math.min(oh - 1, (gy * s) | 0);
+        for (var x = 0; x < w; x += stride) {
+          var gx = x0 + x;
+          if (gx >= sz.w) break;
+          var Y = (read(0, x, y) - yOff) / yDiv, cb, cr, cxp = (x / sx) | 0, cyp = (y / sy) | 0;
+          if (nv) {
+            var L1 = L[1], o1 = L1.offset + cyp * L1.stride + cxp * 2 * (deep ? 2 : 1);
+            cb = ((deep ? buf[o1] | (buf[o1 + 1] << 8) : buf[o1]) - cMid) / cDiv;
+            cr = ((deep ? buf[o1 + 2] | (buf[o1 + 3] << 8) : buf[o1 + 1]) - cMid) / cDiv;
+          } else { cb = (read(1, cxp, cyp) - cMid) / cDiv; cr = (read(2, cxp, cyp) - cMid) / cDiv; }
+          var R, G, B;
+          if (M) { R = Y + M[0] * cr; G = Y - M[1] * cb - M[2] * cr; B = Y + M[3] * cb; }
+          else { G = Y; B = cb + 0.5; R = cr + 0.5; }
+          var r, gg, b;
+          if (pq) { r = lut(PQ, R); gg = lut(PQ, G); b = lut(PQ, B); }
+          else {
+            // HLG: scene light, then the reference OOTF for a 1000 cd/m2 display (system gamma 1.2)
+            r = lut(HLG, R); gg = lut(HLG, G); b = lut(HLG, B);
+            var ys = luma[0] * r + luma[1] * gg + luma[2] * b, k = ys > 0 ? 1000 / 203 * Math.pow(ys, 0.2) : 0;
+            r *= k; gg *= k; b *= k;
+          }
+          var o = oy * ow + Math.min(ow - 1, (gx * s) | 0);
+          acc[o * 3] += r; acc[o * 3 + 1] += gg; acc[o * 3 + 2] += b; cnt[o]++;
+        }
+      }
+    });
+    for (var i = 0; i < cnt.length; i++) { var n = cnt[i] || 1; acc[i * 3] /= n; acc[i * 3 + 1] /= n; acc[i * 3 + 2] /= n; }
+    return { rgb: acc, w: ow, h: oh };
+  }
+  // The SDR picture: highlights roll off smoothly above a knee, the rest stays as graded.
+  function rolloff(Y) { var K = 0.7; return Y <= K ? Y : K + (1 - K) * (1 - Math.exp(-(Y - K) / (1 - K))); }
+  function srgbOETF(v) { return v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; }
+  // From linear HDR: the SDR picture (in the canvas's colour space) and a gain map that
+  // brings the HDR back, with its ISO 21496-1 metadata.
+  function hdrToGainMap(img, prim, target) {
+    var w = img.w, h = img.h, rgb = img.rgb, N = w * h, lw = LUMA[prim], m = TO[prim + ">" + target] || TO["709>709"], lt = LUMA[target];
+    // peak: the 99.9th percentile of luminance, so a few hot pixels do not set it
+    var sample = [], step = Math.max(1, Math.floor(N / 200000));
+    for (var i = 0; i < N; i += step) sample.push(lw[0] * rgb[i * 3] + lw[1] * rgb[i * 3 + 1] + lw[2] * rgb[i * 3 + 2]);
+    sample.sort(function (a, b) { return a - b; });
+    var peak = Math.min(32, Math.max(1, sample[Math.floor(sample.length * 0.999)] || 1));
+    var base = new ImageData(w, h, target === "p3" ? { colorSpace: "display-p3" } : undefined), bd = base.data;
+    var hdrY = new Float32Array(N), sdrY = new Float32Array(N);
+    for (var p = 0; p < N; p++) {
+      var r = rgb[p * 3], g = rgb[p * 3 + 1], b = rgb[p * 3 + 2];
+      var Y = lw[0] * r + lw[1] * g + lw[2] * b, k = Y > 1e-6 ? rolloff(Math.min(Y, peak * 4)) / Y : 1;
+      // into the target primaries; the HDR's luminance there, then the clipped SDR's
+      var R = m[0] * r + m[1] * g + m[2] * b, G = m[3] * r + m[4] * g + m[5] * b, B = m[6] * r + m[7] * g + m[8] * b;
+      hdrY[p] = Math.max(0, lt[0] * R + lt[1] * G + lt[2] * B);
+      var sr = Math.min(1, Math.max(0, R * k)), sg = Math.min(1, Math.max(0, G * k)), sb = Math.min(1, Math.max(0, B * k));
+      sdrY[p] = lt[0] * sr + lt[1] * sg + lt[2] * sb;
+      bd[p * 4] = Math.round(255 * srgbOETF(sr)); bd[p * 4 + 1] = Math.round(255 * srgbOETF(sg)); bd[p * 4 + 2] = Math.round(255 * srgbOETF(sb)); bd[p * 4 + 3] = 255;
+    }
+    // the gain map, at half resolution: log2 of how much brighter the HDR is, per 2 x 2 block
+    var gw = Math.max(1, w >> 1), gh = Math.max(1, h >> 1), G2 = new Float32Array(gw * gh), lo = Infinity, hi = -Infinity, off = 1 / 64;
+    for (var y = 0; y < gh; y++) {
+      for (var x = 0; x < gw; x++) {
+        var yh = 0, ysd = 0, n = 0;
+        for (var dy = 0; dy < 2; dy++) for (var dx = 0; dx < 2; dx++) {
+          var px = Math.min(w - 1, x * 2 + dx), py = Math.min(h - 1, y * 2 + dy), q = py * w + px;
+          yh += hdrY[q]; ysd += sdrY[q]; n++;
+        }
+        var lg = Math.log2((yh / n + off) / (ysd / n + off));
+        G2[y * gw + x] = lg;
+        if (lg < lo) lo = lg;
+        if (lg > hi) hi = lg;
+      }
+    }
+    if (!(hi > lo)) hi = lo + 1e-3;
+    var gm = new ImageData(gw, gh), gd = gm.data;
+    for (var j = 0; j < G2.length; j++) { var v = Math.round(255 * (G2[j] - lo) / (hi - lo)); gd[j * 4] = gd[j * 4 + 1] = gd[j * 4 + 2] = v; gd[j * 4 + 3] = 255; }
+    var bc = canvas(w, h), gc = canvas(gw, gh);
+    (target === "p3" ? bc.getContext("2d", { colorSpace: "display-p3" }) || bc.getContext("2d") : bc.getContext("2d")).putImageData(base, 0, 0);
+    gc.getContext("2d").putImageData(gm, 0, 0);
+    var L = Math.log2(peak);
+    return {
+      base: bc, gain: gc, peak: peak,
+      meta: { channels: 1, useBase: true, min: [lo], max: [hi], gamma: [1], baseOffset: [off], altOffset: [off], baseHeadroom: 0, altHeadroom: Math.max(L, hi, 0.01) }
+    };
+  }
+  function hdrTransfer(nc) { return nc && (nc.transfer === 16 || nc.transfer === 18) ? nc.transfer : 0; }
+  async function readPqHlg(h, primary, nc, opts) {
+    var info = { transfer: nc.transfer, matrix: nc.matrix, full: nc.full, prim: nc.primaries === 12 ? "p3" : nc.primaries === 1 ? "709" : "2020" };
+    var lin = await decodeLinear(h, primary, info, (opts && opts.maxEdge) || 2000);
+    var target = (opts && opts.colorSpace) === "display-p3" ? "p3" : "709";
+    var out = hdrToGainMap(lin, info.prim, target), ops = transforms(h, primary);
+    var base = applyOps(out.base, ops), gain = applyOps(out.gain, ops);
+    if (out.peak < 1.05) return { base: base, canvas: null, meta: null, source: info.transfer === 16 ? "pq" : "hlg" };
+    return { base: base, canvas: gain, meta: out.meta, source: info.transfer === 16 ? "pq" : "hlg", peak: out.peak };
   }
   // Applies HEIF rotation (anticlockwise quarter turns) and mirroring, in order.
   function applyOps(src, ops) {
@@ -569,7 +732,7 @@
   /* ================= Reading a photo's gain map ================= */
   function isHeif(u8) { var b = latin1(u8, 4, 12); return /^ftyp(heic|heix|hevc|hevx|heim|heis|mif1|msf1|MiHE|MiPr|miaf|avif|avis)/.test(b); }
 
-  async function readHeif(buf, baseAspect) {
+  async function readHeif(buf, baseAspect, opts) {
     var h = parseHeif(buf);
     if (!h || !h.items[h.primary]) return null;
     var primary = h.items[h.primary], found = null;
@@ -607,7 +770,13 @@
         if (H > 1.01) found = { item: it, meta: appleMeta(H), table: appleTable(H) };
       });
     }
-    if (!found || !found.item) return null;
+    if (!found || !found.item) {
+      // HDR stored as PQ or HLG (Sony cameras' HLG HEIF, Lightroom's HDR AVIF): make the gain map here.
+      var tiles = primary.type === "grid" ? refsFrom(h, "dimg", primary.id) : [primary.id];
+      var nc = nclx(h, primary) || (tiles.length ? nclx(h, h.items[tiles[0]]) : null);
+      if (hdrTransfer(nc)) return readPqHlg(h, primary, nc, opts);
+      return null;
+    }
     var mode = found.meta.channels === 3 ? "raw" : "luma";
     var raw = await decodeItem(h, found.item, mode);
     var own = transforms(h, found.item), prim = transforms(h, primary);
@@ -633,10 +802,13 @@
   }
 
   // The photo's gain map as an upright canvas plus its ISO-form metadata, or null when
-  // it has none. Rejects (with .hdr set) when it has one this browser cannot read.
-  async function read(file, baseAspect) {
+  // it has none. For a PQ or HLG photo it also returns base: the SDR picture the gain map
+  // was made against (at most opts.maxEdge, in opts.colorSpace), which must be published
+  // in place of the browser's own rendering. Rejects (with .hdr set) when the photo has
+  // HDR this browser cannot read.
+  async function read(file, baseAspect, opts) {
     var buf = await file.arrayBuffer(), u8 = new Uint8Array(buf);
-    if (u8.length > 12 && isHeif(u8)) return readHeif(buf, baseAspect);
+    if (u8.length > 12 && isHeif(u8)) return readHeif(buf, baseAspect, opts);
     if (u8[0] === 0xFF && u8[1] === 0xD8) return readJpegGainMap(buf, baseAspect);
     return null;
   }
@@ -729,5 +901,5 @@
     return concat([pre].concat(extra, [xmp, ver, mpf, rest, secondary]));
   }
 
-  window.StudioHDR = { read: read, join: join, decodeHeif: decodeHeif, _test: { parseHeif: parseHeif, parseIso: parseIso, encodeIso: encodeIso, readJpeg: readJpeg, appleTable: appleTable, appleHeadroomFromExif: appleHeadroomFromExif, hevcCodec: hevcCodec, av1Codec: av1Codec, decodeItem: decodeItem, grid: grid, gainXmp: gainXmp, isHeif: isHeif, tiffIn: tiffIn } };
+  window.StudioHDR = { read: read, join: join, decodeHeif: decodeHeif, _test: { parseHeif: parseHeif, parseIso: parseIso, encodeIso: encodeIso, readJpeg: readJpeg, appleTable: appleTable, appleHeadroomFromExif: appleHeadroomFromExif, hevcCodec: hevcCodec, av1Codec: av1Codec, decodeItem: decodeItem, decodeLinear: decodeLinear, hdrToGainMap: hdrToGainMap, grid: grid, gainXmp: gainXmp, isHeif: isHeif, tiffIn: tiffIn } };
 })();
