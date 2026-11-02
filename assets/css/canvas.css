@@ -309,8 +309,11 @@ p { margin: 0; }
    over the scene: a smoked-glass plate the photographs show through, the digits glowing. */
 .vf.is-docked .vf-led, .vf.is-docked .vf-caption { background: rgba(4, 4, 4, .66); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07); }
 .vf.is-docked .vf-caption { padding: .22rem .55rem; border-radius: .2rem; }
-/* zoomed out the readout stands alone at the foot: no caption under it */
-.vf.is-docked .vf-caption, .vf.is-docked .cv-hint { display: none; }
+/* at the foot the readout stands alone, no caption under it; the first visit's hint floats
+   just above it until the wall is first touched */
+.vf.is-docked .vf-caption { display: none; }
+.vf.is-docked .cv-hint { position: absolute; left: 50%; bottom: calc(100% + .5rem); transform: translateX(-50%); }
+.vf.is-docked .cv-hint.is-gone { visibility: hidden; transition: opacity .6s, visibility 0s .6s; }
 .vf.is-docked .vf-led b { text-shadow: 0 0 .45rem rgba(255, 74, 46, .55); }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .vf.is-docked .vf-led, .vf.is-docked .vf-caption {
