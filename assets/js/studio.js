@@ -37,9 +37,16 @@
     edge: 2000, quality: 86,
     wmOn: true, wmText: "\u00A9 " + YEAR + " " + AUTHOR, wmPos: "br", wmSize: "s", wmOpacity: 60,
     copyright: "Copyright " + YEAR + " " + AUTHOR + ". All rights reserved.", artist: AUTHOR,
-    camera: true
+    camera: true, place: true
   };
   var DATA_PATH = "_data/gallery.yml";
+  // Size and quality a single photo can be published at, instead of the settings.
+  var QUALITY = [
+    { key: "small", label: "Small · 1600 px, 82", edge: 1600, quality: 82 },
+    { key: "standard", label: "Standard · 2000 px, 86", edge: 2000, quality: 86 },
+    { key: "high", label: "High · 3000 px, 90", edge: 3000, quality: 90 },
+    { key: "full", label: "Full · 4000 px, 93", edge: 4000, quality: 93 }
+  ];
   var IMG_DIR = "img/gallery/";
   var TOKEN_KEY = "gallery-studio-token";
 
@@ -159,7 +166,7 @@
   // ("ILCE-7M4 · FE 35mm F1.8 · 35 mm · f/2 · 1/250 s · ISO 100"). Only these
   // values are kept, for captions; the published file never carries them.
   function readExifInfo(buf) {
-    var info = { found: false, year: "", camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
+    var info = { found: false, year: "", date: "", lat: null, lon: null, camera: "", lens: "", focal: "", aperture: "", shutter: "", iso: "", summary: "" };
     try {
       var v = new DataView(buf), bytes = new Uint8Array(buf), t = -1;
       if (v.byteLength > 4 && v.getUint16(0) === 0xFFD8) {
@@ -211,10 +218,28 @@
       info.found = true;
       var date = String(get(exif, 0x9003) || get(ifd0, 0x0132) || "");
       if (/^\d{4}/.test(date) && date.slice(0, 4) !== "0000") info.year = date.slice(0, 4);
+      if (/^\d{4}:\d\d:\d\d/.test(date) && info.year) info.date = date.slice(0, 10).replace(/:/g, "-");
+      // Where it was taken: only to look up the town for the Place field; never published.
+      if (ifd0[0x8825] !== undefined) {
+        var gps = entries(u32(ifd0[0x8825] + 8));
+        var dms = function (tag) {
+          var e = gps[tag];
+          if (e === undefined || u16(e + 2) !== 5 || u32(e + 4) < 3) return null;
+          var q = u32(e + 8), out = 0;
+          for (var j = 0; j < 3; j++) { var dn = u32(q + j * 8 + 4); out += (dn ? u32(q + j * 8) / dn : 0) / Math.pow(60, j); }
+          return out;
+        };
+        var la = dms(2), lo = dms(4);
+        if (la !== null && lo !== null && (la || lo)) {
+          info.lat = String(get(gps, 1) || "N").toUpperCase() === "S" ? -la : la;
+          info.lon = String(get(gps, 3) || "E").toUpperCase() === "W" ? -lo : lo;
+        }
+      }
       var make = String(get(ifd0, 0x010F) || ""), model = String(get(ifd0, 0x0110) || "");
       var brand = make.split(" ")[0].toLowerCase();
       info.camera = model && brand && model.toLowerCase().indexOf(brand) === 0 ? model : [make, model].filter(Boolean).join(" ");
-      info.lens = String(get(exif, 0xA434) || "");
+      // some lenses report a constant aperture as a range ("E 28-75mm F2.8-2.8")
+      info.lens = String(get(exif, 0xA434) || "").replace(/F(\d+(?:\.\d+)?)-\1(?![\d.])/, "F$1");
       if (info.lens === info.camera) info.lens = "";
       var focal = get(exif, 0x920A), fnum = get(exif, 0x829D), exp = get(exif, 0x829A), iso = get(exif, 0x8827);
       if (focal) info.focal = Math.round(focal) + " mm";
@@ -355,7 +380,8 @@
     : Promise.resolve();
 
   function prepare(item) {
-    var s = settings;
+    // this photo's own size and quality, where one was chosen for it
+    var s = Object.assign({}, settings, item.edge ? { edge: item.edge, quality: item.quality } : {});
     var seg = exifSegment(s.artist, s.copyright);
     return Promise.all([decode(item.file), fontReady]).then(function (res) {
       var bmp = res[0];
@@ -458,6 +484,29 @@
     return e ? [e.camera, e.lens, e.focal, e.aperture, e.shutter, e.iso].filter(Boolean).join(" · ") : "";
   }
 
+  // The town a photo was taken in, for its Place field: the coordinates, rounded to about
+  // a kilometre, are looked up on OpenStreetMap. "Boston, MA" in the US, "Kyoto, Japan" elsewhere.
+  var placeCache = {};
+  function placeFor(lat, lon) {
+    if (lat == null || lon == null) return Promise.resolve("");
+    var key = lat.toFixed(2) + "," + lon.toFixed(2);
+    if (placeCache[key]) return placeCache[key];
+    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&addressdetails=1&accept-language=en&lat=" +
+      lat.toFixed(2) + "&lon=" + lon.toFixed(2);
+    var ask = fetch(url, { headers: { "Accept": "application/json" } }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) {
+      var a = (j && j.address) || {};
+      var name = a.city || a.town || a.village || a.hamlet || a.municipality || a.suburb || a.county || "";
+      if (a.country_code === "us") {
+        var st = String(a["ISO3166-2-lvl4"] || "").replace(/^US-/, "");
+        return name ? name + (st ? ", " + st : "") : (a.state || "");
+      }
+      return [name, a.country].filter(Boolean).join(", ");
+    }).catch(function () { return ""; });
+    // never hold a photo up for long
+    placeCache[key] = Promise.race([ask, new Promise(function (r) { setTimeout(function () { r(""); }, 6000); })]);
+    return placeCache[key];
+  }
+
   // Prepare one photo at a time to keep memory low with large originals.
   var processing = false;
   function processPending() {
@@ -467,9 +516,15 @@
     processing = true;
     if (item.preview) { URL.revokeObjectURL(item.preview); item.preview = null; }
     var headP = readFileExif(item.file);
-    Promise.all([prepare(item), headP]).then(function (r) {
+    var placeP = headP.then(function (h) {
+      return settings.place && !item.place && !item.placeTried ? placeFor(h.exif.lat, h.exif.lon) : "";
+    });
+    Promise.all([prepare(item), headP, placeP]).then(function (r) {
       var x = r[1].exif;
       if (!item.year && x.year) item.year = x.year;
+      item.date = x.date;
+      item.placeTried = true;
+      if (!item.place && r[2]) { item.place = r[2]; item.placeAuto = true; }
       item.exif = exifOf(x);
       item.camera = x.summary;
       item.hdr = r[1].hdr;
@@ -518,7 +573,9 @@
             : " HDR photo: kept in HDR, with its gain map. It glows on HDR screens in Safari, Chrome and Edge, and shows as a normal photo elsewhere.")
           : item.hdrSource ? " HDR photo (" + item.hdrSource.toUpperCase() + "), but nothing in it is brighter than white, so it is published as a standard image."
           : item.hdr ? " HDR photo: this browser couldn't read its HDR, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + ". Safari on a Mac or iPhone keeps HDR." : "") +
-        (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "");
+        (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "") +
+        (item.date ? " Taken " + item.date + "." : "") +
+        (item.placeAuto ? " Place from where it was taken: " + item.place + "." : "");
     } else {
       meta.textContent = item.name + " · preparing…";
     }
@@ -534,9 +591,29 @@
         input.type = "text"; input.value = item[f[0]] || ""; input.placeholder = f[2];
         input.id = "q-" + item.key + "-" + f[0];
         if (f[0] === "year") { input.inputMode = "numeric"; input.maxLength = 4; }
-        input.addEventListener("input", function () { item[f[0]] = input.value.trim(); });
+        input.addEventListener("input", function () { item[f[0]] = input.value.trim(); if (f[0] === "place") item.placeAuto = false; });
         label.appendChild(span); label.appendChild(input); fields.appendChild(label);
       });
+      // this photo's size and quality: as in the settings, or one of a few steps
+      var ql = document.createElement("label"); ql.className = "field";
+      var qs = document.createElement("span"); qs.className = "field__label"; qs.textContent = "Quality";
+      var sel = document.createElement("select");
+      sel.id = "q-" + item.key + "-quality";
+      [["", "As in settings (" + settings.edge + " px, " + settings.quality + ")"]].concat(QUALITY.map(function (q) { return [q.key, q.label]; }))
+        .forEach(function (o) { var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; sel.appendChild(op); });
+      sel.value = item.qkey || "";
+      sel.disabled = busy || item.status !== "ready";
+      sel.addEventListener("change", function () {
+        var q = QUALITY.filter(function (x) { return x.key === sel.value; })[0];
+        item.qkey = q ? q.key : "";
+        item.edge = q ? q.edge : 0;
+        item.quality = q ? q.quality : 0;
+        item.status = "preparing";
+        renderItem(item);
+        updatePublish();
+        processPending();
+      });
+      ql.appendChild(qs); ql.appendChild(sel); fields.appendChild(ql);
       body.appendChild(fields);
     }
     var remove = document.createElement("button");
@@ -672,13 +749,16 @@
     busy = true; updatePublish();
     li.classList.add("is-busy");
     setStatus(publishStatus, "Reading the camera details…");
-    var details = null, year = "", next = null;
+    var details = null, year = "", place = "", next = null;
     readFileExif(file).then(function (r) {
       details = exifOf(r.exif);
       year = r.exif.year || "";
       if (!details) {
         var e0 = new Error("no camera details"); e0.noDetails = true; throw e0;
       }
+      return settings.place && !entry.place ? placeFor(r.exif.lat, r.exif.lon) : "";
+    }).then(function (pl) {
+      place = pl || "";
       setStatus(publishStatus, "Saving the camera details…");
       return commitChanges("Add camera details to a photo", function () {
         return fetchGallery().then(function (g) {
@@ -686,6 +766,7 @@
             if (e.id !== entry.id) return e;
             var u = Object.assign({}, e, { exif: details });
             if (!/^\d{4}$/.test(u.year || "") && /^\d{4}$/.test(year)) u.year = year;
+            if (!u.place && place) u.place = place;
             return u;
           });
           return [{ path: DATA_PATH, mode: "100644", type: "blob", content: serializeGallery(g.header, next) }];
@@ -695,7 +776,7 @@
       busy = false;
       published = next;
       renderPublished();
-      setStatus(publishStatus, "Camera details added: " + exifLine(details) + ". Your gallery updates in about a minute.", "done");
+      setStatus(publishStatus, "Camera details added: " + exifLine(details) + (place ? ". Place: " + place : "") + ". Your gallery updates in about a minute.", "done");
       updatePublish();
     }).catch(function (err) {
       busy = false;
@@ -831,7 +912,7 @@
   var F = {
     edge: $("s-edge"), quality: $("s-quality"), qualityOut: $("s-quality-out"),
     wmText: $("s-wm-text"), wmPos: $("s-wm-pos"), wmSize: $("s-wm-size"), wmOpacity: $("s-wm-op"), wmOpacityOut: $("s-wm-op-out"),
-    copyright: $("s-copyright"), artist: $("s-artist"), camera: $("s-camera"), reset: $("s-reset"),
+    copyright: $("s-copyright"), artist: $("s-artist"), camera: $("s-camera"), place: $("s-place"), reset: $("s-reset"),
     summary: $("settings-summary"), lede: $("studio-lede")
   };
   var POS = { br: "bottom right", bl: "bottom left", tr: "top right", tl: "top left", c: "centre" };
@@ -842,7 +923,7 @@
     watermarkBox.checked = settings.wmOn;
     F.wmText.value = settings.wmText; F.wmPos.value = settings.wmPos; F.wmSize.value = settings.wmSize;
     F.wmOpacity.value = settings.wmOpacity; F.wmOpacityOut.textContent = settings.wmOpacity + "%";
-    F.copyright.value = settings.copyright; F.artist.value = settings.artist; F.camera.checked = settings.camera;
+    F.copyright.value = settings.copyright; F.artist.value = settings.artist; F.camera.checked = settings.camera; F.place.checked = settings.place;
     [F.wmText, F.wmPos, F.wmSize, F.wmOpacity].forEach(function (el) { el.disabled = !settings.wmOn; });
   }
   function describe() {
@@ -879,6 +960,7 @@
     settings.copyright = F.copyright.value.slice(0, 200);
     settings.artist = F.artist.value.slice(0, 120);
     settings.camera = F.camera.checked;
+    settings.place = F.place.checked;
     F.qualityOut.textContent = settings.quality;
     F.wmOpacityOut.textContent = settings.wmOpacity + "%";
     [F.wmText, F.wmPos, F.wmSize, F.wmOpacity].forEach(function (el) { el.disabled = !settings.wmOn; });
@@ -889,6 +971,7 @@
   [watermarkBox, F.edge, F.wmPos, F.wmSize].forEach(function (el) { el.addEventListener("change", function () { readForm(true); }); });
   [F.quality, F.wmOpacity, F.wmText, F.copyright, F.artist].forEach(function (el) { el.addEventListener("input", function () { readForm(true); }); });
   F.camera.addEventListener("change", function () { readForm(false); });
+  F.place.addEventListener("change", function () { readForm(false); });
   F.reset.addEventListener("click", function () {
     var k; for (k in DEFAULTS) settings[k] = DEFAULTS[k];
     fillForm(); saveSettings(); describe(); reprocessQueued();

@@ -132,7 +132,8 @@ permalink: /studio/
               <input id="s-artist" type="text" maxlength="120">
             </label>
             <label class="check"><input id="s-camera" type="checkbox"> Show camera, lens, focal length, aperture, shutter speed and ISO in the gallery</label>
-            <p class="field__hint">Read from each JPEG, HEIC or AVIF before it is stripped. Location is always removed and is never shown.</p>
+            <label class="check"><input id="s-place" type="checkbox"> Fill in the place from where the photo was taken</label>
+            <p class="field__hint">Read from each JPEG, HEIC or AVIF before it is stripped. For the place, the photo's location, rounded to about a kilometre, is looked up on OpenStreetMap to find the town; you can change it before publishing. The location itself is always removed from the file and never published.</p>
           </fieldset>
           <button id="s-reset" class="btn btn--line btn--small" type="button">Reset to defaults</button>
         </div>
