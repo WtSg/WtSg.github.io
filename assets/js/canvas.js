@@ -100,10 +100,12 @@
     maskCut = "";
   }
   // A photograph's size on screen when it is framed.
+  // The framed photograph at rest: big enough to read, small enough that the photographs
+  // round it show too, a wall rather than one picture (the close-up is there for the detail).
   function shown(p) {
     var land = p.ar >= 1;
-    var maxW = land && !narrow ? vw * 0.56 : vw * 0.86;
-    var maxH = vh * (land ? (narrow ? 0.46 : 0.56) : (narrow ? 0.54 : 0.62));
+    var maxW = land && !narrow ? vw * 0.34 : vw * 0.68;
+    var maxH = vh * (land ? (narrow ? 0.34 : 0.3) : (narrow ? 0.42 : 0.38));
     var w = Math.min(maxW, maxH * p.ar);
     return { w: w, h: w / p.ar };
   }
