@@ -944,7 +944,10 @@
     lampTest = true;
     vf.classList.add("is-test");
     setLed("n", "88");
-    hold = performance.now() + 650;
+    // the whole wall held a moment longer than the lamp test, for a first look round it, before
+    // the lens closes in on the newest photograph (the owner: "stay on the zoomed out version
+    // for slightly longer so people will take a glance"); a touch, a drag or a zoom takes over
+    hold = performance.now() + 1800;
     setTimeout(function () {
       lampTest = false;
       vf.classList.remove("is-test");
@@ -955,14 +958,23 @@
   // the readout's digits are in a web font: measure it again once that has come
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { ledEm = 0; });
   if (hint) setTimeout(hideHint, 9000);
+  // A new window size: the wall hung again for it, on the same photograph. A phone sends a
+  // resize as the page settles with its size unchanged: nothing to do then (it used to skip
+  // the opening altogether). Still opening, it opens again from the whole wall, pulled back.
   var rT = 0;
   window.addEventListener("resize", function () {
     clearTimeout(rT);
     rT = setTimeout(function () {
+      if (window.innerWidth === vw && window.innerHeight === vh) return;
       var keep = lockOn ? lockOn.i : subject ? subject.i : 0;
       build();
-      startAt(keep, 0, 0);
-      s = restScale();
+      if (opening && !still()) {
+        startAt(keep, cw * 1.3, ch * 0.8);
+        s = 1;
+      } else {
+        startAt(keep, 0, 0);
+        s = restScale();
+      }
     }, 120);
   });
 })();

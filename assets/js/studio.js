@@ -57,6 +57,7 @@
   var filesInput = $("files"), drop = $("drop"), watermarkBox = $("watermark");
   var queueList = $("queue"), publishBtn = $("publish"), publishStatus = $("publish-status");
   var pubList = $("pub-list"), pubEmpty = $("pub-empty");
+  var deleteAllBox = $("pub-delete-all"), deleteAllBtn = $("delete-all"), deleteAllStatus = $("delete-all-status");
   var datesBox = $("pub-dates"), datesInfo = $("dates-info"), datesBtn = $("dates-pick"), datesInput = $("dates-files"), datesStatus = $("dates-status");
 
   var token = null;
@@ -747,7 +748,7 @@
           : item.hdrSource ? " HDR photo (" + item.hdrSource.toUpperCase() + "), but nothing in it is brighter than white, so it is published as a standard image."
           : item.hdr ? " HDR photo: this browser couldn't read its HDR, so it is published as a standard image" + (COLOR_SPACE === "display-p3" ? " that keeps its wide colour" : "") + "." + (item.hdrProblem ? " (Why: " + item.hdrProblem + ")" : "") : "") +
         (settings.camera ? (item.camera ? " Camera details: " + item.camera + "." : " No camera details found in this file.") : "") +
-        (item.date ? " Taken " + item.date + "." : "") +
+        (item.taken ? " Taken " + item.taken.replace("T", " ").slice(0, 16) + "." : " No date taken in this file, so it goes by its year" + (item.year ? "" : " (none yet: type one)") + ".") +
         (item.placeAuto ? " Place from where it was taken: " + item.place + "." : "");
     } else {
       meta.textContent = item.name + " · " + (item.note || "preparing…");
@@ -1048,8 +1049,69 @@
     });
   }
 
+  // ---------- every photo at once ----------
+  // Deletes every published photo, its picture files and its line in the gallery list, in
+  // one change: to publish them all again from the start. Two clicks, the second within a
+  // few seconds, naming how many go.
+  var allArmed = false, allTimer = 0;
+  function renderDeleteAll() {
+    deleteAllBox.hidden = !token || !published.length;
+    clearTimeout(allTimer);
+    allArmed = false;
+    deleteAllBtn.classList.remove("is-armed");
+    deleteAllBtn.textContent = "Delete all " + published.length + " photo" + (published.length === 1 ? "" : "s");
+    deleteAllBtn.disabled = busy;
+  }
+  function deleteAll() {
+    if (busy || !token || !published.length) return;
+    if (!allArmed) {
+      allArmed = true;
+      deleteAllBtn.classList.add("is-armed");
+      deleteAllBtn.textContent = "Confirm: delete all " + published.length + " photo" + (published.length === 1 ? "" : "s");
+      setStatus(deleteAllStatus, "This removes every photo from your gallery. Click again within 5 seconds to confirm.");
+      allTimer = setTimeout(function () { renderDeleteAll(); setStatus(deleteAllStatus, ""); }, 5000);
+      return;
+    }
+    clearTimeout(allTimer);
+    busy = true; updatePublish();
+    deleteAllBtn.disabled = true;
+    datesBtn.disabled = true;
+    pubList.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    setStatus(deleteAllStatus, "Deleting every photo…");
+    var n = 0;
+    commitChanges("Remove all photos from the gallery", function () {
+      // the gallery list as it is now, and the picture files there really are
+      return Promise.all([fetchGallery(), gh(repoPath() + "/contents/" + IMG_DIR.replace(/\/$/, "") + "?ref=" + encodeURIComponent(BRANCH)).catch(function () { return null; })]).then(function (r) {
+        var g = r[0], have = {};
+        // (the folder could not be listed: every file the list names is taken to be there)
+        if (Array.isArray(r[1])) r[1].forEach(function (f) { if (f && f.path) have[f.path] = true; });
+        else g.entries.forEach(function (e) { [e.src, e.thumb].forEach(function (x) { if (x) have[String(x).replace(/^\//, "")] = true; }); });
+        n = g.entries.length;
+        var tree = [];
+        g.entries.forEach(function (e) {
+          [e.src, e.thumb].forEach(function (src) {
+            var path = String(src || "").replace(/^\//, "");
+            if (path.indexOf(IMG_DIR) === 0 && have[path]) { tree.push({ path: path, mode: "100644", type: "blob", sha: null }); delete have[path]; }
+          });
+        });
+        tree.push({ path: DATA_PATH, mode: "100644", type: "blob", content: serializeGallery(g.header, []) });
+        return tree;
+      });
+    }).then(function () {
+      busy = false;
+      published = [];
+      renderPublished(); updatePublish();
+      setStatus(deleteAllStatus, "Deleted all " + n + " photo" + (n === 1 ? "" : "s") + ". Your gallery is empty until you publish again; it updates in about a minute.", "done");
+    }).catch(function (err) {
+      busy = false;
+      renderPublished(); updatePublish();
+      setStatus(deleteAllStatus, explain(err, "change"), "error");
+    });
+  }
+
   function renderPublished() {
     renderDates();
+    renderDeleteAll();
     pubList.innerHTML = "";
     pubEmpty.hidden = published.length > 0;
     if (!published.length) pubEmpty.textContent = token ? "No photos yet. Add some above." : "Sign in to see the photos already in your gallery.";
@@ -1161,6 +1223,7 @@
   });
   drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
   datesBtn.addEventListener("click", function () { if (!busy) datesInput.click(); });
+  deleteAllBtn.addEventListener("click", deleteAll);
   datesInput.addEventListener("change", function () {
     var list = datesInput.files ? Array.prototype.slice.call(datesInput.files) : [];
     datesInput.value = "";
