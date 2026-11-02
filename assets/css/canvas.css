@@ -218,8 +218,8 @@ p { margin: 0; }
   transform: translate(-50%, -50%);
   overflow: hidden;
   border: 1px solid var(--patch-edge);
-  /* "a bright, sharply defined rectangle" (Leica): its corners barely softened */
-  border-radius: 1px;
+  /* its corners rounded in proportion to its size (canvas.js sets them as it resizes) */
+  border-radius: 6px;
   background: var(--patch-tint);
   transition: opacity .45s ease-out;
 }
