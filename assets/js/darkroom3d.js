@@ -368,7 +368,8 @@ export function start(o) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const SAFE_BG = new THREE.Color(0x070202), LIT_BG = new THREE.Color(0x8a8a86);
+  // Under the tubes the room is charcoal, not grey: the prints stand out and the far lines sink into it.
+  const SAFE_BG = new THREE.Color(0x070202), LIT_BG = new THREE.Color(0x2f2e2c);
   // Under the tubes the far lines fade out before the farthest one wraps round to the back
   // of the room as the camera walks in, so no line ever appears out of nothing.
   const FOG = { safe: [3.0, 14], lit: [2.6, (HALL.rows - 2) * HALL.gap - 0.9] };
@@ -1460,7 +1461,8 @@ export function start(o) {
   const travel = { x: 0, d: 0, vx: 0, vd: 0, ax: 0, ad: 0 };
   let walkT = 0, litFrom = 0, hallShift = 0;
   const HALL_REPEAT = HALL.rows * HALL.gap, FOLD_AT = 4;
-  const walked = () => travel.ad + Math.max(0, walkT - litFrom) * HALL.gap * 0.85 - hallShift;
+  // one scroll, one line further in: each stop has the nearest line whole in view
+  const walked = () => travel.ad + Math.max(0, walkT - litFrom) * HALL.gap - hallShift;
   function hallView() {
     const portrait = aspect < 0.85;
     const d = Math.max(0, walked());

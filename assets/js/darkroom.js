@@ -597,10 +597,46 @@
     wanted = indexFromScroll();
     if (progress() > 0.02) ctrl.setProgress(progress());
 
+    // The stage holds still on screen while the page moves under it, so the page goes straight
+    // to a print's place (a smooth scroll would fight the snap points), and the scene plays the
+    // way there at its own pace.
     function go(i) {
       i = Math.max(0, Math.min(N, i));
-      window.scrollTo({ top: wrapTop + i * stepPx + 1, behavior: still() ? "auto" : "smooth" });
+      window.scrollTo({ top: wrapTop + i * stepPx, behavior: "instant" });
     }
+    // One scroll, one print (the owner: "in each scroll ... put one image on the hanger",
+    // "the scroll is too sensitive"): a turn of the wheel or a swipe on a trackpad, glide and
+    // all, moves the page on by exactly one print, however hard it is, and the scene plays
+    // that print's whole step. Another swipe adds one more.
+    function step(dir) { go(indexFromScroll() + dir); }
+    // Where the page is within the prints, or -1 above them, N + 1 below (the footer).
+    function band() {
+      var y = window.pageYOffset - wrapTop;
+      if (y < -2) return -1;
+      if (y > N * stepPx + 2) return N + 1;
+      return Math.round(y / stepPx);
+    }
+    var wheelLast = 0, wheelStep = 0, wheelLow = Infinity;
+    window.addEventListener("wheel", function (e) {
+      if ((dialog && dialog.open) || e.ctrlKey) return;
+      var dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
+      if (!dy || Math.abs(dy) < Math.abs(e.deltaX)) return;
+      var dir = dy > 0 ? 1 : -1, at = band(), t = performance.now(), gap = t - wheelLast, mag = Math.abs(dy);
+      wheelLast = t;
+      // above the prints or below them, the page scrolls as usual
+      if (at < 0 || at > N || (at === 0 && dir < 0)) return;
+      // past the last print: the glide of the swipe that brought it up stays here, a new swipe goes on down
+      if (at === N && dir > 0) { if (gap < 220) e.preventDefault(); return; }
+      e.preventDefault();
+      // A new gesture after a pause, or a fresh swipe on top of a dying glide: the glide only
+      // ever slows, so a swipe shows as the push rising well above where it had sunk to.
+      var fresh = gap > 220 || (t - wheelStep > 400 && mag > 20 && mag > wheelLow * 2 + 12);
+      // (the low point counts from a quarter second in, once the fingers have pushed it up)
+      wheelLow = fresh ? Infinity : t - wheelStep > 250 ? Math.min(wheelLow, mag) : wheelLow;
+      if (!fresh) return;
+      wheelStep = t;
+      step(dir);
+    }, { passive: false });
     // The keyboard list: focusing a print brings it to the tray; pressing opens it.
     Array.prototype.forEach.call(stage.querySelectorAll("[data-hud-print]"), function (b) {
       var i = +b.getAttribute("data-hud-print");
@@ -616,13 +652,18 @@
       else if (a === "look" && shownIdx >= 0) openLoupe(shownIdx, ctrl.rectFor(shownIdx), lookBtn);
     });
     document.addEventListener("keydown", function (e) {
-      if (lightsOn() || (dialog && dialog.open) || e.altKey || e.ctrlKey || e.metaKey) return;
+      if ((dialog && dialog.open) || e.altKey || e.ctrlKey || e.metaKey) return;
       var tag = (e.target.tagName || "").toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
       var r = stage.getBoundingClientRect();
       if (r.bottom < 120 || r.top > 120) return;
-      if (e.key === "ArrowRight") { e.preventDefault(); go(wanted + 1); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); go(wanted - 1); }
+      // down a page, up a page: one print, as with the wheel
+      var k = e.key, down = k === "ArrowDown" || k === "PageDown" || (k === " " && !e.shiftKey && tag !== "button" && tag !== "a"),
+        up = k === "ArrowUp" || k === "PageUp" || (k === " " && e.shiftKey && tag !== "button" && tag !== "a"), at = band();
+      if ((down && at >= 0 && at < N) || (up && at > 0 && at <= N)) { e.preventDefault(); step(down ? 1 : -1); return; }
+      if (lightsOn()) return;
+      if (k === "ArrowRight") { e.preventDefault(); go(wanted + 1); }
+      else if (k === "ArrowLeft") { e.preventDefault(); go(wanted - 1); }
     });
 
     // Nothing to draw behind the loupe.
