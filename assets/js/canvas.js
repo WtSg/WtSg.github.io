@@ -202,6 +202,14 @@
     ch = Lb * 0.97;
     // the wall is wider and taller than the window, zoomed right out, by a few cells, so copies never pop
     var cols = Math.ceil(vw / (cw * S_MIN)) + 3, rows = Math.ceil(vh / (ch * S_MIN)) + 3;
+    // and big enough to hang every photograph at least once: a larger gallery than the window
+    // needs gets a larger wall (it wraps all the same), never photographs left off it
+    if (cols * rows < N) {
+      var grow = Math.sqrt(N / (cols * rows));
+      cols = Math.ceil(cols * grow);
+      rows = Math.ceil(rows * grow);
+      while (cols * rows < N) rows++;
+    }
     if (rows % 2) rows++;
     W = cols * cw;
     H = rows * ch;
