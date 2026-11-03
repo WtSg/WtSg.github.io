@@ -835,6 +835,24 @@ export function start(o) {
     return { pw: (ph - 2 * B) * ar + 2 * B, ph };
   }
   const loader = new THREE.TextureLoader();
+  // Every print, on the line and down the drying room, wears a small picture; only the one
+  // being worked on wears its full one. Small means this many pixels on its long side: a
+  // gallery of hundreds then still fits a phone's memory (900 px prints took about 2.9 MB
+  // each on the GPU; these about 0.5 MB).
+  const THUMB_PX = 384;
+  function shrink(img, max) {
+    const w = img && (img.naturalWidth || img.width), h = img && (img.naturalHeight || img.height);
+    if (!w || !h || Math.max(w, h) <= max) return img;
+    const k = max / Math.max(w, h), c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * k));
+    c.height = Math.max(1, Math.round(h * k));
+    const g = c.getContext("2d");
+    if (!g) return img;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const hallMats = [];
   const prints = photos.map((ph, i) => {
@@ -893,6 +911,7 @@ export function start(o) {
       sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n  totalEmissiveRadiance *= vColor;\n#endif");
     };
     loader.load(ph.thumb, (t) => {
+      t.image = shrink(t.image, THUMB_PX);
       t.colorSpace = THREE.SRGBColorSpace;
       t.anisotropy = maxAniso;
       p.texThumb = t;
