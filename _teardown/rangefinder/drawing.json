@@ -1,0 +1,75 @@
+{
+  "modelScripts": [
+    "model.js"
+  ],
+  "drawings": [
+    {
+      "id": "rangefinder",
+      "title": "How a rangefinder focuses",
+      "description": "Illustrative concept of a coincident-image rangefinder in a Leica M-style camera, its top cover left off: the classic swinging-mirror layout, not any one camera's construction. Angles and travel drawn five times their real size.",
+      "concept": true,
+      "initialView": "exploded",
+      "parts": [
+        {
+          "id": "body",
+          "name": "Body"
+        },
+        {
+          "id": "vf-window",
+          "name": "Viewfinder window"
+        },
+        {
+          "id": "rf-window",
+          "name": "Rangefinder window"
+        },
+        {
+          "id": "front-lens",
+          "name": "Viewfinder front lens"
+        },
+        {
+          "id": "splitter",
+          "name": "Half-silvered mirror"
+        },
+        {
+          "id": "eyepiece",
+          "name": "Eyepiece"
+        },
+        {
+          "id": "mirror",
+          "name": "Rangefinder mirror"
+        },
+        {
+          "id": "lever",
+          "name": "Mirror lever and pivot"
+        },
+        {
+          "id": "roller",
+          "name": "Roller"
+        },
+        {
+          "id": "lens",
+          "name": "Lens"
+        },
+        {
+          "id": "cam",
+          "name": "Focusing cam"
+        },
+        {
+          "id": "light",
+          "name": "Light from the subject"
+        }
+      ],
+      "parameters": [
+        {
+          "key": "dioptres",
+          "label": "Focused at (1 / distance)",
+          "min": 0,
+          "max": 1.4286,
+          "default": 0,
+          "step": 0.01,
+          "unit": "1/m"
+        }
+      ]
+    }
+  ]
+}
