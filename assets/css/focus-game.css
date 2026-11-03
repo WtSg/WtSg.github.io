@@ -282,7 +282,7 @@ button.fg__shot img { transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
   grid-template-rows: minmax(0, 1fr) auto auto;
   gap: .8rem;
   padding: clamp(.8rem, 2.2vw, 1.4rem);
-  background: rgba(5, 5, 5, .97);
+  background: #050505;
   animation: fg-in .2s ease-out both;
 }
 .fg__view[hidden] { display: none; }
