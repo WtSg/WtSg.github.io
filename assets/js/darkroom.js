@@ -18,6 +18,17 @@
   var root = document.documentElement;
   var body = document.body;
   function mq(q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; }
+  // Straight to a place on the page, past the page's smooth scrolling (Safari before 15.4
+  // does not know "instant" and throws).
+  function jumpTo(y) {
+    try { window.scrollTo({ top: y, behavior: "instant" }); }
+    catch (e) {
+      var was = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      window.scrollTo(0, y);
+      root.style.scrollBehavior = was;
+    }
+  }
   var reduce = mq("(prefers-reduced-motion: reduce)");
   var fine = mq("(hover: hover) and (pointer: fine)");
   function still() { return reduce.matches; }
@@ -602,7 +613,7 @@
     // way there at its own pace.
     function go(i) {
       i = Math.max(0, Math.min(N, i));
-      window.scrollTo({ top: wrapTop + i * stepPx, behavior: "instant" });
+      jumpTo(wrapTop + i * stepPx);
     }
     // One scroll, one print (the owner: "in each scroll ... put one image on the hanger",
     // "the scroll is too sensitive"): a turn of the wheel or a swipe on a trackpad, glide and
@@ -679,7 +690,7 @@
         // Under the tubes the scroll walks the drying room; with the lights back down the
         // page returns to where it was, and the bench carries on from the same print.
         if (on) litScroll = window.pageYOffset;
-        else if (Math.abs(window.pageYOffset - litScroll) > 1) window.scrollTo({ top: litScroll, behavior: "instant" });
+        else if (Math.abs(window.pageYOffset - litScroll) > 1) jumpTo(litScroll);
         // The page's colours follow once the room light has actually changed.
         setTimeout(function () { setLightsAttr(on); }, on && !still() ? 380 : 0);
         ctrl.setLights(on);
