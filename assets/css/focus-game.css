@@ -294,3 +294,67 @@ button.fg__shot img { transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
 .fg__view-keys { display: flex; justify-content: center; gap: .6rem; }
 .fg__icon:disabled { opacity: .3; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .fg__view { animation: none; } button.fg__shot img { transition: none; } }
+
+/* The guide's teardown: how a rangefinder focuses (assets/img/teardown, built by
+   _teardown/rangefinder). Fine light ink on the dark page; what moves when the lens is
+   focused in amber, the light in the readout's red, the glass in pale blue. */
+.fg__td {
+  --td-ink: #d9d5cc;
+  --td-move: #f2a65a;
+  --td-light: #ff4a2e;
+  --td-glass: #8fc1dc;
+  position: absolute;
+  inset: 0;
+  display: none;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .4rem;
+  padding: .5rem .7rem .4rem;
+  border-radius: .7rem;
+  background: #0a0a0a;
+}
+.fg.is-teardown .fg__td { display: grid; }
+.fg.is-teardown .fg__main { grid-row: 2 / -1; }
+.fg.is-teardown .fg__readout, .fg.is-teardown .fg__time, .fg.is-teardown .fg__strip, .fg.is-teardown .fg__hint { display: none; }
+.fg.is-teardown .fg__finder { visibility: hidden; }
+.fg__td-fig { position: relative; min-height: 0; margin: 0; }
+.fg__td-fig > div { position: absolute; inset: 0; opacity: 0; transition: opacity .25s ease-out; }
+.fg__td-fig > div.is-on { opacity: 1; }
+.fg__td svg { display: block; width: 100%; height: 100%; }
+.fg__td .td-rangefinder path { stroke: var(--td-ink); }
+.fg__td .td-rangefinder [data-line-role="outline"] { stroke-width: .62; }
+.fg__td .td-rangefinder [data-line-role="edge"] { stroke-width: .4; }
+.fg__td .td-rangefinder [data-line-role="detail"] { stroke-width: .26; }
+.fg__td .td-rangefinder [data-line-role="texture"] { stroke-width: .16; }
+.fg__td .td-rangefinder text, .fg__td .td-rangefinder circle { fill: var(--td-ink); }
+.fg__td .td-rangefinder text { font-family: var(--mono, monospace); letter-spacing: .25px; }
+.fg__td .td-rangefinder [data-item="mirror"] path, .fg__td .td-rangefinder [data-item="lever"] path,
+.fg__td .td-rangefinder [data-item="roller"] path, .fg__td .td-rangefinder [data-item="cam"] path { stroke: var(--td-move); }
+.fg__td .td-rangefinder [data-item="splitter"] path, .fg__td .td-rangefinder [data-item="front-lens"] path,
+.fg__td .td-rangefinder [data-item="vf-window"] path, .fg__td .td-rangefinder [data-item="rf-window"] path { stroke: var(--td-glass); }
+.fg__td .td-rangefinder [data-item="light"] path { stroke: var(--td-light); stroke-width: .5; }
+.fg__td-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; padding: 0 .2rem .2rem; }
+.fg__td-bar label { color: var(--muted, #9a978f); font: 400 .62rem/1 var(--mono, monospace); letter-spacing: .14em; text-transform: uppercase; }
+.fg__td-bar input { flex: 1; min-width: 9rem; accent-color: var(--td-move, #f2a65a); }
+.fg__td-bar output { min-width: 5ch; color: var(--td-move, #f2a65a); font: 500 .95rem/1 var(--mono, monospace); text-align: right; }
+.fg__td-note { margin: 0; width: 100%; color: var(--muted, #9a978f); font-size: .66rem; }
+@media (prefers-reduced-motion: reduce) { .fg__td-fig > div { transition: none; } }
+
+/* on the teardown's step the guide's card stands beside the drawing on a wide screen, and
+   below it on a narrow one, the drawing kept clear of it */
+@media (min-width: 900px) {
+  .fg.is-teardown .fg__card--guide {
+    left: auto;
+    right: clamp(.8rem, 2.2vw, 1.4rem);
+    top: 50%;
+    bottom: auto;
+    translate: 0 -50%;
+    width: min(24rem, 32%);
+    max-height: calc(100% - 7rem);
+    animation-name: fg-in;
+  }
+  .fg.is-teardown .fg__td { right: calc(min(24rem, 32%) + .9rem); }
+}
+@media (max-width: 899px) {
+  .fg.is-teardown .fg__card--guide { max-height: 40%; }
+  .fg.is-teardown .fg__td { bottom: 46%; }
+}
