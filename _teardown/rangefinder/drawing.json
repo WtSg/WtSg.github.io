@@ -1,30 +1,27 @@
 {
   "modelScripts": [
-    "model.js"
+    "model.js",
+    "exploded.js"
   ],
   "drawings": [
     {
       "id": "rangefinder",
       "title": "How a rangefinder focuses",
-      "description": "Illustrative concept of a coincident-image rangefinder in a Leica M-style camera, its top cover left off: the classic swinging-mirror layout, not any one camera's construction. Angles and travel drawn five times their real size.",
+      "description": "Illustrative concept of the coincident-image rangefinder of a Leica M-style camera, seen from behind with its shell see-through: the viewfinder at the left, the rangefinder window at the right; the lens, its cam, the roller and levers turning the mirror, and the two lines of sight meeting on a subject 1 m away when the lens is focused there. Angles drawn nine times their real size.",
       "concept": true,
-      "initialView": "exploded",
+      "initialView": "assembled",
       "parts": [
         {
           "id": "body",
-          "name": "Body"
+          "name": "Body, see-through"
         },
         {
           "id": "vf-window",
-          "name": "Viewfinder window"
+          "name": "Viewfinder window and lens"
         },
         {
           "id": "rf-window",
           "name": "Rangefinder window"
-        },
-        {
-          "id": "front-lens",
-          "name": "Viewfinder front lens"
         },
         {
           "id": "splitter",
@@ -40,7 +37,11 @@
         },
         {
           "id": "lever",
-          "name": "Mirror lever and pivot"
+          "name": "Mirror lever"
+        },
+        {
+          "id": "rocker",
+          "name": "Roller lever"
         },
         {
           "id": "roller",
@@ -51,12 +52,24 @@
           "name": "Lens"
         },
         {
+          "id": "focus-ring",
+          "name": "Focus ring"
+        },
+        {
           "id": "cam",
           "name": "Focusing cam"
         },
         {
           "id": "light",
           "name": "Light from the subject"
+        },
+        {
+          "id": "sight",
+          "name": "Rangefinder line of sight"
+        },
+        {
+          "id": "subject",
+          "name": "Subject, 1 m away"
         }
       ],
       "parameters": [
@@ -65,11 +78,93 @@
           "label": "Focused at (1 / distance)",
           "min": 0,
           "max": 1.4286,
-          "default": 0,
+          "default": 1,
           "step": 0.01,
           "unit": "1/m"
         }
       ]
+    },
+    {
+      "id": "rangefinder-exploded",
+      "title": "A Leica M-style camera taken apart",
+      "description": "Illustrative concept of the main parts of a Leica M-style camera, seen from behind: the top cover and its dials, the viewfinder optics, the rangefinder mirror and roller lever, the body casting, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis.",
+      "concept": true,
+      "initialView": "exploded",
+      "parts": [
+        {
+          "id": "cover",
+          "name": "Top cover"
+        },
+        {
+          "id": "rewind",
+          "name": "Rewind knob"
+        },
+        {
+          "id": "speed-dial",
+          "name": "Shutter-speed dial"
+        },
+        {
+          "id": "advance",
+          "name": "Advance lever and release"
+        },
+        {
+          "id": "finder",
+          "name": "Viewfinder optics"
+        },
+        {
+          "id": "rf-mirror",
+          "name": "Rangefinder mirror and lever"
+        },
+        {
+          "id": "rocker",
+          "name": "Roller lever and roller"
+        },
+        {
+          "id": "body",
+          "name": "Body casting"
+        },
+        {
+          "id": "shutter",
+          "name": "Focal-plane shutter"
+        },
+        {
+          "id": "base",
+          "name": "Base plate"
+        },
+        {
+          "id": "cassette",
+          "name": "Film cassette"
+        },
+        {
+          "id": "spool",
+          "name": "Take-up spool"
+        },
+        {
+          "id": "cam",
+          "name": "Focusing cam"
+        },
+        {
+          "id": "bayonet",
+          "name": "Lens bayonet"
+        },
+        {
+          "id": "helicoid",
+          "name": "Helicoid"
+        },
+        {
+          "id": "focus-ring",
+          "name": "Focus ring and tab"
+        },
+        {
+          "id": "aperture",
+          "name": "Aperture ring"
+        },
+        {
+          "id": "optics",
+          "name": "Optical unit"
+        }
+      ],
+      "parameters": []
     }
   ]
 }

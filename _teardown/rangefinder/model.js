@@ -1,134 +1,197 @@
 // How a rangefinder focuses: the coincident-image rangefinder of a Leica M-style camera, as an
 // illustrative concept (the classic swinging-mirror layout, not any one camera's construction,
-// no maker's name or mark). Millimetres; x runs across the camera, y towards the subject, z up.
-// One parameter, the distance the lens is focused at (in dioptres, 1 / metres), sets the mirror,
-// the lever, the roller, the focusing cam and the light paths together. Angles and travel are
-// drawn five times their real size, or they would not show on paper.
+// no maker's name or mark). Millimetres; x runs across the camera from the photographer's left
+// to right, y towards the subject, z up. Seen from behind, as the photographer holds it: the
+// viewfinder window and the eyepiece at the left end, the rangefinder window at the right.
+// One parameter, the distance the lens is focused at (in dioptres, 1 / metres), sets the lens,
+// its focus ring and cam, the roller, the levers, the mirror and the rangefinder's line of sight
+// together. A subject stands 1 m away; the two lines of sight meet on it when the lens is focused
+// there. Angles are drawn six times their real size, or they would not show on paper.
 self.DrawingModels ??= {};
 self.DrawingModels.rangefinder = (parameters, options) => {
   const G = TechnicalGeometry;
   const v = parameters.dioptres;
   if (!Number.isFinite(v) || v < 0 || v > 1.4286 + 1e-9) throw Error('Focus must be from infinity (0) to 0.7 m (1.43)');
 
-  const W = 138, D = 34, H = 80, R = 15;          // the body, its rounded ends
-  const FRONT = D / 2, BACK = -D / 2, PLATE = 52; // the top plate begins at PLATE
-  const Z = 68;                                    // the viewfinder's axis
-  const XF = 34, XR = -36, BASE = XF - XR;         // the viewfinder window, the rangefinder window
-  const XL = 0, ZL = 28;                           // the lens axis
-  const K = 5, BASE_REAL = 0.069;                  // angles drawn K times their size
-  const REACH = 140;                               // how far in front the light paths are drawn
-  const LIFT = 52, DROP = 52;                      // how far the cover rises and the body falls
+  const W = 138, D = 34, H = 80, PLATE = 52, R = 15; // the body; its top cover from PLATE up
+  const FRONT = D / 2, BACK = -D / 2;
+  const Z = 68;                                    // the finder's axis
+  const XF = -34, XR = 36, BASE = XR - XF;         // the viewfinder window (left), the rangefinder window (right)
+  const XL = 4, ZL = 28;                           // the lens axis
+  const K = 9, BASE_REAL = 0.069;                  // parallax angles drawn K times their size
+  const SUBJECT = 1;                               // the subject stands 1 m away
+  const REACH = 112;                               // how far in front the light is drawn
+  const far = FRONT + REACH;
 
-  // Where the subject in focus stands: on the viewfinder's axis, at the distance the rangefinder
-  // triangle (base and parallax angle, both drawn K times) puts it.
-  const alpha = K * Math.atan(BASE_REAL * v);
-  const Ys = alpha > 1e-9 ? BASE / Math.tan(alpha) : Infinity;
+  // How far in front of the finder (y = 0) the two lines of sight meet for a distance d (dioptres)
+  const sightAt = d => { const a = K * Math.atan(BASE_REAL * d); return a > 1e-9 ? BASE / Math.tan(a) : Infinity; };
+  const Ys = sightAt(v), Yt = sightAt(SUBJECT);
   const norm = (x, y) => { const l = Math.hypot(x, y); return [x / l, y / l]; };
-  // The mirror's face bisects the light coming in from the subject and going out to the
-  // half-silvered mirror (along +x): its normal is out − in.
-  const din = Ys === Infinity ? [0, -1] : norm(XR - XF, -Ys);
-  const n = norm(1 - din[0], -din[1]);
-  const theta = Math.atan2(n[1], n[0]), phi = theta - Math.PI / 4;   // phi = 0 at infinity
   const rot = (x, y, a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  const turnZ = (a, x, y) => ({origin: [x, y, 0], xAxis: [Math.cos(a), Math.sin(a), 0], yAxis: [-Math.sin(a), Math.cos(a), 0], zAxis: [0, 0, 1]});
   const plateFrame = (x, y, z, normal) => ({origin: [x, y, z], xAxis: [normal[1], -normal[0], 0], yAxis: [normal[0], normal[1], 0], zAxis: [0, 0, 1]});
 
-  // The top cover, lifted off: rounded ends, the three windows on its front, dials on top
-  const cover = G.part('cover', 'Top cover', [0, 0, LIFT]);
-  G.box(cover, [-W / 2, BACK, PLATE], [W / 2, FRONT, H], {radius: R});
-  const win = (x, w, h) => {
-    const y = FRONT + 0.05, z0 = Z - h / 2, z1 = Z + h / 2, x0 = x - w / 2, x1 = x + w / 2;
-    G.polyline(cover, [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], {closed: true});
+  // The mirror's face bisects the light coming in along the line of sight and the light going out
+  // across to the half-silvered mirror (along -x): its normal is out - in. It turns
+  // anticlockwise, seen from above, as the lens is focused closer.
+  const din = Ys === Infinity ? [0, -1] : norm(XR - XF, -Ys);
+  const n = norm(-1 - din[0], -din[1]);
+  const phi = Math.atan2(n[1], n[0]) - Math.atan2(1, -1);           // 0 at infinity
+
+  // The linkage: the mirror's lever carries a pin; the pin rides in a slot in the roller lever,
+  // a rocker on a fixed post, whose other end holds the roller against the lens's cam. As the
+  // lens is focused closer its cam moves forward, the roller follows it (a spring keeps it on),
+  // the rocker tips and the pin turns the mirror.
+  const PIVOT_Z = 50, ARM = [-10, 8];             // the mirror lever, from its pivot to its pin
+  const Q = [XR - 18, 8], ROCK_Z = 46.5, L1 = 10; // the rocker's post, its plate, its arm to the roller
+  const ROLL_R = 2.5, ROLL_Z = 43;
+  const pinAt = a => { const [x, y] = rot(ARM[0], ARM[1], a); return [XR + x, y]; };
+  const rollerAt = a => {
+    const [px, py] = pinAt(a), psi = Math.atan2(py - Q[1], px - Q[0]);
+    return {psi, x: Q[0] - L1 * Math.cos(psi), y: Q[1] - L1 * Math.sin(psi)};
   };
-  win(XF, 22, 14);       // the viewfinder window
-  win(9, 13, 8);         // the frame-line window
-  win(XR, 13, 10);       // the rangefinder window
-  const knob = (x, y, r, h) => { const k = G.piece(); G.lathe(k, [[0, 0], [0, r], [h, r], [h, 0]], {axis: 'z', at: [x, y, H], segments: 72}); G.merge(cover, k); };
-  knob(-50, 1, 9, 4.5);  // the speed dial
-  knob(-60, 7, 3, 3);    // the release
-  knob(53, 0, 7, 4.5);   // the rewind knob
+  const pin = pinAt(phi), roll = rollerAt(phi), roll0 = rollerAt(0);
+  const camFace = roll.y + ROLL_R, EXT = roll.y - roll0.y;           // the lens moves out with its cam
 
-  // The body, dropped away from the lens and the rangefinder
-  const body = G.part('body', 'Body', [0, 0, -DROP]);
-  G.box(body, [-W / 2, BACK, 0], [W / 2, FRONT, PLATE - 1], {radius: R});
-  G.circle(body, [XL, FRONT + 0.05, ZL], 25, [0, 1, 0], {segments: 96});
+  // The body and its top cover, drawn see-through: rounded ends, the three windows on the front
+  // of the cover, the dials on top (the rewind knob at the left end; the shutter-speed dial, the
+  // release and the advance lever at the right), the lens mount
+  const body = G.part('body', 'Body, see-through');
+  body.transparent = true;
+  G.box(body, [-W / 2, BACK, 0], [W / 2, FRONT, PLATE], {radius: R});
+  G.box(body, [-W / 2 + 0.6, BACK + 0.6, PLATE], [W / 2 - 0.6, FRONT - 0.6, H], {radius: R - 0.6});
+  G.circle(body, [XL, FRONT + 0.05, ZL], 25.5, [0, 1, 0], {segments: 96});
+  const pane = (x, w, h, z = Z) => G.polyline(body, [[x - w / 2, FRONT - 0.5, z - h / 2], [x + w / 2, FRONT - 0.5, z - h / 2], [x + w / 2, FRONT - 0.5, z + h / 2], [x - w / 2, FRONT - 0.5, z + h / 2]], {closed: true, role: 'detail'});
+  pane(XF, 25.5, 16.5);
+  pane(-9, 12, 9);                                 // the frame-line window, frosted
+  pane(XR, 14.5, 11.5);
+  const dial = (x, y, profile) => G.lathe(body, profile, {axis: 'z', at: [x, y, H - 0.6], segments: 72});
+  dial(-52, 0, [[0, 0], [0, 8.5], [3, 8.5], [3, 6], [9, 6], [9, 0]]);              // the rewind knob
+  dial(38, 2, [[0, 0], [0, 10], [5, 10], [5, 0]]);                                 // the shutter-speed dial
+  dial(53, 4, [[0, 0], [0, 4], [2.5, 4], [2.5, 2.6], [5.5, 2.6], [5.5, 0]]);       // the release
+  dial(53, -9, [[0, 0], [0, 4.5], [2.4, 4.5], [2.4, 0]]);                          // the advance lever's hub
+  G.merge(body, G.transform(G.extrude(G.piece(), [[56, -11.5], [32, -16], [31, -13.4], [56, -6.5]], {depth: 1.6}), {origin: [0, 0, H + 1.6]}));   // the advance lever
+  G.box(body, [-14, -9, H - 0.6], [6, 9, H + 1.2]);                                // the accessory shoe
 
-  // The viewfinder: front lens behind its window, the half-silvered mirror, the eyepiece
-  const front = G.part('front-lens', 'Viewfinder front lens');
-  G.lathe(front, [[0, 0], [0, 7.5], [2.4, 7.5], [2.4, 0]], {axis: 'y', at: [XF, FRONT - 6, Z], segments: 72});
-  front.transparent = true;
-  const splitter = G.part('splitter', 'Half-silvered mirror');
-  const sp = G.piece();
-  G.box(sp, [-7.5, -0.6, -6.5], [7.5, 0.6, 6.5]);
-  G.merge(splitter, G.transform(sp, plateFrame(XF, 0, Z, norm(1, 1))));
-  splitter.transparent = true;
-  const eye = G.part('eyepiece', 'Eyepiece');
-  G.lathe(eye, [[0, 6], [0, 8.5], [6, 8.5], [6, 6]], {axis: 'y', at: [XF, BACK - 6, Z], segments: 72});
-  // the two windows' glass, left where the cover held them
+  // The viewfinder: its window, the front lens, the half-silvered mirror, the eyepiece
   const glassPane = (id, name, x, w, h) => {
     const g = G.part(id, name);
     G.box(g, [x - w / 2, FRONT - 1.2, Z - h / 2], [x + w / 2, FRONT, Z + h / 2]);
     g.transparent = true;
     return g;
   };
-  const vfWin = glassPane('vf-window', 'Viewfinder window', XF, 22, 14);
+  const vfWin = glassPane('vf-window', 'Viewfinder window and lens', XF, 24, 15);
   const rfWin = glassPane('rf-window', 'Rangefinder window', XR, 13, 10);
+  G.lathe(vfWin, [[0, 0], [0, 7.5], [2.4, 7.5], [2.4, 0]], {axis: 'y', at: [XF, FRONT - 7, Z], segments: 72});   // its front lens
+  const splitter = G.part('splitter', 'Half-silvered mirror');
+  G.merge(splitter, G.transform(G.box(G.piece(), [-7.5, -0.6, -6.5], [7.5, 0.6, 6.5]), plateFrame(XF, 0, Z, norm(1, -1))));
+  splitter.transparent = true;
+  const eye = G.part('eyepiece', 'Eyepiece');
+  G.lathe(eye, [[0, 6], [0, 8.5], [5, 8.5], [5, 9.5], [7, 9.5], [7, 6]], {axis: 'y', at: [XF, BACK - 7, Z], segments: 72});
 
-  // The rangefinder: the mirror on its pivot, turned by the lever, whose roller rides on the
-  // focusing cam at the back of the lens
+  // The rangefinder mirror on its pivot
   const mirror = G.part('mirror', 'Rangefinder mirror');
-  const mp = G.piece();
-  G.box(mp, [-5.5, -0.7, -6], [5.5, 0.7, 6]);
-  G.merge(mirror, G.transform(mp, plateFrame(XR, 0, Z, n)));
+  G.merge(mirror, G.transform(G.box(G.piece(), [-5.5, -0.7, -6], [5.5, 0.7, 6]), plateFrame(XR, 0, Z, n)));
 
-  const ROLL_R = 2.5, ROLL_Z = 45, YR0 = 11;        // the roller, at infinity
-  const lever = G.part('lever', 'Mirror lever and pivot');
+  // its lever: the pivot up to the mirror, an arm, the pin down through the rocker's slot
+  const lever = G.part('lever', 'Mirror lever');
   const lv = G.piece();
-  G.lathe(lv, [[0, 0], [0, 1.4], [Z - 6.2 - 49, 1.4], [Z - 6.2 - 49, 0]], {axis: 'z', at: [0, 0, 49], segments: 48});   // the pivot, up to the mirror
-  const arm = [XL - XR, YR0], [ux, uy] = norm(arm[0], arm[1]), [px, py] = [-uy * 2, ux * 2];
-  G.merge(lv, G.transform(G.extrude(G.piece(), [[-ux * 2 + px, -uy * 2 + py], [arm[0] + px, arm[1] + py], [arm[0] - px, arm[1] - py], [-ux * 2 - px, -uy * 2 - py]], {depth: 2.5}), {origin: [0, 0, 49]}));
-  G.box(lv, [arm[0] - 1.5, arm[1] - 1.5, ROLL_Z + 1], [arm[0] + 1.5, arm[1] + 1.5, 49.2]);   // the post down to the roller
-  G.merge(lever, G.transform(lv, {origin: [XR, 0, 0], xAxis: [Math.cos(phi), Math.sin(phi), 0], yAxis: [-Math.sin(phi), Math.cos(phi), 0], zAxis: [0, 0, 1]}));
+  G.lathe(lv, [[0, 0], [0, 1.4], [Z - 6 - PIVOT_Z, 1.4], [Z - 6 - PIVOT_Z, 0]], {axis: 'z', at: [0, 0, PIVOT_Z], segments: 48});
+  G.lathe(lv, [[0, 0], [0, 3], [2, 3], [2, 0]], {axis: 'z', at: [0, 0, PIVOT_Z], segments: 48});
+  {
+    const [ux, uy] = norm(ARM[0], ARM[1]), [px, py] = [-uy * 1.8, ux * 1.8];
+    G.merge(lv, G.transform(G.extrude(G.piece(), [[px, py], [ARM[0] + px, ARM[1] + py], [ARM[0] - px, ARM[1] - py], [-px, -py]], {depth: 2}), {origin: [0, 0, PIVOT_Z]}));
+  }
+  G.lathe(lv, [[0, 0], [0, 0.8], [PIVOT_Z - ROCK_Z + 1, 0.8], [PIVOT_Z - ROCK_Z + 1, 0]], {axis: 'z', at: [ARM[0], ARM[1], ROCK_Z - 1], segments: 32});
+  G.merge(lever, G.transform(lv, turnZ(phi, XR, 0)));
 
-  const [rx, ry] = rot(arm[0], arm[1], phi), RX = XR + rx, RY = ry;
+  // the rocker: a plate with a slot for the pin, on its post
+  const rocker = G.part('rocker', 'Roller lever');
+  const rk = G.piece();
+  const S0 = 5.6, S1 = 9.6, SW = 1.1;            // the slot, from the post outwards
+  G.extrude(rk, [[-L1 - 2, -2.2], [S1 + 2, -2.2], [S1 + 2, 2.2], [-L1 - 2, 2.2]], {depth: 1.5, holes: [[[S0, -SW], [S1, -SW], [S1, SW], [S0, SW]]]});
+  G.lathe(rk, [[0, 0], [0, 2.4], [1.5, 2.4], [1.5, 0]], {axis: 'z', at: [0, 0, 0], segments: 48});
+  G.merge(rocker, G.transform(rk, {...turnZ(roll.psi, Q[0], Q[1]), origin: [Q[0], Q[1], ROCK_Z]}));
+  G.lathe(rocker, [[0, 0], [0, 1.6], [ROCK_Z - 38, 1.6], [ROCK_Z - 38, 0]], {axis: 'z', at: [Q[0], Q[1], 38], segments: 32});   // the post
+  // the roller's bracket, down from the rocker's end
+  G.box(rocker, [roll.x - 3.2, roll.y - 1, ROLL_Z], [roll.x - 2.4, roll.y + 1, ROCK_Z]);
+  G.box(rocker, [roll.x + 2.4, roll.y - 1, ROLL_Z], [roll.x + 3.2, roll.y + 1, ROCK_Z]);
+
   const roller = G.part('roller', 'Roller');
-  G.lathe(roller, [[0, 0], [0, ROLL_R], [5, ROLL_R], [5, 0]], {axis: 'x', at: [RX - 2.5, RY, ROLL_Z], segments: 48});
+  G.lathe(roller, [[0, 0], [0, ROLL_R], [4.4, ROLL_R], [4.4, 0]], {axis: 'x', at: [roll.x - 2.2, roll.y, ROLL_Z], segments: 48});
 
-  // The lens, and its focusing cam: a ring that moves as the lens is focused, here exactly as
-  // far as the lever needs to turn the mirror (arm × angle)
+  // The lens: a fixed bayonet and barrel; the focus ring, whose scale turns past the index; and
+  // the optics, which move out as the ring is turned, carrying the cam at their back
   const lens = G.part('lens', 'Lens');
-  G.lathe(lens, [[-22, 0], [-22, 11.5], [0, 11.5], [0, 25], [3, 25], [3, 23], [36, 23], [36, 19], [37, 19], [37, 0]], {axis: 'y', at: [XL, FRONT, ZL], segments: 96});
-  // the roller rides on the cam's back face: as the lens is focused closer the cam moves back
-  // and pushes the roller with it
-  const camFace = RY + ROLL_R;
-  const cam = G.part('cam', 'Focusing cam');
-  G.lathe(cam, [[0, 12], [0, 19], [3, 19], [3, 12]], {axis: 'y', at: [XL, camFace, ZL], segments: 96});
-
-  // The light: from the subject through the viewfinder window straight to the eye, and through
-  // the rangefinder window to the mirror, across to the half-silvered mirror and into the eye
-  const light = G.part('light', 'Light from the subject');
-  const far = FRONT + REACH;
-  const S = Ys <= far ? [XF, Ys, Z] : null;
-  const M = [XR, 0, Z], P = [XF, 0, Z], E = [XF, BACK - 14, Z];
-  const mainStart = S ?? [XF, far, Z];
-  const rfStart = S ?? [XR - din[0] * (far / -din[1]), far, Z];
-  G.line(light, mainStart, P, 'detail');
-  G.line(light, P, E, 'detail');
-  G.line(light, rfStart, M, 'detail');
-  G.line(light, M, P, 'detail');
-  if (S) {
-    // the subject, where the two paths meet
-    G.line(light, [S[0] - 3, S[1], S[2]], [S[0] + 3, S[1], S[2]], 'detail');
-    G.line(light, [S[0], S[1], S[2] - 3], [S[0], S[1], S[2] + 3], 'detail');
+  G.lathe(lens, [[0, 20], [0, 25], [2.5, 25], [2.5, 22.5], [4.5, 22.5], [4.5, 20]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
+  G.line(lens, [XL, FRONT + 2.7, ZL + 22.55], [XL, FRONT + 4.4, ZL + 22.55], 'detail');                // the index
+  const yo = FRONT + EXT;                          // the optics, moved out
+  G.lathe(lens, [[camFace + 3 - yo, 0], [camFace + 3 - yo, 11.5], [12, 11.5], [12, 21], [21, 21], [21, 22.6], [27, 22.6], [27, 21], [33, 21], [33, 20], [34, 20], [34, 0]], {axis: 'y', at: [XL, yo, ZL], segments: 120});
+  G.circle(lens, [XL, yo + 34.05, ZL], 15, [0, 1, 0], {role: 'detail', segments: 96});              // the front glass
+  for (let i = 0; i < 24; i++) {                    // the aperture ring's grip
+    const a = i / 24 * Math.PI * 2, s = Math.sin(a), c = Math.cos(a);
+    G.line(lens, [XL + 22.65 * s, yo + 22.5, ZL + 22.65 * c], [XL + 22.65 * s, yo + 25.5, ZL + 22.65 * c], 'texture');
   }
 
+  const ring = G.part('focus-ring', 'Focus ring');
+  G.lathe(ring, [[4.6, 20.5], [4.6, 23], [7, 23], [7, 24], [13, 24], [13, 20.5]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
+  const SPAN = 70 * Math.PI / 180;                 // the ring turns 100° from infinity to 0.7 m
+  const at = (a, r, y) => [XL + r * Math.sin(a), y, ZL + r * Math.cos(a)];
+  for (const d of [0, 1 / 3, 1 / 2, 1 / 1.5, 1 / 1.2, 1, 1 / 0.85, 1 / 0.7]) {    // its distance scale
+    const a = (v - d) * SPAN;
+    G.line(ring, at(a, 23.05, FRONT + 4.7), at(a, 23.05, FRONT + (d === 0 ? 6.9 : 6.1)), 'detail');
+  }
+  for (let i = 0; i < 30; i++) {                    // the grip, turning with the ring
+    const a = v * SPAN + i / 30 * Math.PI * 2;
+    G.line(ring, at(a, 24.05, FRONT + 8), at(a, 24.05, FRONT + 12), 'texture');
+  }
+
+  const cam = G.part('cam', 'Focusing cam');
+  G.lathe(cam, [[0, 12], [0, 19.5], [3, 19.5], [3, 12]], {axis: 'y', at: [XL, camFace, ZL], segments: 120});
+
+  // The light, from the subject through the viewfinder window straight to the eye, and through
+  // the rangefinder window to the mirror
+  const light = G.part('light', 'Light from the subject');
+  const S = [XF, Yt, Z], M = [XR, 0, Z], P = [XF, 0, Z], E = [XF, BACK - 16, Z];
+  G.line(light, S, P, 'detail');
+  G.line(light, P, E, 'detail');
+  G.line(light, S, M, 'detail');
+
+  // The rangefinder's line of sight: where the mirror is turned to look, across to the
+  // half-silvered mirror and into the middle of the finder. It crosses the viewfinder's line where
+  // the lens is focused; on the subject when the lens is focused on it.
+  const sight = G.part('sight', 'Rangefinder line of sight');
+  const F = Ys <= far ? [XF, Ys, Z] : null;
+  G.line(sight, F ?? [XR - din[0] * ((far) / -din[1]), far, Z], M, 'axis');
+  G.line(sight, M, P, 'axis');
+  if (F) {                                         // where the lens is focused
+    G.circle(sight, F, 3.2, [0, 0, 1], {role: 'detail', segments: 36});
+    G.line(sight, [F[0] - 5, F[1], F[2]], [F[0] + 5, F[1], F[2]], 'detail');
+  }
+
+  // The subject, a post 1 m away
+  const subject = G.part('subject', 'Subject, 1 m away');
+  G.lathe(subject, [[0, 0], [0, 6], [1.6, 6], [1.6, 1.6], [Z + 9 - (Z - 24), 1.6], [Z + 9 - (Z - 24), 0]], {axis: 'z', at: [XF, Yt, Z - 24], segments: 72});
+  G.lathe(subject, [[-3.6, 0], [-3.3, 1.5], [-2.2, 2.8], [0, 3.6], [2.2, 2.8], [3.3, 1.5], [3.6, 0]], {axis: 'z', at: [XF, Yt, Z + 12.6], segments: 72});
+
   // Every setting fits the page the same way: a fixed frame of hidden trails round all of them
-  const frame = [[-W / 2, BACK - 16, -DROP], [W / 2, FRONT + REACH + 4, Z + 10]];
+  const frame = [[-W / 2, BACK - 16, 0], [W / 2, far + 4, Z + 17]];
   const corners = [0, 1, 2, 3, 4, 5, 6, 7].map(i => [frame[i & 1][0], frame[(i >> 1) & 1][1], frame[(i >> 2) & 1][2]]);
   const trails = corners.map(c => ({a: c, b: [c[0] + 0.01, c[1], c[2]], role: 'texture'}));
 
-  // the top cover is left off this drawing, so the light can be followed; its windows stay
-  const parts = [body, vfWin, rfWin, front, splitter, eye, mirror, lever, roller, lens, cam, light];
-  void cover;
-  const result = TechnicalProjection.render(parts, {...options, camera: {azimuth: -100, elevation: 40, roll: 0}, trails});
-  return {...result, meta: {Ys, phi, camTravel: camFace - (rot(arm[0], arm[1], 0)[1] + ROLL_R)}};
+  const parts = [body, vfWin, rfWin, splitter, eye, mirror, lever, rocker, roller, lens, ring, cam, light, sight, subject];
+  const camera = options.camera ?? {azimuth: -64, elevation: 42, roll: 0};
+  const result = TechnicalProjection.render(parts, {...options, camera, trails});
+  // where each part's label points, moving with it (the build lays the labels out once, for
+  // every setting, so they hold still while the leaders follow the parts)
+  const lerp = (a, b, t) => a.map((x, i) => x + (b[i] - x) * t);
+  const [ax, ay] = rot(ARM[0] * 0.55, ARM[1] * 0.55, phi), [kx, ky] = rot(-L1 * 0.45, 0, roll.psi);
+  const anchors = {
+    body: [W / 2 - 4, BACK, 22], 'vf-window': [XF - 12, FRONT, Z + 7.5], 'rf-window': [XR + 6.5, FRONT, Z + 5],
+    splitter: [XF, 0, Z + 6.5], eyepiece: [XF - 8.5, BACK - 4, Z], mirror: [XR, 0, Z + 6],
+    lever: [XR + ax, ay, PIVOT_Z + 2], rocker: [Q[0] + kx, Q[1] + ky, ROCK_Z + 1.5], roller: [roll.x, roll.y, ROLL_Z + ROLL_R],
+    cam: [XL - 19.5, camFace + 1.5, ZL], lens: [XL + 21, yo + 30, ZL], 'focus-ring': [XL - 24, FRONT + 10, ZL],
+    light: lerp(S, P, 0.45), sight: lerp(M, F ?? [XR - din[0] * (far / -din[1]), far, Z], 0.42), subject: [XF, Yt, Z + 16.2]
+  };
+  return {...result, camera, meta: {Ys, Yt, phi, ext: EXT, anchors, pin, contact: Math.hypot(roll.x - XL, ROLL_Z - ZL), slot: Math.hypot(pin[0] - Q[0], pin[1] - Q[1])}};
 };
