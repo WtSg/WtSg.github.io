@@ -6,7 +6,8 @@
 // Every frame of a drawing fits the page the same way and shares one crop, so the page swaps
 // frames that line up exactly. Each frame is a list of part drawings; a part drawn the same in
 // two frames is stored once. Styles are left to the page (assets/css/focus-game.css). Each
-// drawing also gives the crop of its ink alone (inkBox), for screens too narrow for the labels.
+// drawing also gives a crop of its ink alone (inkBox), for screens too narrow for the labels; in
+// action, round the camera and the subject, the rangefinder's line of sight left to run off it.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const tools = path.join(__dirname, '../tools/assets');
 const context = {console, structuredClone};
@@ -66,7 +67,8 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
   const paper = p => { const q = view.project(p); return [offset[0] + q[0] * scale, offset[1] + q[1] * scale]; };
   const names = Object.fromEntries([...runs[0].markup.matchAll(/data-item="([^"]*)" data-name="([^"]*)"/g)].map(m => [m[1], m[2]]));
   const crop = cropper();
-  runs.forEach(r => crop.ink(r.markup));
+  const tight = cropper();                                  // for narrow screens: the camera and the subject, the line of sight
+  runs.forEach(r => { crop.ink(r.markup); tight.ink(r.markup.replace(/<g id="part-sight[^"]*"[\s\S]*?<\/g>/, '')); });   // left to run off the edge
   const ink = {...crop.box};
   // the labels, in two columns either side of the drawing, in the order their parts stand at 1 m
   const ref = Object.entries(runs[REF].meta.anchors).map(([id, p]) => ({id, at: paper(p)}));
@@ -89,7 +91,7 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
     return `<path data-line-role="detail" data-for="${id}" fill="none" d="M${r1(ax)} ${r1(ay)}L${r1(elbow)} ${r1(y)}L${r1(end)} ${r1(y)}"/><circle data-ink-fill="" cx="${r1(ax)}" cy="${r1(ay)}" r=".7"/>`;
   }).join('') + '</g>';
   const data = pack(runs.map(r => [...groupsOf(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '')), leaders(r)]), {
-    viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(ink).join(' '), labels,
+    viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(tight.box, 3).join(' '), labels,
     stops: STOPS.map(([v, label, speak]) => ({v: +v.toFixed(4), label, speak})), subject: REF,
     title: 'How a rangefinder focuses: the lens, its cam, the roller and levers turning the mirror, and the two lines of sight meeting where the lens is focused'
   });
