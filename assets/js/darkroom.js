@@ -550,7 +550,7 @@
         // The last print on the line: the roll is done, and the lights can come on.
         if (!ended && hudTry && s.index === N - 1 && s.label === "Dry" && !lit) {
           ended = true;
-          hudTry.textContent = "Every print is on the line · switch the lights on to see the whole room";
+          hudTry.textContent = "The roll is done · switch the lights on to walk the drying room, where every print hangs";
           hudTry.hidden = false;
           hudTry.classList.remove("is-gone");
           setTimeout(function () { hudTry.classList.add("is-gone"); }, 7000);
@@ -630,11 +630,15 @@
       new MutationObserver(function () { ctrl.setPaused(dialog.open); }).observe(dialog, { attributes: true, attributeFilter: ["open"] });
     }
 
-    var lit = false;
+    var lit = false, litScroll = 0;
     mode = {
       toggle: function () {
         lit = !lit;
         var on = lit;
+        // Under the tubes the scroll walks the drying room; with the lights back down the
+        // page returns to where it was, and the bench carries on from the same print.
+        if (on) litScroll = window.pageYOffset;
+        else if (Math.abs(window.pageYOffset - litScroll) > 1) window.scrollTo({ top: litScroll, behavior: "instant" });
         // The page's colours follow once the room light has actually changed.
         setTimeout(function () { setLightsAttr(on); }, on && !still() ? 380 : 0);
         ctrl.setLights(on);
