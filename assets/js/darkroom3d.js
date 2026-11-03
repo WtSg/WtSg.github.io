@@ -910,20 +910,44 @@ export function start(o) {
     p.mat.emissiveMap = t;
     p.mat.needsUpdate = true;
   }
-  function useFull(p) {
-    if (p.texFull || !photos[p.i].full) return;
+  // Full-size pictures: the print being worked on wears its own; the next one's is fetched,
+  // decoded off the page's thread and handed to the GPU while the scene stands still, so the
+  // hand-off from one print to the next never waits on a picture (it used to start loading
+  // just as the next sheet came out, and land mid-move).
+  function loadFull(p) {
+    if (p.texFull || p.fullLoading || !photos[p.i].full) return;
+    p.fullLoading = true;
     loader.load(photos[p.i].full, (t) => {
-      t.colorSpace = THREE.SRGBColorSpace;
-      t.anisotropy = maxAniso;
-      p.texFull = t;
-      setTex(p, t);
-    });
+      const ready = () => {
+        p.fullLoading = false;
+        if (p.fullDropped) { p.fullDropped = false; t.dispose(); return; }
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = maxAniso;
+        p.texFull = t;
+        p.uploaded = false;
+        if (prints[shown] === p) wearFull(p);
+      };
+      if (t.image && t.image.decode) t.image.decode().then(ready, ready); else ready();
+    }, undefined, () => { p.fullLoading = false; });
+  }
+  function wearFull(p) {
+    if (!p.texFull || p.mat.map === p.texFull) return;
+    p.uploaded = true;
+    setTex(p, p.texFull);
+  }
+  // to the GPU now, while nothing moves (the upload would otherwise come with its first frame)
+  function uploadFull(p) {
+    if (!p.texFull || p.uploaded) return;
+    p.uploaded = true;
+    try { renderer.initTexture(p.texFull); } catch (e) { /* drawn with its first frame instead */ }
   }
   function dropFull(p) {
+    if (p.fullLoading) p.fullDropped = true;
     if (!p.texFull) return;
     if (p.texThumb) setTex(p, p.texThumb);
     p.texFull.dispose();
     p.texFull = null;
+    p.uploaded = false;
   }
   // The image carries a little of its own colour once it has come up, so it
   // reads in the red light; blank paper never glows.
@@ -1329,6 +1353,18 @@ export function start(o) {
 
   /* ---------- Camera ---------- */
   const view = { pos: V(0.4, 1.1, 2.4), look: V(0, 0.5, -0.3) };
+  const viewV = { pos: V(0, 0, 0), look: V(0, 0, 0) };
+  // A critically damped spring toward a goal (the steps of Unity's SmoothDamp): it starts and
+  // stops smoothly and never overshoots, whatever the frame time. smoothTime is roughly how
+  // long it takes to get there.
+  function damp(cur, vel, goal, smoothTime, ds) {
+    const w = 2 / smoothTime, x = w * ds, ex = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    for (const c of ["x", "y", "z"]) {
+      const change = cur[c] - goal[c], tmp = (vel[c] + w * change) * ds;
+      vel[c] = (vel[c] - w * tmp) * ex;
+      cur[c] = goal[c] + (change + tmp) * ex;
+    }
+  }
   let aspect = 1, fov = 36;
   function fitDist(w, h) {
     const vf = THREE.MathUtils.degToRad(fov), hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
@@ -1374,11 +1410,12 @@ export function start(o) {
     const look = portrait ? V(-0.15, 0.45, -1.6) : V(-0.1, 0.5, -1.6);
     return frame0(look, (portrait ? V(0.05, 1.62, 3.3) : V(0.3, 1.45, 2.9)).sub(look));
   }
-  // Between two framings the camera keeps whatever is moving in view.
+  // Between two framings the camera keeps whatever is moving in view: it turns to it
+  // gently over the first third of the move and gently back over the last, never at once.
   function between(a, b, k, subject) {
     const kk = clamp(k, 0, 1), e = E.inOut(kk);
     const look = a.look.clone().lerp(b.look, e);
-    if (subject) look.lerp(subject, Math.sqrt(Math.sin(Math.PI * kk)));
+    if (subject) look.lerp(subject, smooth(clamp(3 * Math.min(kk, 1 - kk), 0, 1)));
     return frame0(look, a.off.clone().lerp(b.off, e));
   }
   // The middle of a print held in pose q.
@@ -1469,6 +1506,35 @@ export function start(o) {
   function mixView(a, b, k) {
     return { pos: a.pos.clone().lerp(b.pos, k), look: a.look.clone().lerp(b.look, k) };
   }
+  // How far the camera's path goes per print just ahead of pp, the way it is heading:
+  // the most over a short look ahead, so the process eases off before a long move, not in it.
+  function pathSpeed(pp, dir, q) {
+    const h = 0.004, N1 = N;
+    let most = 0;
+    for (const ahead of [0, 0.012, 0.028]) {
+      const a = clamp(pp + dir * ahead, 0, N1), b = clamp(a + dir * h, 0, N1);
+      if (a === b) continue;
+      const va = pathCam(a, q), vb = pathCam(b, q);
+      most = Math.max(most, va.pos.distanceTo(vb.pos) / h, va.look.distanceTo(vb.look) / h);
+    }
+    return most;
+  }
+  // One step of the scene's clock toward where the page is: at its own pace (PLAY), faster
+  // only to make up a long way, and slower wherever the camera has a long way to go across
+  // the room (a print going up to the far end of the line, the enlarger after it), so the
+  // camera glides there at no more than CAM_MAX instead of being whipped across.
+  const CAM_MAX = 3;
+  function pace(p0, v0, goal, q, ds) {
+    const gap = goal - p0, far = Math.max(1, Math.abs(gap));
+    const cap = Math.min(PLAY, CAM_MAX / Math.max(0.05, pathSpeed(p0, Math.sign(gap) || 1, q)));
+    const vmax = cap * far;
+    const want = clamp(gap * 4, -vmax, vmax), acc = ((PLAY * far) / 0.4) * ds;
+    let v = v0 + clamp(want - v0, -acc, acc);
+    let p = p0 + v * ds;
+    // never past where the page is
+    if ((goal - p) * gap <= 0) { p = goal; v = 0; }
+    return { pos: p, v };
+  }
   // Print i and the step after it: f from 0 to 1. The last print has one more step too,
   // which only takes it through the stop bath and the fixer to the line (its f runs to letGo).
   function split(pp) {
@@ -1537,9 +1603,9 @@ export function start(o) {
       return asView(between(lineFrame(i), wholeLineFrame(), seg(f, PH.hang - 0.02, PH.letGo)));
     }
     if (f < PH.letGo) return asView(between(trayFrame(fixTray), lineFrame(i), seg(f, PH.fixOut, PH.hang - 0.02), mine()));
-    if (f < PH.exp0) return asView(between(lineFrame(i), enlargerFrame(0), seg(f, PH.letGo - 0.01, PH.exp0 - 0.01), next()));
+    if (f < PH.exp0) return asView(between(lineFrame(i), enlargerFrame(0), seg(f, PH.letGo, PH.exp0), next()));
     if (f < PH.exp1) return asView(enlargerFrame(E.inOut(seg(f, PH.exp0, PH.exp1))));
-    return asView(between(enlargerFrame(1), T, seg(f, PH.exp1 + 0.01, PH.drop1), next()));
+    return asView(between(enlargerFrame(1), T, seg(f, PH.exp1, PH.drop1), next()));
   }
   // The tongs: they come to the print in the developer and let go of it on the line.
   function tongPath(pp) {
@@ -1835,12 +1901,9 @@ export function start(o) {
       pos += (target - pos) * (1 - Math.exp(-dt / 110));
       posV = 0;
     } else {
-      const gap = target - pos, vmax = PLAY * Math.max(1, Math.abs(gap));
-      const want = clamp(gap * 4, -vmax, vmax), acc = (vmax / 0.4) * ds;
-      posV += clamp(want - posV, -acc, acc);
-      pos += posV * ds;
-      // never past where the page is
-      if ((target - pos) * gap <= 0) { pos = target; posV = 0; }
+      const st = pace(pos, posV, target, intro, ds);
+      pos = st.pos;
+      posV = st.v;
     }
     if (Math.abs(target - pos) < 0.0005) { pos = target; posV = 0; }
     if (intro < 1 && introStart >= 0) intro = clamp((now - introStart) / INTRO_MS, 0, 1);
@@ -1990,9 +2053,17 @@ export function start(o) {
     const introing = q < 1 && pos < 0.02;
     const showIdx = introing ? 0 : (f >= PH.letGo && i + 1 < N ? i + 1 : i);
     if (showIdx !== shown) {
-      if (shown >= 0 && prints[shown]) dropFull(prints[shown]);
       shown = showIdx;
-      useFull(prints[shown]);
+      // the one shown, and the one after it, keep their full pictures; the rest go back to prints
+      prints.forEach((p, k) => { if (k !== shown && k !== shown + 1 && (p.texFull || p.fullLoading)) dropFull(p); });
+      if (prints[shown + 1] && prints[shown + 1].mat.map === prints[shown + 1].texFull) setTex(prints[shown + 1], prints[shown + 1].texThumb);
+      loadFull(prints[shown]);
+      wearFull(prints[shown]);
+    }
+    // standing still on a print: the next one's picture is fetched and made ready now
+    if (pos === target && !drag && shown + 1 < N && prints[shown + 1]) {
+      loadFull(prints[shown + 1]);
+      uploadFull(prints[shown + 1]);
     }
     const sp = prints[shown];
     // What the timer reads: the exposure counting down, then the developer, stop and fixer counting up.
@@ -2030,9 +2101,15 @@ export function start(o) {
     travel.ad = reduce ? travel.d : lerp(travel.ad, travel.d, 1 - Math.exp(-dt / 90));
     const pc = pathCam(pos, q);
     const goalView = eAll > 0 ? mixView(pc, hallView(), eAll) : pc;
-    const kc = reduce ? 1 : 1 - Math.exp(-(dt / 1000) * 5);
-    view.pos.lerp(goalView.pos, kc);
-    view.look.lerp(goalView.look, kc);
+    if (reduce) {
+      view.pos.copy(goalView.pos);
+      view.look.copy(goalView.look);
+    } else {
+      // through the darkroom it glides; walking the lit room it follows the hand more closely
+      const st = lerp(0.42, 0.14, eAll);
+      damp(view.pos, viewV.pos, goalView.pos, st, dt / 1000);
+      damp(view.look, viewV.look, goalView.look, st, dt / 1000);
+    }
     camPos.copy(view.pos);
     camLook.copy(view.look);
     if (!reduce) {
