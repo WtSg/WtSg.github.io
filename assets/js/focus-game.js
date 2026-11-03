@@ -5,11 +5,14 @@
  * first, and let go: letting go releases the shutter (a tap shoots as it stands, for anyone
  * who would rather time it). A roll is twelve frames, and the subject moves more from frame
  * to frame: still, then swaying, then walking off, with the hand shaking a little at the end.
- * Each frame is ranked only by how closely the two images met when the shutter went; the
- * game makes up no distances, since it cannot know how far away anything in a photograph
- * was. Sharp frames in a row build a streak, and the roll ends on a contact sheet. Today's
- * roll is the same twelve frames, moving the same way, for everyone on the same day. The
- * camera on the title is a design of its own: no maker's name or mark.
+ * As on a Leica, nothing says when the two images are one (no lamp, no beep): the eye
+ * judges, and only after the shutter does the game say how close they were. Each frame is
+ * ranked only by how closely the two images met; the game makes up no distances, since it
+ * cannot know how far away anything in a photograph was. Sharp frames in a row build a
+ * streak, and the roll ends on a contact sheet. Today's roll is the same twelve frames,
+ * moving the same way, for everyone on the same day. A guide teaches rangefinder focusing
+ * step by step in the same finder. The camera on the title is a design of its own: no
+ * maker's name or mark.
  */
 import * as THREE from "three";
 
@@ -118,7 +121,7 @@ function makeSound() {
   s.shutter = () => { if (!ready()) return; const t = ctx.currentTime; burst(t, 0.035, 1800, 0.9, 0.5); tone(t, 140, 0.03, 0.25); burst(t + 0.045, 0.03, 3200, 1.2, 0.35); };
   // the film advancing: a run of small ratchet clicks
   s.advance = () => { if (!ready()) return; const t = ctx.currentTime + 0.05; for (let k = 0; k < 6; k++) burst(t + k * 0.03, 0.008, 4200, 2, 0.12 - k * 0.012, "highpass"); };
-  // the two images coming into register
+  // a soft click, to say the sound is on
   s.tick = () => { if (!ready()) return; burst(ctx.currentTime, 0.006, 5200, 3, 0.09, "highpass"); };
   s.streak = (n) => { if (!ready()) return; const t = ctx.currentTime + 0.12; tone(t, 880, 0.09, 0.06); tone(t + 0.07, 880 * Math.pow(2, Math.min(n, 5) / 12 + 0.5), 0.12, 0.05); };
   s.toggle = () => { s.on = !s.on; store.set("focus-challenge-sound", s.on ? "on" : "off"); if (s.on) ready(); return s.on; };
@@ -129,9 +132,6 @@ const buzz = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } cat
 
 const ICON_X = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 const ICON_SND = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path class="fg__wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 7a7.2 7.2 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="fg__mute" d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-const LAMP_L = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7.5 1.5L2.5 5l5 3.5z"/></svg>';
-const LAMP_R = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 1.5L7.5 5l-5 3.5z"/></svg>';
-const LAMP_C = '<svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3"/></svg>';
 
 export function start(o) {
   const host = o.host, photos = o.photos || [], still = !!o.still;
@@ -152,21 +152,26 @@ export function start(o) {
     '<button class="fg__icon fg__snd" type="button" aria-pressed="false" aria-label="Sound">' + ICON_SND + "</button>" +
     '<button class="fg__icon fg__x" type="button" aria-label="Back to the photograph">' + ICON_X + "</button></header>" +
     '<div class="fg__main"><canvas class="fg__gl" aria-hidden="true"></canvas>' +
-    '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas><span class="fg__curtain" aria-hidden="true"></span><p class="fg__pop" aria-hidden="true"></p></div></div>' +
-    '<div class="fg__readout" aria-hidden="true"><span class="fg__lamps"><i data-l="l">' + LAMP_L + '</i><i data-l="c">' + LAMP_C + '</i><i data-l="r">' + LAMP_R + "</i></span>" +
+    '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas><img class="fg__cap" alt="" draggable="false"><span class="fg__curtain" aria-hidden="true"></span><p class="fg__pop" aria-hidden="true"></p></div></div>' +
+    '<div class="fg__readout" aria-hidden="true">' +
     '<span class="fg__cell fg__cell--frame"><small>Frame</small><b class="fg__count">01</b><small>/' + FRAMES + "</small></span>" +
     '<span class="fg__cell fg__cell--streak"><small>Streak</small><b class="fg__streak">0</b></span>' +
     '<span class="fg__cell"><small>Score</small><b class="fg__score">0</b></span></div>' +
     '<div class="fg__time" aria-hidden="true"><i></i></div>' +
     '<ol class="fg__strip" aria-hidden="true">' + strip + "</ol>" +
     '<p class="fg__hint"></p><p class="fg__sr" aria-live="polite"></p>' +
+    '<div class="fg__view" role="group" aria-label="A frame from the roll" hidden><figure class="fg__view-fig"><img class="fg__view-img" alt="" draggable="false"></figure>' +
+    '<p class="fg__view-cap" aria-live="polite"></p>' +
+    '<div class="fg__view-keys"><button class="fg__icon" type="button" data-v="prev" aria-label="Previous frame"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+    '<button class="fg__btn" type="button" data-v="back">Back to the roll</button>' +
+    '<button class="fg__icon" type="button" data-v="next" aria-label="Next frame"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>' +
     '<section class="fg__card" hidden></section>';
   host.appendChild(root);
   const $ = (s) => root.querySelector(s);
-  const vf = $(".fg__vf"), gl = $(".fg__gl"), finder = $(".fg__finder"), curtain = $(".fg__curtain"), pop = $(".fg__pop");
+  const vf = $(".fg__vf"), gl = $(".fg__gl"), finder = $(".fg__finder"), curtain = $(".fg__curtain"), pop = $(".fg__pop"), cap = $(".fg__cap");
   const modeEl = $(".fg__mode"), countEl = $(".fg__count"), streakEl = $(".fg__streak"), scoreEl = $(".fg__score"), timeEl = $(".fg__time i");
   const hintEl = $(".fg__hint"), srEl = $(".fg__sr"), card = $(".fg__card"), sndBtn = $(".fg__snd");
-  const lamps = { l: $('[data-l="l"]'), c: $('[data-l="c"]'), r: $('[data-l="r"]') };
+  const viewEl = $(".fg__view"), viewImg = $(".fg__view-img"), viewCap = $(".fg__view-cap");
   const slots = Array.prototype.slice.call(root.querySelectorAll(".fg__frm"));
   // nothing in here reaches the close-up underneath: its clicks, swipes, pinches and wheel
   ["click", "dblclick", "pointerdown", "pointermove", "pointerup", "pointercancel", "wheel", "touchstart", "touchmove", "touchend", "gesturestart", "gesturechange", "gestureend", "contextmenu"].forEach((t) =>
@@ -179,6 +184,7 @@ export function start(o) {
   let mode = "roll", dayKey = todayKey(), roll = [];
   function makeRoll(m) {
     mode = m;
+    if (m === "guide") { roll = [{ p: photos[o.index | 0], img: null, full: false, at: null, m: guideMotion("still") }]; return; }
     const r = m === "day" ? rng(hashStr("focus-challenge " + dayKey)) : rng((Math.random() * 4294967296) >>> 0);
     const all = photos.map((_, i) => i);
     for (let k = all.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [all[k], all[j]] = [all[j], all[k]]; }
@@ -231,6 +237,8 @@ export function start(o) {
   }
 
   /* ---------- The finder ---------- */
+  // the guide's highlight breathes slowly (never a flash); still for anyone who asks for less motion
+  const pulse = () => (still ? 1 : 0.5 + 0.5 * Math.sin(performance.now() / 420));
   const vg = vf.getContext("2d");
   let dpr = 1, patchCss = 120;
   function geom() {
@@ -240,7 +248,8 @@ export function start(o) {
     const pw = clamp(ww * 0.3, 120 * dpr, 360 * dpr), ph = Math.min(pw * 0.62, wh * 0.4);
     return { W, H, m, r, wx: m, wy: m, ww, wh, pw, ph, px: W / 2 - pw / 2, py: H / 2 - ph / 2 };
   }
-  function drawFinder(u, shake, glow) {
+  // hl: what the guide points at ("frame" or "patch"), never whether the images are one
+  function drawFinder(u, shake, hl) {
     const G = geom(), { W, H, wx, wy, ww, wh, pw, ph, px, py } = G;
     vg.setTransform(1, 0, 0, 1, 0, 0);
     vg.fillStyle = "#000";
@@ -268,10 +277,11 @@ export function start(o) {
     vg.fillRect(wx, wy, ww, wh);
     // bright-line corners
     const fw = ww * 0.8, fh = Math.min(wh * 0.8, fw / 1.5), fx = W / 2 - fw / 2, fy = H / 2 - fh / 2, cl = Math.min(fw, fh) * 0.11;
+    const lit = hl === "frame" ? 0.5 + 0.5 * pulse() : 0;
     vg.strokeStyle = "rgba(255, 246, 222, .88)";
-    vg.lineWidth = Math.max(1, 1.4 * dpr);
-    vg.shadowColor = "rgba(255, 236, 190, .5)";
-    vg.shadowBlur = 4 * dpr;
+    vg.lineWidth = Math.max(1, (1.4 + 1.6 * lit) * dpr);
+    vg.shadowColor = "rgba(255, 236, 190, " + (0.5 + 0.5 * lit) + ")";
+    vg.shadowBlur = (4 + 10 * lit) * dpr;
     vg.beginPath();
     [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]].forEach(([x, y, sx, sy]) => {
       vg.moveTo(x + sx * cl, y); vg.lineTo(x, y); vg.lineTo(x, y + sy * cl);
@@ -296,10 +306,11 @@ export function start(o) {
       vg.fillRect(px, py, pw, ph);
       vg.restore();
     }
-    // its edge warms as the two images come into register
-    vg.strokeStyle = glow > 1 ? "rgba(255, 214, 140, .95)" : glow > 0 ? "rgba(255, 224, 170, .7)" : "rgba(255, 232, 180, .36)";
-    vg.lineWidth = (glow > 0 ? 2 : 1) * Math.max(1, dpr);
-    if (glow > 0) { vg.shadowColor = "rgba(255, 200, 110, .8)"; vg.shadowBlur = (glow > 1 ? 10 : 6) * dpr; }
+    // its edge, the same whether the images are one or not (a rangefinder never says)
+    const pl = hl === "patch" ? 0.5 + 0.5 * pulse() : 0;
+    vg.strokeStyle = pl ? "rgba(255, 220, 160, " + (0.5 + 0.45 * pl) + ")" : "rgba(255, 232, 180, .36)";
+    vg.lineWidth = (1 + 1.5 * pl) * Math.max(1, dpr);
+    if (pl) { vg.shadowColor = "rgba(255, 200, 110, .8)"; vg.shadowBlur = 10 * pl * dpr; }
     vg.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
     vg.shadowBlur = 0;
     vg.restore();
@@ -339,7 +350,7 @@ export function start(o) {
 
   /* ---------- The game ---------- */
   let state = "title", frame = 0, t0 = 0, adjust = 0, holding = null, results = [], total = 0, streak = 0, bestStreak = 0;
-  let need = true, raf = 0, held = false, lastNow = 0, inReg = false, nextAt = 0, keyRep = 0, shotU = 0;
+  let need = true, raf = 0, held = false, lastNow = 0, nextAt = 0, keyRep = 0, shotU = 0;
   function offsetAt(now) {
     const pc = roll[frame];
     if (!pc) return 0;
@@ -352,22 +363,15 @@ export function start(o) {
     const t = now / 1000;
     return { x: s * (Math.sin(t * 7.3) * 0.6 + Math.sin(t * 13.1) * 0.4), y: s * (Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 11.3) * 0.4) };
   }
-  function setLamps(u) {
-    const a = Math.abs(u);
-    lamps.c.classList.toggle("is-on", a <= RANKS[1].max);
-    lamps.c.classList.toggle("is-hot", a <= RANKS[0].max);
-    // the arrows say which way to move the second image
-    lamps.l.classList.toggle("is-on", a > RANKS[1].max && u > 0);
-    lamps.r.classList.toggle("is-on", a > RANKS[1].max && u < 0);
-  }
   function digits(n, w) { const s = String(Math.max(0, Math.round(n))); return s.length >= w ? s : "0".repeat(w - s.length) + s; }
-  function showCard(html, cls) {
+  function showCard(html, cls, noFocus) {
     card.className = "fg__card" + (cls ? " " + cls : "");
     card.innerHTML = html;
     card.hidden = false;
     root.classList.add("has-card");
-    const b = card.querySelector("[data-fg]");
-    if (b) b.focus({ preventScroll: true });
+    const b = card.querySelector(".fg__btn--solid") || card.querySelector("[data-fg]");
+    if (noFocus) root.focus({ preventScroll: true });
+    else if (b) b.focus({ preventScroll: true });
   }
   function hideCard() { card.hidden = true; root.classList.remove("has-card"); }
   function title() {
@@ -383,18 +387,20 @@ export function start(o) {
       (touch ? "" : " Keys: ← → to line up, Space to shoot.") + "</p>" +
       '<div class="fg__row"><button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot a roll</button>' +
       '<button class="fg__btn" type="button" data-fg="day">Today\'s roll' + (day ? " · " + day + " pts" : "") + "</button></div>" +
+      '<button class="fg__btn fg__btn--quiet fg__btn--guide" type="button" data-fg="guide">New to a rangefinder? How to focus one</button>' +
       (best ? '<p class="fg__small fg__best-line">Your best roll: ' + best + " points</p>" : ""),
       "fg__card--title"
     );
   }
   function begin(m, now) {
+    closeView();
     const fromTitle = state === "title";
     makeRoll(m);
     results = []; total = 0; streak = 0; bestStreak = 0; frame = 0;
     slots.forEach((s) => { s.className = "fg__frm"; const im = s.querySelector("img"); im.removeAttribute("src"); im.style.filter = ""; });
     loadPic(0); loadPic(1); loadPic(2);
     hideCard();
-    modeEl.textContent = m === "day" ? "Today's roll · " + dayLabel(dayKey) : "A roll of " + FRAMES;
+    modeEl.textContent = m === "day" ? "Today's roll · " + dayLabel(dayKey) : m === "guide" ? "How to focus" : "A roll of " + FRAMES;
     scoreEl.textContent = "0";
     streakEl.textContent = "0";
     if (renderer && !still && view && fromTitle) {
@@ -406,13 +412,98 @@ export function start(o) {
     root.className = "fg is-play";
     fly = null;
     resize();
-    startFrame(now + (still ? 0 : 350));
+    if (mode === "guide") startGuide(now);
+    else startFrame(now + (still ? 0 : 350));
+  }
+
+  /* ---------- The guide: how a rangefinder is focused, step by step, in the same finder ---------- */
+  // The hands-on steps say nothing while the images come together (no lamp, no beep, as on the
+  // camera); only after the shutter does the guide say how close they were.
+  const GUIDE = [
+    { t: "The finder", hl: "frame", x: "On a Leica M, as on any rangefinder, you look through a window beside the lens, not through the lens itself. So the whole finder is always sharp, wherever the lens is focused, and the bright lines mark what the lens will take." },
+    { t: "The patch", hl: "patch", x: "In the middle is a small, brighter patch. It shows the scene a second time, seen from another window a few centimetres along the camera, laid over the first. While the lens is not focused on what is in the patch, the two do not line up: you see it twice, side by side." },
+    { t: "An upright edge", hl: "patch", x: "The second image only ever moves sideways, so put the patch on something upright in your subject: the edge of a face, an eye, a doorframe, a tree trunk. Where there are only level lines, tilt the camera a little." },
+    { t: "Turn the ring", act: "still", x: "On the camera you turn the lens's focus ring (on many Leica lenses by a small tab underneath, under one fingertip) and the second image slides across. Here, hold anywhere on the finder and drag. When the two images are one, let go: letting go is the shutter. Nothing lights up or beeps to tell you, just as on the camera: trust your eye." },
+    { t: "Past it, and back", act: "still", x: "A habit of rangefinder photographers: turn a little past the point where the images meet, then back. The moment the doubling vanishes is easiest to see coming from either side. Try it, then let go." },
+    { t: "A moving subject", act: "sway", x: "People move, and as they do the images part again. Keep them together as your subject moves and let go the moment they are one. On the street many Leica photographers focus ahead instead: they set a distance on the lens's scale and wait for the subject to step into it (zone focusing)." },
+    { t: "The game", end: true, x: "A roll is " + FRAMES + " frames, and it gets harder: still, then swaying, then walking off, the hand shaking towards the end. Each frame is ranked by how closely the two images met when you let go: critically sharp, sharp, soft or missed. Sharp frames in a row build a streak, up to ×3, and quick ones score a bonus." }
+  ];
+  let gstep = 0, gdone = false, gnote = "", gShot = 0;
+  function guideMotion(kind) {
+    const sign = Math.random() < 0.5 ? -1 : 1;
+    return kind === "sway"
+      ? { u0: sign * 0.16, amp: 0.05, freq: 0.3, phase: Math.random() * 6.28, walk: 0, shake: 0, ms: 1e9 }
+      : { u0: sign * (0.22 + 0.15 * Math.random()), amp: 0, freq: 0, phase: 0, walk: 0, shake: 0, ms: 1e9 };
+  }
+  function startGuide(now) {
+    state = "guide";
+    root.className = "fg is-play is-guide";
+    gstep = 0;
+    guideStep(now);
+  }
+  function guideStep(now) {
+    hideCapture();
+    const st = GUIDE[gstep];
+    gdone = !st.act;
+    gnote = "";
+    adjust = 0;
+    holding = null;
+    if (st.act || gstep === 0) roll[0].m = guideMotion(st.act || "still");
+    t0 = now;
+    renderGuide();
+    need = true;
+  }
+  function renderGuide() {
+    const st = GUIDE[gstep], n = GUIDE.length;
+    modeEl.textContent = "How to focus · " + (gstep + 1) + " of " + n;
+    const btns = st.end
+      ? '<button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot a roll</button><button class="fg__btn" type="button" data-fg="day">Today\'s roll</button>'
+      : gdone ? '<button class="fg__btn fg__btn--solid" type="button" data-fg="gnext">Next</button>' : "";
+    showCard(
+      '<p class="fg__step">' + (gstep + 1) + " / " + n + "</p>" +
+      '<h2 class="fg__h">' + st.t + "</h2><p>" + st.x + "</p>" +
+      (gnote ? '<p class="fg__note">' + gnote + "</p>" : "") +
+      '<div class="fg__row">' + (gstep > 0 ? '<button class="fg__btn" type="button" data-fg="gback">Back</button>' : "") + btns +
+      (st.end ? "" : '<button class="fg__btn fg__btn--quiet" type="button" data-fg="gskip">Skip the guide</button>') + "</div>",
+      "fg__card--guide",
+      !!st.act && !gdone
+    );
+  }
+  // letting go in a hands-on step: the shutter, then how close the two images were
+  function guideShoot(now) {
+    const st = GUIDE[gstep];
+    if (state !== "guide" || !st.act || gdone) return;
+    const u = offsetAt(now), rk = rankOf(Math.abs(u));
+    holding = null;
+    root.classList.remove("is-holding");
+    snd.shutter();
+    buzz(16);
+    if (!still) { curtain.classList.remove("is-go"); void curtain.offsetWidth; curtain.classList.add("is-go"); }
+    if (sharpish(rk)) {
+      gdone = true;
+      gShot = u;
+      gnote = "<b>" + rk.name + ".</b> " + (rk === RANKS[0] ? "The two images were one." : "The two images were all but one.") + (st.act === "sway" ? " Caught as it moved." : "");
+    } else {
+      gnote = "<b>" + rk.name + ".</b> The two images were still apart. Look at the patch again, and try once more.";
+      roll[0].m = guideMotion(st.act);
+      adjust = 0;
+      t0 = now;
+    }
+    srEl.textContent = rk.name + ".";
+    const tok = showCapture(roll[0], Math.abs(u));
+    setTimeout(() => { if (tok === capTok) hideCapture(); }, still ? 1400 : 2200);
+    renderGuide();
+    need = true;
+  }
+  function guideFrame(now) {
+    const st = GUIDE[gstep];
+    drawFinder(st.act && gdone ? gShot : offsetAt(now), { x: 0, y: 0 }, st.hl || null);
   }
   function startFrame(at) {
+    hideCapture();
     state = "play";
     adjust = 0;
     holding = null;
-    inReg = false;
     t0 = at;
     loadPic(frame + 1); loadPic(frame + 2);
     countEl.textContent = pad2(frame + 1);
@@ -453,9 +544,27 @@ export function start(o) {
     root.classList.toggle("is-streak", streak >= 2);
     if (streak >= 2) snd.streak(streak);
     srEl.textContent = "Frame " + (frame + 1) + ": " + rk.name + (late ? ", out of time" : "") + ", " + pts + " points" + (streak >= 2 ? ", streak " + streak : "") + ".";
-    hintEl.textContent = "";
-    nextAt = now + (still ? 700 : 1150);
+    showCapture(pc, e);
+    hintEl.textContent = "Tap to go on";
+    nextAt = now + (still ? 1200 : 1900);
     setTimeout(() => snd.advance(), 380);
+  }
+  // After each exposure the frame as it came out fills the finder for a moment: the whole
+  // photograph, blurred as far as the two images were apart (in proportion to the gap in the
+  // patch, so the blur on screen matches what was seen there).
+  let capTok = 0;
+  function showCapture(pc, e) {
+    const tok = ++capTok;
+    cap.src = pc.full ? pc.p.src : pc.p.thumb;
+    cap.style.filter = e <= RANKS[0].max ? "none" : "blur(" + Math.min(28, e * patchCss * 0.5).toFixed(2) + "px)";
+    finder.classList.add("is-review");
+    requestAnimationFrame(() => { if (tok === capTok) cap.classList.add("is-on"); });
+    return tok;
+  }
+  function hideCapture() {
+    capTok++;
+    cap.classList.remove("is-on");
+    finder.classList.remove("is-review");
   }
   // how a frame came out on the little print: the further apart the two images, the softer
   function blurOf(e) { return e <= RANKS[0].max ? "none" : "blur(" + Math.min(9, e * 110).toFixed(2) + "px)"; }
@@ -465,6 +574,7 @@ export function start(o) {
     startFrame(now + 120);
   }
   function sheet() {
+    hideCapture();
     state = "sheet";
     pop.className = "fg__pop";
     const sharp = results.filter((r) => sharpish(r.rank)).length;
@@ -482,7 +592,7 @@ export function start(o) {
       '<header class="fg__sheet-head"><h2 class="fg__h">' + total + " points" + bestNote + "</h2>" +
       "<p>" + sharp + " of " + FRAMES + " frames sharp · best streak " + bestStreak + "</p></header>" +
       '<ol class="fg__sheet">' + results.map((r) =>
-        '<li class="is-' + r.rank.name.split(" ")[0].toLowerCase() + '"><span class="fg__shot"><img src="' + r.p.thumb + '" alt="" draggable="false" style="filter:' + blurOf(r.e) + '"></span>' +
+        '<li class="is-' + r.rank.name.split(" ")[0].toLowerCase() + '"><button class="fg__shot" type="button" data-fg="view" data-k="' + r.k + '" aria-label="See frame ' + (r.k + 1) + ", " + r.rank.name + '"><img src="' + r.p.thumb + '" alt="" draggable="false" data-e="' + r.e + '"></button>' +
         '<span class="fg__edge">' + (r.k + 1) + "</span><span class=\"fg__rank\">" + r.rank.name + "</span><span class=\"fg__pts\">+" + r.pts + "</span></li>").join("") + "</ol>" +
       '<p class="fg__marks" aria-label="' + sharp + " of " + FRAMES + ' sharp">' + marks + "</p>" +
       '<div class="fg__row"><button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot another roll</button>' +
@@ -491,16 +601,61 @@ export function start(o) {
       '<button class="fg__btn" type="button" data-fg="close">Back to the photograph</button></div>',
       "fg__card--sheet"
     );
-    srEl.textContent = "Roll done: " + total + " points, " + sharp + " of " + FRAMES + " frames sharp.";
+    // each little frame blurred in proportion to its own size, as the big one is
+    requestAnimationFrame(() => card.querySelectorAll(".fg__shot img").forEach((im) => { im.style.filter = blurFor(+im.getAttribute("data-e"), im.clientWidth); }));
+    srEl.textContent = "Roll done: " + total + " points, " + sharp + " of " + FRAMES + " frames sharp. Choose a frame to see it.";
   }
+
+  // How a frame came out at a given width on screen: the same blur, for its size, as the frame
+  // shown in the finder after the exposure (about 15% of the gap per pixel of width).
+  function blurFor(e, w) { return e <= RANKS[0].max || !w ? "none" : "blur(" + Math.min(w * 0.05, e * 0.15 * w).toFixed(2) + "px)"; }
+  /* ---------- After the roll: any frame, large, as it came out ---------- */
+  let viewK = -1, viewFrom = null;
+  function openView(k, from) {
+    if (k < 0 || k >= results.length) return;
+    if (viewK < 0) viewFrom = from || null;
+    viewK = k;
+    const r = results[k];
+    viewImg.style.filter = "";
+    viewImg.onload = () => { viewImg.style.filter = blurFor(r.e, viewImg.getBoundingClientRect().width || viewImg.clientWidth); };
+    viewImg.src = r.p.src;
+    if (viewImg.complete && viewImg.naturalWidth) viewImg.onload();
+    viewCap.innerHTML = "<b>Frame " + (r.k + 1) + "</b><span>" + r.rank.name + "</span><span>+" + r.pts + (r.mult > 1 ? " · ×" + r.mult : "") + "</span>" + (r.late ? "<span>Out of time</span>" : "");
+    viewEl.hidden = false;
+    root.classList.add("is-viewing");
+    viewEl.querySelector('[data-v="prev"]').disabled = k === 0;
+    viewEl.querySelector('[data-v="next"]').disabled = k === results.length - 1;
+    const back = viewEl.querySelector('[data-v="back"]');
+    if (document.activeElement && !viewEl.contains(document.activeElement)) back.focus({ preventScroll: true });
+  }
+  function closeView() {
+    if (viewK < 0) return;
+    viewK = -1;
+    viewEl.hidden = true;
+    root.classList.remove("is-viewing");
+    if (viewFrom && viewFrom.focus) viewFrom.focus({ preventScroll: true });
+    viewFrom = null;
+  }
+  viewEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-v]");
+    if (!b) { if (e.target === viewEl) closeView(); return; }
+    const a = b.getAttribute("data-v");
+    if (a === "back") closeView();
+    else if (a === "prev") openView(viewK - 1);
+    else if (a === "next") openView(viewK + 1);
+  });
 
   /* ---------- Hands on ---------- */
   card.addEventListener("click", (e) => {
     const b = e.target.closest("[data-fg]");
     if (!b) return;
     const a = b.getAttribute("data-fg"), now = performance.now();
-    if (a === "roll" || a === "day") begin(a, now);
+    if (a === "roll" || a === "day" || a === "guide") begin(a, now);
+    else if (a === "gnext") { gstep = Math.min(GUIDE.length - 1, gstep + 1); guideStep(now); }
+    else if (a === "gback") { gstep = Math.max(0, gstep - 1); guideStep(now); }
+    else if (a === "gskip") { gstep = GUIDE.length - 1; guideStep(now); }
     else if (a === "close") close();
+    else if (a === "view") openView(+b.getAttribute("data-k"), b);
     else if (a === "share") {
       const text = b.getAttribute("data-share");
       const done = () => { b.textContent = "Copied"; setTimeout(() => { b.textContent = "Share score"; }, 1600); };
@@ -511,8 +666,10 @@ export function start(o) {
   $(".fg__x").addEventListener("click", () => close());
   // Hold anywhere on the finder and drag: the second image follows (a little slower than the
   // finger, so its tremble matters less); let go and the shutter goes.
+  const canAim = () => (state === "play" && performance.now() >= t0) || (state === "guide" && !!GUIDE[gstep].act && !gdone);
   finder.addEventListener("pointerdown", (e) => {
-    if (state !== "play" || performance.now() < t0) return;
+    if (state === "shot") { nextAt = 0; return; }
+    if (!canAim()) return;
     holding = { id: e.pointerId, x: e.clientX };
     try { finder.setPointerCapture(e.pointerId); } catch (x) {}
     root.classList.add("is-holding");
@@ -528,13 +685,15 @@ export function start(o) {
     if (!holding || e.pointerId !== holding.id) return;
     holding = null;
     root.classList.remove("is-holding");
-    if (!cancel) shoot(performance.now(), false);
+    if (cancel) return;
+    if (state === "guide") guideShoot(performance.now());
+    else shoot(performance.now(), false);
   };
   finder.addEventListener("pointerup", (e) => letGo(e, false));
   finder.addEventListener("pointercancel", (e) => letGo(e, true));
   root.addEventListener("wheel", (e) => {
     e.preventDefault();
-    if (state !== "play") return;
+    if (!canAim()) return;
     const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : -e.deltaY;
     adjust += (d * (e.deltaMode === 1 ? 16 : 1) * 0.35) / patchCss;
   }, { passive: false });
@@ -543,11 +702,17 @@ export function start(o) {
   function onKey(e) {
     if (closed || !host.open) return;
     const k = e.key;
+    if (viewK >= 0 && (k === "Escape" || k === "ArrowLeft" || k === "ArrowRight")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (k === "Escape") closeView(); else openView(viewK + (k === "ArrowRight" ? 1 : -1));
+      return;
+    }
     if (k === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); return; }
     if (k === "ArrowLeft" || k === "ArrowRight") {
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (state !== "play") return;
+      if (!canAim()) return;
       keyRep = e.repeat ? keyRep + 1 : 0;
       const step = (e.shiftKey ? 0.03 : 0.004) * Math.min(4, 1 + keyRep * 0.25);
       adjust += k === "ArrowRight" ? step : -step;
@@ -558,11 +723,13 @@ export function start(o) {
       e.preventDefault();
       e.stopImmediatePropagation();
       if (state === "play") shoot(performance.now(), false);
+      else if (state === "shot") nextAt = 0;
+      else if (state === "guide") guideShoot(performance.now());
       else if (state === "title") begin("roll", performance.now());
     }
   }
   window.addEventListener("keydown", onKey, true);
-  function onCancel(e) { e.preventDefault(); e.stopImmediatePropagation(); close(); }
+  function onCancel(e) { e.preventDefault(); e.stopImmediatePropagation(); if (viewK >= 0) closeView(); else close(); }
   host.addEventListener("cancel", onCancel, true);
 
   /* ---------- Sizing and drawing ---------- */
@@ -609,17 +776,15 @@ export function start(o) {
       const pc = roll[frame], left = pc.m.ms - Math.max(0, now - t0);
       timeEl.style.transform = "scaleX(" + clamp(left / pc.m.ms, 0, 1).toFixed(4) + ")";
       root.classList.toggle("is-late", left < 1200);
-      const u = offsetAt(now), a = Math.abs(u), reg = a <= RANKS[1].max;
-      if (reg && !inReg && holding) { snd.tick(); buzz(6); }
-      inReg = reg;
-      setLamps(u);
-      drawFinder(u, shakeAt(now), a <= RANKS[0].max ? 2 : reg ? 1 : 0);
+      drawFinder(offsetAt(now), shakeAt(now), null);
       if (left <= 0 && now >= t0) shoot(now, true);
     } else if (state === "shot") {
       if (now >= nextAt) next(now);
-      else if (need) { drawFinder(shotU, { x: 0, y: 0 }, 0); need = false; }
+      else if (need) { drawFinder(shotU, { x: 0, y: 0 }, null); need = false; }
+    } else if (state === "guide") {
+      guideFrame(now);
     } else if (need && (state === "sheet")) {
-      drawFinder(0, { x: 0, y: 0 }, 0);
+      drawFinder(0, { x: 0, y: 0 }, null);
     }
     need = false;
   }
@@ -664,7 +829,11 @@ export function start(o) {
       frame: () => frame,
       begin: (m) => begin(m, performance.now()),
       roll: () => roll.map((r) => ({ src: r.p.src, m: r.m })),
-      patch: () => patchCss
+      patch: () => patchCss,
+      guide: () => ({ step: gstep, done: gdone, note: gnote }),
+      guideShoot: () => guideShoot(held ? Math.max(lastNow, t0) : performance.now()),
+      view: () => ({ k: viewK, open: !viewEl.hidden, filter: viewImg.style.filter, cap: viewCap.textContent, w: viewImg.getBoundingClientRect().width }),
+      capture: () => ({ on: cap.classList.contains("is-on"), filter: cap.style.filter, src: cap.getAttribute("src") })
     }
   };
 }

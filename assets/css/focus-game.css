@@ -1,7 +1,8 @@
 /* The focus challenge (focus-game.js), over the close-up. On the title, the camera in 3D;
    in play, the finder fills the screen, with the readout under it (the wall's red LED:
-   focus lamps, frame, streak, score), the time left, and the roll filling frame by frame;
-   at the end, the roll as a contact sheet. Near black, warm ink, the readout's red. */
+   frame, streak, score; no focus lamps, as a Leica has none), the time left, and the roll
+   filling frame by frame; at the end, the roll as a contact sheet; and the guide, its card
+   under the finder. Near black, warm ink, the readout's red. */
 .fg {
   position: fixed;
   inset: 0;
@@ -103,7 +104,7 @@
 .fg__pop.is-critically b { color: var(--led, #ff4a2e); text-shadow: 0 0 .6rem rgba(255, 74, 46, .6); }
 .fg__pop.is-soft b, .fg__pop.is-missed b { color: var(--muted, #9a978f); }
 
-/* the readout: the wall's red LED */
+/* the readout: the wall's red LED (frame, streak, score; nothing to say when the images meet) */
 .fg__readout {
   justify-self: center;
   display: flex;
@@ -115,11 +116,6 @@
   background: rgba(10, 6, 5, .85);
   color: var(--led, #ff4a2e);
 }
-.fg__lamps { display: flex; align-items: center; gap: .3rem; }
-.fg__lamps i { display: grid; place-items: center; width: .95rem; height: .95rem; }
-.fg__lamps svg { width: 100%; height: 100%; fill: rgba(255, 74, 46, .14); transition: fill .08s linear, filter .08s linear; }
-.fg__lamps .is-on svg { fill: var(--led, #ff4a2e); filter: drop-shadow(0 0 .25rem rgba(255, 74, 46, .8)); }
-.fg__lamps .is-hot svg { filter: drop-shadow(0 0 .45rem rgba(255, 110, 70, 1)); }
 .fg__cell { display: flex; align-items: baseline; gap: .35rem; }
 .fg__cell small { color: rgba(255, 74, 46, .72); font: 400 .58rem/1 var(--mono, monospace); letter-spacing: .14em; text-transform: uppercase; }
 .fg__cell b { font: 700 1.15rem/1 var(--seg, monospace); text-shadow: 0 0 .5rem rgba(255, 74, 46, .45); }
@@ -229,3 +225,72 @@
 /* the readout keeps its width as the numbers grow */
 .fg__score { min-width: 4ch; text-align: right; }
 .fg__streak { min-width: 1.5ch; text-align: right; }
+
+/* the guide: its card under the finder, the patch left clear; no dimming */
+.fg.is-guide .fg__readout, .fg.is-guide .fg__time, .fg.is-guide .fg__strip, .fg.is-guide .fg__hint { visibility: hidden; }
+.fg.is-guide.has-card::after { display: none; }
+.fg__card--guide {
+  top: auto;
+  bottom: clamp(.8rem, 2.2vw, 1.4rem);
+  translate: -50% 0;
+  width: min(36rem, calc(100% - 1.6rem));
+  max-height: 46%;
+  padding: 1rem 1.2rem 1.1rem;
+  background: rgba(11, 11, 11, .9);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation-name: fg-card-b;
+}
+.fg__card--guide .fg__h { font-size: 1.1rem; margin-bottom: .4rem; }
+.fg__card--guide p { margin-bottom: .7rem; }
+.fg__step { margin: 0 0 .3rem !important; color: var(--led, #ff4a2e); font: 400 .62rem/1 var(--mono, monospace); letter-spacing: .16em; }
+.fg__note { padding: .5rem .7rem; border-left: 2px solid var(--led, #ff4a2e); background: rgba(255, 74, 46, .06); }
+.fg__btn--quiet { border-color: transparent; background: transparent; color: var(--muted, #9a978f); }
+.fg__btn--guide { display: block; margin-top: .7rem; padding-left: 0; padding-right: 0; text-align: left; text-transform: none; letter-spacing: .02em; font-size: .78rem; text-decoration: underline; text-underline-offset: .22em; }
+@media (hover: hover) { .fg__btn--quiet:hover { color: var(--ink, #edebe6); border-color: transparent; } }
+
+/* after each exposure: the frame as it came out, the whole photograph, over a darkened finder */
+.fg__cap {
+  position: absolute;
+  inset: 4%;
+  z-index: 1;
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity .22s ease-out, transform .35s cubic-bezier(.2, .8, .2, 1);
+  pointer-events: none;
+}
+.fg__cap.is-on { opacity: 1; transform: none; }
+.fg__finder::after { content: ""; position: absolute; inset: 0; z-index: 0; background: rgba(0, 0, 0, .86); opacity: 0; transition: opacity .2s ease-out; pointer-events: none; }
+.fg__finder.is-review::after { opacity: 1; }
+.fg__finder.is-review { cursor: pointer; }
+.fg__curtain { z-index: 2; }
+.fg__pop { z-index: 3; top: auto; bottom: 6%; }
+@media (prefers-reduced-motion: reduce) { .fg__cap, .fg__finder::after { transition: none; } }
+
+/* after the roll: each frame on the sheet opens large, as it came out */
+button.fg__shot { width: 100%; padding: 0; border: 0; cursor: zoom-in; color: inherit; font: inherit; }
+@media (hover: hover) { button.fg__shot:hover img { transform: scale(1.12); } }
+button.fg__shot img { transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+.fg__view {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: .8rem;
+  padding: clamp(.8rem, 2.2vw, 1.4rem);
+  background: rgba(5, 5, 5, .97);
+  animation: fg-in .2s ease-out both;
+}
+.fg__view[hidden] { display: none; }
+.fg__view-fig { margin: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.fg__view-img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: .2rem; }
+.fg__view-cap { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem 1.1rem; margin: 0; font: 400 .74rem/1.3 var(--mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--muted, #9a978f); }
+.fg__view-cap b { color: var(--ink, #edebe6); font-weight: 500; }
+.fg__view-cap span:first-of-type { color: var(--led, #ff4a2e); }
+.fg__view-keys { display: flex; justify-content: center; gap: .6rem; }
+.fg__icon:disabled { opacity: .3; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .fg__view { animation: none; } button.fg__shot img { transition: none; } }
