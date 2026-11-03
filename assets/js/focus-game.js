@@ -1,89 +1,204 @@
 /*
- * The focus challenge, opened from the close-up on the wall. A rangefinder camera with a
- * 50 mm f/2 lens sits on a dark table. Through its finder the photograph is the scene, and in
- * the bright patch in the middle a second image of it lies beside the first: turning the
- * lens's focus ring slides that image across, and where the two become one the lens is
- * focused on the subject. Five rounds, eight seconds each, a subject at a hidden distance
- * every time; release the shutter (or let the time run out) and the round says how close it
- * was. The camera is a design of its own: no maker's name or mark.
+ * The focus challenge, opened from the close-up on the wall: a small game with a rangefinder.
+ * Through the camera's finder a photograph is the scene, and in the bright patch in the
+ * middle a second image of it lies beside the first. Hold, drag that second image onto the
+ * first, and let go: letting go releases the shutter (a tap shoots as it stands, for anyone
+ * who would rather time it). A roll is twelve frames, and the subject moves more from frame
+ * to frame: still, then swaying, then walking off, with the hand shaking a little at the end.
+ * Each frame is ranked only by how closely the two images met when the shutter went; the
+ * game makes up no distances, since it cannot know how far away anything in a photograph
+ * was. Sharp frames in a row build a streak, and the roll ends on a contact sheet. Today's
+ * roll is the same twelve frames, moving the same way, for everyone on the same day. The
+ * camera on the title is a design of its own: no maker's name or mark.
  */
 import * as THREE from "three";
 
-const ROUNDS = 5;
-const ROUND_MS = 8000;
-const NEAR = 0.7;                      // the lens focuses from 0.7 m to infinity
-const INV_MAX = 1 / NEAR;              // in dioptres (1 / metres)
-const A_MAX = 2.6;                     // the focus ring's travel, infinity to 0.7 m, radians
-const F_MM = 50, N_STOP = 2, COC = 0.03;
-// the ring turns in proportion to 1 / distance, as a real distance scale is laid out
+const FRAMES = 12;
+// the scales engraved on the title camera's lens (it focuses from 0.7 m to infinity, 50 mm f/2)
+const NEAR = 0.7, INV_MAX = 1 / NEAR, A_MAX = 2.6, F_MM = 50, COC = 0.03;
 const angOf = (inv) => (inv / INV_MAX) * A_MAX;
-const invOf = (a) => (a / A_MAX) * INV_MAX;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
-// How sharp a round was: the blur circle on the film (mm) from the focus error, for this
-// lens; within 0.03 mm a 35 mm frame counts as sharp.
-function blurMm(err) { return ((F_MM * F_MM) / N_STOP) * (err / 1000); }
-// How close the two images came together, as a percentage: 100 when they are one, about
-// 80 at the edge of the depth of field, falling off beyond it.
-function accuracy(err) { return 100 * Math.exp(-err / 0.1); }
-function verdict(c) {
-  if (c <= COC / 2) return "Critically sharp";
-  if (c <= COC) return "Sharp";
-  if (c <= COC * 3) return "Soft";
-  return "Missed";
+// How far apart the two images were when the shutter went, in widths of the patch.
+const RANKS = [
+  { max: 0.008, name: "Critically sharp", pts: 100, mark: "●" },
+  { max: 0.02, name: "Sharp", pts: 70, mark: "◐" },
+  { max: 0.06, name: "Soft", pts: 30, mark: "○" },
+  { max: Infinity, name: "Missed", pts: 0, mark: "·" }
+];
+const rankOf = (e) => RANKS.find((r) => e <= r.max);
+const sharpish = (r) => r.pts >= 70;
+// one patch width of drag moves the second image this far, so a finger's tremble matters less
+const GAIN = 0.65;
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
-function metres(m) {
-  if (!isFinite(m)) return "∞";
-  return m >= 10 ? m.toFixed(1) + " m" : m.toFixed(2) + " m";
+function hashStr(s) {
+  let h = 2166136261;
+  for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619);
+  return h >>> 0;
 }
-function gap(cm) { return cm < 100 ? Math.round(cm) + " cm" : (cm / 100).toFixed(2) + " m"; }
+const pad2 = (n) => (n < 10 ? "0" : "") + n;
+function todayKey(d) { d = d || new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+function dayLabel(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+// How the subject moves in frame k: still at first, then swaying, then walking off, the hand
+// shaking a little towards the end; and how long the frame lasts.
+function motion(k, r) {
+  const t = k / (FRAMES - 1);
+  const sign = r() < 0.5 ? -1 : 1;
+  return {
+    u0: sign * (0.2 + 0.2 * r()),
+    amp: k === 0 ? 0 : 0.01 + 0.07 * t * (0.6 + 0.4 * r()),
+    freq: 0.18 + 0.5 * t * (0.5 + r()),
+    phase: r() * Math.PI * 2,
+    walk: k < 4 ? 0 : (r() < 0.5 ? -1 : 1) * 0.04 * t * (0.5 + r()),
+    shake: k < 6 ? 0 : 0.5 + 2 * t,
+    ms: Math.round(lerp(5600, 3600, t))
+  };
+}
+
+/* ---------- Sound: made here, nothing to load; off unless asked for ---------- */
+function makeSound() {
+  let ctx = null, noise = null;
+  const s = { on: store.get("focus-challenge-sound") === "on" };
+  function ready() {
+    if (!s.on) return null;
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+      noise = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
+      const d = noise.getChannelData(0);
+      for (let k = 0; k < d.length; k++) d[k] = Math.random() * 2 - 1;
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  function burst(at, dur, f, q, gain, type) {
+    const c = ctx, src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = noise;
+    fl.type = type || "bandpass";
+    fl.frequency.value = f;
+    fl.Q.value = q;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(gain, at + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    src.connect(fl).connect(g).connect(c.destination);
+    src.start(at, Math.random() * 0.1, dur + 0.02);
+  }
+  function tone(at, f, dur, gain) {
+    const c = ctx, o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(gain, at + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g).connect(c.destination);
+    o.start(at);
+    o.stop(at + dur + 0.02);
+  }
+  // the cloth shutter: a soft first curtain and a crisper second one
+  s.shutter = () => { if (!ready()) return; const t = ctx.currentTime; burst(t, 0.035, 1800, 0.9, 0.5); tone(t, 140, 0.03, 0.25); burst(t + 0.045, 0.03, 3200, 1.2, 0.35); };
+  // the film advancing: a run of small ratchet clicks
+  s.advance = () => { if (!ready()) return; const t = ctx.currentTime + 0.05; for (let k = 0; k < 6; k++) burst(t + k * 0.03, 0.008, 4200, 2, 0.12 - k * 0.012, "highpass"); };
+  // the two images coming into register
+  s.tick = () => { if (!ready()) return; burst(ctx.currentTime, 0.006, 5200, 3, 0.09, "highpass"); };
+  s.streak = (n) => { if (!ready()) return; const t = ctx.currentTime + 0.12; tone(t, 880, 0.09, 0.06); tone(t + 0.07, 880 * Math.pow(2, Math.min(n, 5) / 12 + 0.5), 0.12, 0.05); };
+  s.toggle = () => { s.on = !s.on; store.set("focus-challenge-sound", s.on ? "on" : "off"); if (s.on) ready(); return s.on; };
+  s.close = () => { if (ctx) try { ctx.close(); } catch (e) {} };
+  return s;
+}
+const buzz = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+
+const ICON_X = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const ICON_SND = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path class="fg__wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 7a7.2 7.2 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="fg__mute" d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const LAMP_L = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M7.5 1.5L2.5 5l5 3.5z"/></svg>';
+const LAMP_R = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 1.5L7.5 5l-5 3.5z"/></svg>';
+const LAMP_C = '<svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3"/></svg>';
 
 export function start(o) {
   const host = o.host, photos = o.photos || [], still = !!o.still;
+  const touch = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   let closed = false;
+  const snd = makeSound();
 
   /* ---------- The page ---------- */
   const root = document.createElement("div");
-  root.className = "fg";
+  root.className = "fg is-title";
   root.setAttribute("role", "group");
   root.setAttribute("aria-label", "Focus challenge");
   root.tabIndex = -1;
+  let strip = "";
+  for (let k = 0; k < FRAMES; k++) strip += '<li class="fg__frm"><span class="fg__no">' + (k + 1) + '</span><img alt="" draggable="false"></li>';
   root.innerHTML =
-    '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas></div>' +
-    '<div class="fg__cam"><canvas class="fg__gl" role="img" aria-label="The camera. Drag across the lens, scroll, or use the left and right arrow keys to turn its focus ring."></canvas>' +
-    '<p class="fg__how" aria-hidden="true">Drag the ring</p></div>' +
-    '<header class="fg__top"><p class="fg__title">Focus challenge</p><p class="fg__round" aria-live="polite"></p>' +
-    '<div class="fg__clock" aria-hidden="true"><b class="fg__secs">8.0</b><span class="fg__bar"><i></i></span></div>' +
-    '<button class="fg__x" type="button" aria-label="Back to the photograph"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></header>' +
-    '<div class="fg__foot"><p class="fg__hint"></p><button class="fg__go" type="button">Release</button></div>' +
-    '<section class="fg__card" aria-live="polite" hidden></section>';
+    '<header class="fg__top"><p class="fg__title">Focus challenge</p><p class="fg__mode"></p>' +
+    '<button class="fg__icon fg__snd" type="button" aria-pressed="false" aria-label="Sound">' + ICON_SND + "</button>" +
+    '<button class="fg__icon fg__x" type="button" aria-label="Back to the photograph">' + ICON_X + "</button></header>" +
+    '<div class="fg__main"><canvas class="fg__gl" aria-hidden="true"></canvas>' +
+    '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas><span class="fg__curtain" aria-hidden="true"></span><p class="fg__pop" aria-hidden="true"></p></div></div>' +
+    '<div class="fg__readout" aria-hidden="true"><span class="fg__lamps"><i data-l="l">' + LAMP_L + '</i><i data-l="c">' + LAMP_C + '</i><i data-l="r">' + LAMP_R + "</i></span>" +
+    '<span class="fg__cell fg__cell--frame"><small>Frame</small><b class="fg__count">01</b><small>/' + FRAMES + "</small></span>" +
+    '<span class="fg__cell fg__cell--streak"><small>Streak</small><b class="fg__streak">0</b></span>' +
+    '<span class="fg__cell"><small>Score</small><b class="fg__score">0</b></span></div>' +
+    '<div class="fg__time" aria-hidden="true"><i></i></div>' +
+    '<ol class="fg__strip" aria-hidden="true">' + strip + "</ol>" +
+    '<p class="fg__hint"></p><p class="fg__sr" aria-live="polite"></p>' +
+    '<section class="fg__card" hidden></section>';
   host.appendChild(root);
   const $ = (s) => root.querySelector(s);
-  const vf = $(".fg__vf"), gl = $(".fg__gl"), roundEl = $(".fg__round"), secsEl = $(".fg__secs"), barEl = $(".fg__bar i");
-  const hintEl = $(".fg__hint"), goBtn = $(".fg__go"), card = $(".fg__card"), howEl = $(".fg__how");
-  // Nothing in here reaches the close-up underneath: its clicks, swipes, pinches and wheel.
+  const vf = $(".fg__vf"), gl = $(".fg__gl"), finder = $(".fg__finder"), curtain = $(".fg__curtain"), pop = $(".fg__pop");
+  const modeEl = $(".fg__mode"), countEl = $(".fg__count"), streakEl = $(".fg__streak"), scoreEl = $(".fg__score"), timeEl = $(".fg__time i");
+  const hintEl = $(".fg__hint"), srEl = $(".fg__sr"), card = $(".fg__card"), sndBtn = $(".fg__snd");
+  const lamps = { l: $('[data-l="l"]'), c: $('[data-l="c"]'), r: $('[data-l="r"]') };
+  const slots = Array.prototype.slice.call(root.querySelectorAll(".fg__frm"));
+  // nothing in here reaches the close-up underneath: its clicks, swipes, pinches and wheel
   ["click", "dblclick", "pointerdown", "pointermove", "pointerup", "pointercancel", "wheel", "touchstart", "touchmove", "touchend", "gesturestart", "gesturechange", "gestureend", "contextmenu"].forEach((t) =>
     root.addEventListener(t, (e) => e.stopPropagation()));
+  function showSound() { sndBtn.setAttribute("aria-pressed", snd.on ? "true" : "false"); sndBtn.setAttribute("aria-label", snd.on ? "Sound on" : "Sound off"); }
+  showSound();
+  sndBtn.addEventListener("click", () => { snd.toggle(); showSound(); if (snd.on) snd.tick(); });
 
-  /* ---------- The photographs: this one first, then four others ---------- */
-  const order = [o.index | 0];
-  const rest = photos.map((_, i) => i).filter((i) => i !== (o.index | 0));
-  for (let k = rest.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [rest[k], rest[j]] = [rest[j], rest[k]]; }
-  while (order.length < ROUNDS && rest.length) order.push(rest.shift());
-  while (order.length < ROUNDS) order.push(order[order.length % Math.max(1, order.length)]);
-  const pics = order.map((i) => ({ p: photos[i], img: null, full: false, at: null }));
+  /* ---------- The roll: which photographs, and how each frame moves ---------- */
+  let mode = "roll", dayKey = todayKey(), roll = [];
+  function makeRoll(m) {
+    mode = m;
+    const r = m === "day" ? rng(hashStr("focus-challenge " + dayKey)) : rng((Math.random() * 4294967296) >>> 0);
+    const all = photos.map((_, i) => i);
+    for (let k = all.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [all[k], all[j]] = [all[j], all[k]]; }
+    let pick = all;
+    if (m === "roll") pick = [o.index | 0].concat(all.filter((i) => i !== (o.index | 0)));
+    const ids = [];
+    for (let k = 0; k < FRAMES; k++) ids.push(pick[k % Math.max(1, pick.length)]);
+    roll = ids.map((i, k) => ({ p: photos[i], img: null, full: false, at: null, m: motion(k, r) }));
+  }
   function loadPic(k) {
-    const pc = pics[k];
-    if (!pc || pc.img) return;
+    const pc = roll[k];
+    if (!pc || pc.loading) return;
+    pc.loading = true;
     const thumb = new Image();
     thumb.decoding = "async";
-    thumb.onload = () => { if (!pc.full) { pc.img = thumb; pc.at = pc.at || detail(thumb); if (k === round) need = true; } };
+    thumb.onload = () => { if (!pc.full) { pc.img = thumb; pc.at = pc.at || detail(thumb); need = true; } };
     thumb.src = pc.p.thumb;
     const big = new Image();
     big.decoding = "async";
-    big.onload = () => { pc.img = big; pc.full = true; pc.at = pc.at || detail(big); if (k === round) need = true; };
+    big.onload = () => { pc.img = big; pc.full = true; pc.at = pc.at || detail(big); need = true; };
     big.src = pc.p.src;
   }
   // Where in a photograph the patch has something to line up: the strongest run of upright
@@ -100,10 +215,10 @@ export function start(o) {
       for (let k = 0; k < w * h; k++) L[k] = 0.3 * d[k * 4] + 0.59 * d[k * 4 + 1] + 0.11 * d[k * 4 + 2];
       const E = new Float32Array(w * h);
       for (let y = 0; y < h; y++) for (let x = 1; x < w - 1; x++) E[y * w + x] = Math.abs(L[y * w + x + 1] - L[y * w + x - 1]);
-      const bw = Math.max(2, Math.round(w * 0.12)), bh = Math.max(2, Math.round(h * 0.1));
+      const bw = Math.max(2, Math.round(w * 0.16)), bh = Math.max(2, Math.round(h * 0.12));
       let best = -1, bx = w / 2, by = h / 2;
-      for (let y = Math.round(h * 0.28); y <= Math.round(h * 0.72) - bh; y++) {
-        for (let x = Math.round(w * 0.28); x <= Math.round(w * 0.72) - bw; x++) {
+      for (let y = Math.round(h * 0.26); y <= Math.round(h * 0.74) - bh; y++) {
+        for (let x = Math.round(w * 0.26); x <= Math.round(w * 0.74) - bw; x++) {
           let s = 0;
           for (let yy = y; yy < y + bh; yy++) for (let xx = x; xx < x + bw; xx++) s += E[yy * w + xx];
           if (s > best) { best = s; bx = x + bw / 2; by = y + bh / 2; }
@@ -117,18 +232,23 @@ export function start(o) {
 
   /* ---------- The finder ---------- */
   const vg = vf.getContext("2d");
-  let vw = 1, vh = 1, dpr = 1;
-  function drawFinder() {
+  let dpr = 1, patchCss = 120;
+  function geom() {
     const W = vf.width, H = vf.height;
+    const m = Math.round(Math.min(W, H) * 0.03), r = Math.min(W, H) * 0.05;
+    const ww = W - 2 * m, wh = H - 2 * m;
+    const pw = clamp(ww * 0.3, 120 * dpr, 360 * dpr), ph = Math.min(pw * 0.62, wh * 0.4);
+    return { W, H, m, r, wx: m, wy: m, ww, wh, pw, ph, px: W / 2 - pw / 2, py: H / 2 - ph / 2 };
+  }
+  function drawFinder(u, shake, glow) {
+    const G = geom(), { W, H, wx, wy, ww, wh, pw, ph, px, py } = G;
     vg.setTransform(1, 0, 0, 1, 0, 0);
     vg.fillStyle = "#000";
     vg.fillRect(0, 0, W, H);
-    const m = Math.round(Math.min(W, H) * 0.035), r = Math.min(W, H) * 0.05;
-    const wx = m, wy = m, ww = W - 2 * m, wh = H - 2 * m;
-    const pc = pics[round], img = pc && pc.img;
+    const pc = roll[frame], img = pc && pc.img;
     vg.save();
     vg.beginPath();
-    vg.roundRect ? vg.roundRect(wx, wy, ww, wh, r) : vg.rect(wx, wy, ww, wh);
+    vg.roundRect ? vg.roundRect(wx, wy, ww, wh, G.r) : vg.rect(wx, wy, ww, wh);
     vg.clip();
     vg.fillStyle = "#14130f";
     vg.fillRect(wx, wy, ww, wh);
@@ -137,21 +257,20 @@ export function start(o) {
       // the photograph as the scene, a little closer than the whole frame, its detail behind the patch
       const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
       const s = Math.max(ww / iw, wh / ih) * 1.5, dw = iw * s, dh = ih * s, at = pc.at || { u: 0.5, v: 0.5 };
-      const ox = clamp(wx + ww / 2 - at.u * dw, wx + ww - dw, wx), oy = clamp(wy + wh / 2 - at.v * dh, wy + wh - dh, wy);
+      const ox = clamp(wx + ww / 2 - at.u * dw, wx + ww - dw, wx) + shake.x * dpr, oy = clamp(wy + wh / 2 - at.v * dh, wy + wh - dh, wy) + shake.y * dpr;
       place = { ox, oy, dw, dh };
       vg.drawImage(img, ox, oy, dw, dh);
     }
-    // a finder is a little darker towards its edges
-    const vgn = vg.createRadialGradient(W / 2, H / 2, Math.min(ww, wh) * 0.3, W / 2, H / 2, Math.hypot(ww, wh) * 0.62);
+    const vgn = vg.createRadialGradient(W / 2, H / 2, Math.min(ww, wh) * 0.32, W / 2, H / 2, Math.hypot(ww, wh) * 0.62);
     vgn.addColorStop(0, "rgba(0,0,0,0)");
-    vgn.addColorStop(1, "rgba(0,0,0,.45)");
+    vgn.addColorStop(1, "rgba(0,0,0,.42)");
     vg.fillStyle = vgn;
     vg.fillRect(wx, wy, ww, wh);
-    // the bright-line frame for the 50 mm lens
-    const fw = ww * 0.74, fh = Math.min(wh * 0.76, fw / 1.5), fx = W / 2 - fw / 2, fy = H / 2 - fh / 2, cl = Math.min(fw, fh) * 0.12;
-    vg.strokeStyle = "rgba(255, 246, 222, .9)";
+    // bright-line corners
+    const fw = ww * 0.8, fh = Math.min(wh * 0.8, fw / 1.5), fx = W / 2 - fw / 2, fy = H / 2 - fh / 2, cl = Math.min(fw, fh) * 0.11;
+    vg.strokeStyle = "rgba(255, 246, 222, .88)";
     vg.lineWidth = Math.max(1, 1.4 * dpr);
-    vg.shadowColor = "rgba(255, 236, 190, .55)";
+    vg.shadowColor = "rgba(255, 236, 190, .5)";
     vg.shadowBlur = 4 * dpr;
     vg.beginPath();
     [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]].forEach(([x, y, sx, sy]) => {
@@ -159,177 +278,220 @@ export function start(o) {
     });
     vg.stroke();
     vg.shadowBlur = 0;
-    // the rangefinder patch: the scene, and over it the second image, as far off as the focus is
-    const pw = Math.max(ww * 0.2, 70 * dpr), ph = Math.max(wh * 0.15, pw * 0.6), px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+    // the patch: the scene, and over it the second image, as far off as it is
     if (place) {
       vg.save();
       vg.beginPath();
-      vg.roundRect ? vg.roundRect(px, py, pw, ph, 3 * dpr) : vg.rect(px, py, pw, ph);
+      vg.roundRect ? vg.roundRect(px, py, pw, ph, 4 * dpr) : vg.rect(px, py, pw, ph);
       vg.clip();
       vg.drawImage(img, place.ox, place.oy, place.dw, place.dh);
       vg.globalAlpha = 0.55;
-      vg.drawImage(img, place.ox + shift(ww), place.oy, place.dw, place.dh);
+      vg.drawImage(img, place.ox + u * pw, place.oy, place.dw, place.dh);
       vg.globalAlpha = 1;
       vg.globalCompositeOperation = "overlay";
       vg.fillStyle = "rgba(255, 210, 120, .22)";
       vg.fillRect(px, py, pw, ph);
       vg.globalCompositeOperation = "source-over";
-      vg.fillStyle = "rgba(255, 236, 200, .08)";
+      vg.fillStyle = "rgba(255, 236, 200, .07)";
       vg.fillRect(px, py, pw, ph);
       vg.restore();
     }
-    vg.strokeStyle = "rgba(255, 232, 180, .38)";
-    vg.lineWidth = Math.max(1, dpr);
+    // its edge warms as the two images come into register
+    vg.strokeStyle = glow > 1 ? "rgba(255, 214, 140, .95)" : glow > 0 ? "rgba(255, 224, 170, .7)" : "rgba(255, 232, 180, .36)";
+    vg.lineWidth = (glow > 0 ? 2 : 1) * Math.max(1, dpr);
+    if (glow > 0) { vg.shadowColor = "rgba(255, 200, 110, .8)"; vg.shadowBlur = (glow > 1 ? 10 : 6) * dpr; }
     vg.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+    vg.shadowBlur = 0;
     vg.restore();
   }
-  // How far the second image lies off the first, in pixels of the finder's window: in
-  // proportion to the focus error in dioptres, nearly half the window over the ring's travel.
-  function shift(ww) { return (invNow() - target) * ((ww * 0.42) / INV_MAX); }
 
-  /* ---------- The camera, in 3D ---------- */
+  /* ---------- The camera on the title, in 3D ---------- */
   let renderer = null;
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, powerPreference: "high-performance" });
-  } catch (e) {
-    renderer = null;
-  }
-  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, 1, 0.5, 200);
-  let ring = null, release = null, ringPivot = new THREE.Vector3();
+  try { renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, powerPreference: "high-performance" }); } catch (e) { renderer = null; }
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, 1, 0.1, 200);
+  const EYE = new THREE.Vector3(4.35, 6.45, -1.73);
   if (renderer) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     scene.background = new THREE.Color(0x070707);
     scene.environment = studio(renderer);
-    const built = buildCamera(scene);
-    ring = built.ring;
-    release = built.release;
-    ringPivot = built.pivot;
+    buildCamera(scene);
     const key = new THREE.DirectionalLight(0xfff4e6, 1.6);
     key.position.set(-14, 22, 18);
-    scene.add(key);
     const rim = new THREE.DirectionalLight(0xdfe8ff, 0.9);
     rim.position.set(16, 10, -14);
-    scene.add(rim);
-    // a low light raking across the lens from the front left, so the ring's ribs and its scale show
     const rake = new THREE.DirectionalLight(0xffffff, 1.4);
     rake.position.set(-22, 7, 16);
-    scene.add(rake);
+    scene.add(key, rim, rake);
   }
-
-  /* ---------- Views of the camera ---------- */
-  // At the start a slow turn round it; in play, a three-quarter view from above the lens,
-  // the focus ring and its scale towards the player.
-  const VIEW_PLAY = { pos: new THREE.Vector3(-11.5, 13.5, 21), look: new THREE.Vector3(-1.4, 3.7, 4.4) };
-  let view = { pos: VIEW_PLAY.pos.clone(), look: VIEW_PLAY.look.clone() }, viewFrom = null, viewAt = 0;
+  let view = null, fly = null;
   function orbit(t) {
-    const a = -0.55 + Math.sin(t / 5200) * 0.42, R = 31;
-    return { pos: new THREE.Vector3(Math.sin(a) * R, 14 + Math.sin(t / 3700) * 1.5, Math.cos(a) * R), look: new THREE.Vector3(0, 3.6, 1.2) };
+    const a = -0.6 + Math.sin(t / 5200) * 0.45, R = 30;
+    return { pos: new THREE.Vector3(Math.sin(a) * R, 13 + Math.sin(t / 3700) * 1.5, Math.cos(a) * R), look: new THREE.Vector3(0, 3.8, 1.2) };
   }
-  function goPlayView(now) {
-    viewFrom = { pos: view.pos.clone(), look: view.look.clone() };
-    viewAt = now;
+  // lifting the camera to the eye: round behind it and into the eyepiece
+  function flyAt(k) {
+    const e = ease(k), a = fly.from.pos, c = new THREE.Vector3(14, 17, -16), b = EYE.clone().add(new THREE.Vector3(0, 0, -0.35));
+    const p = a.clone().multiplyScalar((1 - e) * (1 - e)).add(c.clone().multiplyScalar(2 * e * (1 - e))).add(b.clone().multiplyScalar(e * e));
+    return { pos: p, look: fly.from.look.clone().lerp(EYE.clone().add(new THREE.Vector3(0, 0, 8)), ease(clamp(k * 1.25, 0, 1))) };
   }
 
   /* ---------- The game ---------- */
-  const best = (() => { try { return +localStorage.getItem("focus-challenge-best") || 0; } catch (e) { return 0; } })();
-  let state = "intro", round = 0, target = 0.5, ang = angOf(0.2), t0 = 0, results = [], need = true, raf = 0, ringV = 0;
-  function invNow() { return invOf(ang); }
-  function setAng(a) {
-    const na = clamp(a, 0, A_MAX);
-    if (na !== ang) { ang = na; need = true; }
+  let state = "title", frame = 0, t0 = 0, adjust = 0, holding = null, results = [], total = 0, streak = 0, bestStreak = 0;
+  let need = true, raf = 0, held = false, lastNow = 0, inReg = false, nextAt = 0, keyRep = 0, shotU = 0;
+  function offsetAt(now) {
+    const pc = roll[frame];
+    if (!pc) return 0;
+    const m = pc.m, t = Math.max(0, now - t0) / 1000;
+    return m.u0 + m.amp * (Math.sin(2 * Math.PI * m.freq * t + m.phase) - Math.sin(m.phase)) + m.walk * t + adjust;
   }
-  // a subject somewhere between 0.8 m and 8 m, evenly spread on the ring (in 1 / distance),
-  // the ring left well away from it
-  function newRound() {
-    const inv = lerp(1 / 8, 1 / 0.8, Math.random());
-    target = inv;
-    let start = Math.random() * INV_MAX, tries = 0;
-    while (Math.abs(start - inv) < 0.35 && tries++ < 20) start = Math.random() * INV_MAX;
-    setAng(angOf(start));
+  function shakeAt(now) {
+    const pc = roll[frame], s = pc ? pc.m.shake : 0;
+    if (!s || still) return { x: 0, y: 0 };
+    const t = now / 1000;
+    return { x: s * (Math.sin(t * 7.3) * 0.6 + Math.sin(t * 13.1) * 0.4), y: s * (Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 11.3) * 0.4) };
   }
-  function showCard(html) {
+  function setLamps(u) {
+    const a = Math.abs(u);
+    lamps.c.classList.toggle("is-on", a <= RANKS[1].max);
+    lamps.c.classList.toggle("is-hot", a <= RANKS[0].max);
+    // the arrows say which way to move the second image
+    lamps.l.classList.toggle("is-on", a > RANKS[1].max && u > 0);
+    lamps.r.classList.toggle("is-on", a > RANKS[1].max && u < 0);
+  }
+  function digits(n, w) { const s = String(Math.max(0, Math.round(n))); return s.length >= w ? s : "0".repeat(w - s.length) + s; }
+  function showCard(html, cls) {
+    card.className = "fg__card" + (cls ? " " + cls : "");
     card.innerHTML = html;
     card.hidden = false;
     root.classList.add("has-card");
-    const b = card.querySelector("button");
+    const b = card.querySelector("[data-fg]");
     if (b) b.focus({ preventScroll: true });
   }
-  function hideCard() {
-    card.hidden = true;
-    root.classList.remove("has-card");
-  }
-  function intro() {
-    state = "intro";
-    roundEl.textContent = "";
+  function hideCard() { card.hidden = true; root.classList.remove("has-card"); }
+  function title() {
+    state = "title";
+    root.className = "fg is-title";
+    modeEl.textContent = "";
     hintEl.textContent = "";
+    const best = +store.get("focus-challenge-best") || 0, day = store.get("focus-challenge-day-" + dayKey);
     showCard(
       '<h2 class="fg__h">Focus challenge</h2>' +
-      "<p>The camera's finder shows the photograph, and a bright patch in its middle shows it twice. Turn the lens's focus ring until the two images in the patch become one, then release the shutter.</p>" +
-      '<p class="fg__small">' + ROUNDS + " rounds, " + ROUND_MS / 1000 + " seconds each, a subject at a different distance every time. Drag across the lens, scroll, or use ← → (Shift for big turns); Space releases." +
-      (best ? " Your best: " + best.toFixed(1) + "%." : "") + "</p>" +
-      '<button class="fg__btn fg__btn--solid" type="button" data-fg="start">Start</button>'
+      "<p>In the bright patch in the middle of the finder the photograph shows twice. <b>Hold, drag the second image onto the first, and let go</b>: letting go releases the shutter. Or just tap when they meet.</p>" +
+      '<p class="fg__small">' + FRAMES + " frames to a roll. The subject keeps still at first, then sways, then walks off. Sharp frames in a row build a streak." +
+      (touch ? "" : " Keys: ← → to line up, Space to shoot.") + "</p>" +
+      '<div class="fg__row"><button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot a roll</button>' +
+      '<button class="fg__btn" type="button" data-fg="day">Today\'s roll' + (day ? " · " + day + " pts" : "") + "</button></div>" +
+      (best ? '<p class="fg__small fg__best-line">Your best roll: ' + best + " points</p>" : ""),
+      "fg__card--title"
     );
   }
-  function begin(now) {
-    results = [];
-    round = 0;
-    goPlayView(now);
-    next(now);
-  }
-  function next(now) {
+  function begin(m, now) {
+    const fromTitle = state === "title";
+    makeRoll(m);
+    results = []; total = 0; streak = 0; bestStreak = 0; frame = 0;
+    slots.forEach((s) => { s.className = "fg__frm"; const im = s.querySelector("img"); im.removeAttribute("src"); im.style.filter = ""; });
+    loadPic(0); loadPic(1); loadPic(2);
     hideCard();
-    loadPic(round);
-    loadPic(round + 1);
-    newRound();
+    modeEl.textContent = m === "day" ? "Today's roll · " + dayLabel(dayKey) : "A roll of " + FRAMES;
+    scoreEl.textContent = "0";
+    streakEl.textContent = "0";
+    if (renderer && !still && view && fromTitle) {
+      fly = { from: { pos: view.pos.clone(), look: view.look.clone() }, at: now };
+      state = "lift";
+    } else toPlay(now);
+  }
+  function toPlay(now) {
+    root.className = "fg is-play";
+    fly = null;
+    resize();
+    startFrame(now + (still ? 0 : 350));
+  }
+  function startFrame(at) {
     state = "play";
-    t0 = now;
-    roundEl.textContent = "Round " + (round + 1) + " of " + ROUNDS;
-    hintEl.textContent = "Turn the focus ring until the two images in the patch become one";
-    goBtn.disabled = false;
-    root.focus({ preventScroll: true });
+    adjust = 0;
+    holding = null;
+    inReg = false;
+    t0 = at;
+    loadPic(frame + 1); loadPic(frame + 2);
+    countEl.textContent = pad2(frame + 1);
+    slots.forEach((s, k) => s.classList.toggle("is-now", k === frame));
+    hintEl.textContent = frame === 0 ? "Hold and drag the second image onto the first, then let go" : "";
+    pop.className = "fg__pop";
     need = true;
+    root.focus({ preventScroll: true });
   }
   function shoot(now, late) {
-    if (state !== "play") return;
+    if (state !== "play" || now < t0) return;
+    const pc = roll[frame], m = pc.m;
+    const u = offsetAt(now), e = Math.abs(u), rk = rankOf(e), used = clamp(now - t0, 0, m.ms);
+    const speed = late ? 0 : 1 - used / m.ms;
+    if (sharpish(rk)) streak++; else streak = 0;
+    bestStreak = Math.max(bestStreak, streak);
+    const mult = sharpish(rk) ? 1 + Math.min(streak - 1, 4) * 0.5 : 1;
+    const pts = Math.round((rk.pts + (sharpish(rk) ? 30 * speed : 0)) * mult);
+    total += pts;
+    results.push({ k: frame, e, rank: rk, pts, mult, late, used, p: pc.p });
+    holding = null;
     state = "shot";
-    goBtn.disabled = true;
-    const err = Math.abs(invNow() - target), c = blurMm(err), acc = accuracy(err);
-    const s = invNow() > 1e-6 ? 1 / invNow() : Infinity, d = 1 / target;
-    const used = clamp(now - t0, 0, ROUND_MS) / 1000;
-    const r = { err, c, acc, s, d, used, late, k: round };
-    results.push(r);
-    pressAt = now;
-    const p = pics[round].p;
-    const last = round + 1 >= ROUNDS;
-    showCard(
-      '<div class="fg__shot"><img src="' + p.thumb + '" alt="" style="filter: blur(' + blurPx(c).toFixed(2) + 'px)"></div>' +
-      '<p class="fg__acc"><b>' + acc.toFixed(1) + '%</b> <span class="fg__v fg__v--' + (c <= COC ? "ok" : "off") + '">' + verdict(c) + "</span></p>" +
-      '<dl class="fg__nums"><div><dt>Subject</dt><dd>' + metres(d) + "</dd></div><div><dt>Focused at</dt><dd>" + metres(s) + "</dd></div>" +
-      "<div><dt>Off by</dt><dd>" + (isFinite(s) ? gap(Math.abs(s - d) * 100) : "all the way") + "</dd></div><div><dt>Time</dt><dd>" + (late ? "Out of time" : used.toFixed(1) + " s") + "</dd></div></dl>" +
-      '<button class="fg__btn fg__btn--solid" type="button" data-fg="' + (last ? "done" : "next") + '">' + (last ? "See the score" : "Next round") + "</button>"
-    );
-    roundEl.textContent = "Round " + (round + 1) + " of " + ROUNDS + ": " + acc.toFixed(1) + "%, " + verdict(c).toLowerCase();
+    // the shutter, the frame onto the roll, the film on
+    snd.shutter();
+    buzz(16);
+    if (!still) { curtain.classList.remove("is-go"); void curtain.offsetWidth; curtain.classList.add("is-go"); }
+    shotU = u;
+    need = true;
+    const slot = slots[frame], im = slot.querySelector("img");
+    im.src = pc.p.thumb;
+    im.style.filter = blurOf(e);
+    slot.classList.remove("is-now");
+    slot.classList.add("is-done", "is-" + rk.name.split(" ")[0].toLowerCase());
+    pop.innerHTML = "<b>" + rk.name + "</b>" + (late ? "<span>Out of time</span>" : "") + "<span>+" + pts + (mult > 1 ? " · ×" + mult : "") + "</span>";
+    pop.className = "fg__pop is-on is-" + rk.name.split(" ")[0].toLowerCase();
+    scoreEl.textContent = String(total);
+    streakEl.textContent = String(streak);
+    root.classList.toggle("is-streak", streak >= 2);
+    if (streak >= 2) snd.streak(streak);
+    srEl.textContent = "Frame " + (frame + 1) + ": " + rk.name + (late ? ", out of time" : "") + ", " + pts + " points" + (streak >= 2 ? ", streak " + streak : "") + ".";
     hintEl.textContent = "";
+    nextAt = now + (still ? 700 : 1150);
+    setTimeout(() => snd.advance(), 380);
   }
-  // how the blur circle would look on the little print: the film is 36 mm wide
-  function blurPx(c) { return Math.min(14, (c / 36) * 260 * 0.6); }
-  function done() {
-    state = "done";
-    const avg = results.reduce((s, r) => s + r.acc, 0) / results.length;
-    const sharp = results.filter((r) => r.c <= COC).length;
-    const t = results.reduce((s, r) => s + r.used, 0) / results.length;
-    let isBest = false;
-    if (avg > best) { isBest = true; try { localStorage.setItem("focus-challenge-best", avg.toFixed(2)); } catch (e) {} }
-    roundEl.textContent = "Score: " + avg.toFixed(1) + "%";
+  // how a frame came out on the little print: the further apart the two images, the softer
+  function blurOf(e) { return e <= RANKS[0].max ? "none" : "blur(" + Math.min(9, e * 110).toFixed(2) + "px)"; }
+  function next(now) {
+    frame++;
+    if (frame >= FRAMES) { sheet(); return; }
+    startFrame(now + 120);
+  }
+  function sheet() {
+    state = "sheet";
+    pop.className = "fg__pop";
+    const sharp = results.filter((r) => sharpish(r.rank)).length;
+    const marks = results.map((r) => r.rank.mark).join("");
+    let bestNote = "";
+    if (mode === "day") {
+      const prev = +store.get("focus-challenge-day-" + dayKey) || 0;
+      if (total > prev) store.set("focus-challenge-day-" + dayKey, String(total));
+    }
+    const best = +store.get("focus-challenge-best") || 0;
+    if (total > best) { store.set("focus-challenge-best", String(total)); bestNote = ' <span class="fg__best">best yet</span>'; }
+    const share = "Focus challenge" + (mode === "day" ? ", today's roll (" + dayLabel(dayKey) + ")" : "") + ": " + sharp + "/" + FRAMES + " sharp, " + total + " points\n" + marks + "\n" + location.origin + "/photography/";
+    root.className = "fg is-play is-done";
     showCard(
-      '<h2 class="fg__h">' + avg.toFixed(1) + "%" + (isBest ? ' <span class="fg__best">best yet</span>' : "") + "</h2>" +
-      "<p>" + sharp + " of " + ROUNDS + " frames sharp · " + t.toFixed(1) + " s a frame on average</p>" +
-      '<ol class="fg__list">' + results.map((r) => "<li><span>" + r.acc.toFixed(1) + "%</span><span>" + verdict(r.c) + "</span><span>" + metres(r.d) + "</span></li>").join("") + "</ol>" +
-      '<p class="fg__small">The percentage is how close the two images came together; sharp means the blur on the film was within 0.03 mm for this 50 mm f/2 lens.</p>' +
-      '<div class="fg__row"><button class="fg__btn fg__btn--solid" type="button" data-fg="again">Play again</button><button class="fg__btn" type="button" data-fg="close">Back to the photograph</button></div>'
+      '<header class="fg__sheet-head"><h2 class="fg__h">' + total + " points" + bestNote + "</h2>" +
+      "<p>" + sharp + " of " + FRAMES + " frames sharp · best streak " + bestStreak + "</p></header>" +
+      '<ol class="fg__sheet">' + results.map((r) =>
+        '<li class="is-' + r.rank.name.split(" ")[0].toLowerCase() + '"><span class="fg__shot"><img src="' + r.p.thumb + '" alt="" draggable="false" style="filter:' + blurOf(r.e) + '"></span>' +
+        '<span class="fg__edge">' + (r.k + 1) + "</span><span class=\"fg__rank\">" + r.rank.name + "</span><span class=\"fg__pts\">+" + r.pts + "</span></li>").join("") + "</ol>" +
+      '<p class="fg__marks" aria-label="' + sharp + " of " + FRAMES + ' sharp">' + marks + "</p>" +
+      '<div class="fg__row"><button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot another roll</button>' +
+      (mode !== "day" ? '<button class="fg__btn" type="button" data-fg="day">Today\'s roll</button>' : "") +
+      '<button class="fg__btn" type="button" data-fg="share" data-share="' + share.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '">Share score</button>' +
+      '<button class="fg__btn" type="button" data-fg="close">Back to the photograph</button></div>',
+      "fg__card--sheet"
     );
+    srEl.textContent = "Roll done: " + total + " points, " + sharp + " of " + FRAMES + " frames sharp.";
   }
 
   /* ---------- Hands on ---------- */
@@ -337,123 +499,128 @@ export function start(o) {
     const b = e.target.closest("[data-fg]");
     if (!b) return;
     const a = b.getAttribute("data-fg"), now = performance.now();
-    if (a === "start" || a === "again") begin(now);
-    else if (a === "next") { round++; next(now); }
-    else if (a === "done") done();
+    if (a === "roll" || a === "day") begin(a, now);
     else if (a === "close") close();
+    else if (a === "share") {
+      const text = b.getAttribute("data-share");
+      const done = () => { b.textContent = "Copied"; setTimeout(() => { b.textContent = "Share score"; }, 1600); };
+      if (navigator.share) navigator.share({ text }).catch(() => {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => {});
+    }
   });
-  goBtn.addEventListener("click", () => shoot(performance.now(), false));
   $(".fg__x").addEventListener("click", () => close());
-  // dragging across the lens turns the ring: its near edge follows the finger
-  let drag = null;
-  function ringDir() {
-    // which way on screen the ring's top moves as it turns
-    if (!renderer) return 1;
-    const top = new THREE.Vector3(0, 2.62, 0), a = top.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), 0.05);
-    const p0 = top.add(ringPivot).project(cam), p1 = a.add(ringPivot).project(cam);
-    return p1.x - p0.x >= 0 ? 1 : -1;
-  }
-  gl.addEventListener("pointerdown", (e) => {
-    if (state !== "play") return;
-    drag = { id: e.pointerId, x: e.clientX, dir: ringDir() };
-    try { gl.setPointerCapture(e.pointerId); } catch (x) {}
-    howEl.classList.add("is-gone");
+  // Hold anywhere on the finder and drag: the second image follows (a little slower than the
+  // finger, so its tremble matters less); let go and the shutter goes.
+  finder.addEventListener("pointerdown", (e) => {
+    if (state !== "play" || performance.now() < t0) return;
+    holding = { id: e.pointerId, x: e.clientX };
+    try { finder.setPointerCapture(e.pointerId); } catch (x) {}
+    root.classList.add("is-holding");
+    hintEl.textContent = "";
   });
-  gl.addEventListener("pointermove", (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dx = e.clientX - drag.x;
-    drag.x = e.clientX;
-    // a full turn of the ring over about two thirds of the panel's width
-    setAng(ang + drag.dir * dx * (A_MAX / Math.max(240, gl.clientWidth * 0.66)));
+  finder.addEventListener("pointermove", (e) => {
+    if (!holding || e.pointerId !== holding.id) return;
+    const dx = e.clientX - holding.x;
+    holding.x = e.clientX;
+    adjust += (dx * GAIN) / patchCss;
   });
-  const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
-  gl.addEventListener("pointerup", endDrag);
-  gl.addEventListener("pointercancel", endDrag);
+  const letGo = (e, cancel) => {
+    if (!holding || e.pointerId !== holding.id) return;
+    holding = null;
+    root.classList.remove("is-holding");
+    if (!cancel) shoot(performance.now(), false);
+  };
+  finder.addEventListener("pointerup", (e) => letGo(e, false));
+  finder.addEventListener("pointercancel", (e) => letGo(e, true));
   root.addEventListener("wheel", (e) => {
     e.preventDefault();
     if (state !== "play") return;
-    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    setAng(ang + d * (e.deltaMode === 1 ? 16 : 1) * 0.0016);
-    howEl.classList.add("is-gone");
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : -e.deltaY;
+    adjust += (d * (e.deltaMode === 1 ? 16 : 1) * 0.35) / patchCss;
   }, { passive: false });
-  // the keys: arrows turn (Shift for big turns), Space or Enter releases, Escape leaves
+  // the keys: arrows line up (held down, faster; Shift, much faster), Space or Enter shoots,
+  // Escape goes back to the photograph
   function onKey(e) {
     if (closed || !host.open) return;
     const k = e.key;
     if (k === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); return; }
-    if (k === "ArrowLeft" || k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown") {
+    if (k === "ArrowLeft" || k === "ArrowRight") {
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (state === "play") setAng(ang + (k === "ArrowRight" || k === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 0.06 : 0.0035));
+      if (state !== "play") return;
+      keyRep = e.repeat ? keyRep + 1 : 0;
+      const step = (e.shiftKey ? 0.03 : 0.004) * Math.min(4, 1 + keyRep * 0.25);
+      adjust += k === "ArrowRight" ? step : -step;
       return;
     }
-    if ((k === " " || k === "Enter") && state === "play" && !(e.target && e.target.closest && e.target.closest("button"))) {
+    if (k === "ArrowUp" || k === "ArrowDown") { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if ((k === " " || k === "Enter") && !(e.target && e.target.closest && e.target.closest("button"))) {
       e.preventDefault();
       e.stopImmediatePropagation();
-      shoot(performance.now(), false);
+      if (state === "play") shoot(performance.now(), false);
+      else if (state === "title") begin("roll", performance.now());
     }
   }
   window.addEventListener("keydown", onKey, true);
-  // Escape on the close-up would close it: here it only leaves the game
   function onCancel(e) { e.preventDefault(); e.stopImmediatePropagation(); close(); }
   host.addEventListener("cancel", onCancel, true);
 
   /* ---------- Sizing and drawing ---------- */
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const fr = vf.parentNode.getBoundingClientRect();
-    vw = Math.max(1, Math.round(fr.width));
-    vh = Math.max(1, Math.round(fr.height));
-    vf.width = Math.round(vw * dpr);
-    vf.height = Math.round(vh * dpr);
+    const fr = finder.getBoundingClientRect();
+    if (fr.width && fr.height) {
+      vf.width = Math.round(fr.width * dpr);
+      vf.height = Math.round(fr.height * dpr);
+      patchCss = geom().pw / dpr;
+    }
     if (renderer) {
-      const cr = gl.parentNode.getBoundingClientRect();
-      renderer.setPixelRatio(dpr);
-      renderer.setSize(Math.max(1, cr.width), Math.max(1, cr.height), false);
-      cam.aspect = Math.max(0.2, cr.width / Math.max(1, cr.height));
-      cam.fov = cam.aspect < 1 ? 36 : 28;
-      cam.updateProjectionMatrix();
+      const cr = gl.getBoundingClientRect();
+      if (cr.width && cr.height) {
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(cr.width, cr.height, false);
+        cam.aspect = cr.width / cr.height;
+        cam.fov = cam.aspect < 1 ? 38 : 28;
+        cam.updateProjectionMatrix();
+      }
     }
     need = true;
   }
   const ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
   if (ro) ro.observe(root); else window.addEventListener("resize", resize);
 
-  let pressAt = -1e9, lastRing = -1, held = false, lastNow = 0;
-  function frame(now) {
-    raf = requestAnimationFrame(frame);
-    // the clock (a test can hold it still)
-    if (held && state === "play") t0 += now - lastNow;
+  function frameLoop(now) {
+    raf = requestAnimationFrame(frameLoop);
+    if (held && state === "play" && now > t0) t0 = Math.min(now, t0 + now - lastNow);
     lastNow = now;
-    if (state === "play") {
-      const left = Math.max(0, ROUND_MS - (now - t0));
-      secsEl.textContent = (left / 1000).toFixed(1);
-      barEl.style.transform = "scaleX(" + (left / ROUND_MS).toFixed(4) + ")";
-      root.classList.toggle("is-late", left < 2500);
-      if (left <= 0) shoot(now, true);
-    } else if (state === "intro") {
-      secsEl.textContent = (ROUND_MS / 1000).toFixed(1);
-      barEl.style.transform = "scaleX(1)";
-    }
-    // the camera: turning round it at the start, settling into the play view
-    let moving = false;
-    if (renderer) {
-      if (state === "intro" && !still) { view = orbit(now); moving = true; }
-      else if (viewFrom) {
-        const k = still ? 1 : clamp((now - viewAt) / 1400, 0, 1), e = ease(k);
-        view = { pos: viewFrom.pos.clone().lerp(VIEW_PLAY.pos, e), look: viewFrom.look.clone().lerp(VIEW_PLAY.look, e) };
-        if (k >= 1) viewFrom = null;
-        moving = true;
+    // the title camera: turning slowly, then lifted to the eye
+    if (renderer && (state === "title" || state === "lift")) {
+      if (state === "title") view = still ? orbit(0) : orbit(now);
+      else {
+        const k = clamp((now - fly.at) / 1100, 0, 1);
+        view = flyAt(k);
+        if (k >= 1) toPlay(now);
       }
       cam.position.copy(view.pos);
       cam.lookAt(view.look);
-      if (ring && ring.rotation.z !== ang) { ring.rotation.z = ang; moving = true; }
-      // the shutter button goes down and comes back up
-      const pk = clamp((now - pressAt) / 260, 0, 1), down = pk < 1 ? Math.sin(pk * Math.PI) : 0;
-      if (release) { const y = release.userData.y0 - down * 0.18; if (release.position.y !== y) { release.position.y = y; moving = true; } }
+      renderer.render(scene, cam);
     }
-    if (need || lastRing !== ang) { drawFinder(); lastRing = ang; }
-    if (renderer && (need || moving)) renderer.render(scene, cam);
+    if (state === "play") {
+      const pc = roll[frame], left = pc.m.ms - Math.max(0, now - t0);
+      timeEl.style.transform = "scaleX(" + clamp(left / pc.m.ms, 0, 1).toFixed(4) + ")";
+      root.classList.toggle("is-late", left < 1200);
+      const u = offsetAt(now), a = Math.abs(u), reg = a <= RANKS[1].max;
+      if (reg && !inReg && holding) { snd.tick(); buzz(6); }
+      inReg = reg;
+      setLamps(u);
+      drawFinder(u, shakeAt(now), a <= RANKS[0].max ? 2 : reg ? 1 : 0);
+      if (left <= 0 && now >= t0) shoot(now, true);
+    } else if (state === "shot") {
+      if (now >= nextAt) next(now);
+      else if (need) { drawFinder(shotU, { x: 0, y: 0 }, 0); need = false; }
+    } else if (need && (state === "sheet")) {
+      drawFinder(0, { x: 0, y: 0 }, 0);
+    }
     need = false;
   }
 
@@ -464,6 +631,7 @@ export function start(o) {
     window.removeEventListener("keydown", onKey, true);
     host.removeEventListener("cancel", onCancel, true);
     if (ro) ro.disconnect(); else window.removeEventListener("resize", resize);
+    snd.close();
     if (renderer) {
       scene.traverse((m) => {
         if (m.geometry) m.geometry.dispose();
@@ -479,24 +647,24 @@ export function start(o) {
   }
 
   resize();
-  loadPic(0);
-  intro();
-  raf = requestAnimationFrame(frame);
+  title();
+  raf = requestAnimationFrame(frameLoop);
   return {
     close,
-    // for tests: set the ring to a distance (in dioptres) and read where things stand
+    // for tests
     test: {
-      setInv: (inv) => setAng(angOf(clamp(inv, 0, INV_MAX))),
-      target: () => target,
-      offset: () => shift(vf.width - 2 * Math.round(Math.min(vf.width, vf.height) * 0.035)),
       state: () => state,
-      results: () => results.slice(),
-      start: () => begin(performance.now()),
-      shoot: () => shoot(performance.now(), false),
-      next: () => { round++; next(performance.now()); },
-      done: () => done(),
+      // (with the clock held, at the time of the last frame drawn, where the game's time stands)
+      offset: () => offsetAt(held ? Math.max(lastNow, t0) : performance.now()),
+      alignTo: (u) => { adjust += u - offsetAt(held ? Math.max(lastNow, t0) : performance.now()); },
+      shoot: () => shoot(held ? Math.max(lastNow, t0) : performance.now(), false),
       hold: (on) => { held = !!on; },
-      ang: () => ang
+      results: () => results.map((r) => ({ k: r.k, e: r.e, rank: r.rank.name, pts: r.pts, mult: r.mult, late: r.late })),
+      total: () => total,
+      frame: () => frame,
+      begin: (m) => begin(m, performance.now()),
+      roll: () => roll.map((r) => ({ src: r.p.src, m: r.m })),
+      patch: () => patchCss
     }
   };
 }
