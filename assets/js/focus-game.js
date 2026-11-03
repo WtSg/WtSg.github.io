@@ -154,11 +154,12 @@ export function start(o) {
     '<div class="fg__main"><canvas class="fg__gl" aria-hidden="true"></canvas>' +
     '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas><img class="fg__cap" alt="" draggable="false"><span class="fg__curtain" aria-hidden="true"></span><p class="fg__pop" aria-hidden="true"></p></div>' +
     '<div class="fg__td"><div class="fg__td-bar">' +
-    '<div class="fg__td-tabs" role="group" aria-label="Drawing"><button type="button" data-td="action" aria-pressed="true">In action</button><button type="button" data-td="apart" aria-pressed="false">Taken apart</button></div>' +
-    '<label for="fg-td-at">Lens focused at</label><input id="fg-td-at" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity"><output for="fg-td-at">∞</output>' +
-    '<p class="fg__td-note"></p></div>' +
-    '<figure class="fg__td-fig"><div class="fg__td-layer"></div><div class="fg__td-layer"></div><p class="fg__td-wait">Drawing…</p></figure>' +
-    '<p class="fg__td-eye" aria-hidden="true">In the finder</p></div></div>' +
+    '<div class="fg__td-eye"><span aria-hidden="true">In the finder</span></div>' +
+    '<div class="fg__td-ctl"><div class="fg__td-tabs" role="group" aria-label="Drawing"><button type="button" data-td="action" aria-pressed="true">In action</button><button type="button" data-td="apart" aria-pressed="false">Taken apart</button></div>' +
+    '<div class="fg__td-set"><label for="fg-td-at">Lens focused at</label><output for="fg-td-at">∞</output></div>' +
+    '<input id="fg-td-at" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity">' +
+    '<p class="fg__td-note"><span class="fg__td-long"></span><span class="fg__td-short"></span></p></div></div>' +
+    '<figure class="fg__td-fig"><div class="fg__td-layer"></div><div class="fg__td-layer"></div><p class="fg__td-wait">Drawing…</p></figure></div></div>' +
     '<div class="fg__readout" aria-hidden="true">' +
     '<span class="fg__cell fg__cell--frame"><small>Frame</small><b class="fg__count">01</b><small>/' + FRAMES + "</small></span>" +
     '<span class="fg__cell fg__cell--streak"><small>Streak</small><b class="fg__streak">0</b></span>' +
@@ -454,7 +455,7 @@ export function start(o) {
     const wasTd = root.classList.contains("is-teardown");
     root.classList.toggle("is-teardown", !!st.td);
     if (st.td) openTeardown();
-    else { tdStop(); if (wasTd) resize(); }
+    else { tdStop(); finderTo(false); if (wasTd) resize(); }
     gdone = !st.act;
     gnote = "";
     adjust = 0;
@@ -481,18 +482,34 @@ export function start(o) {
       "fg__card--guide",
       !!st.act && !gdone
     );
+    tdFit();
+  }
+  // where the card stands below the drawing (narrow screens), the drawing comes down to meet it
+  function tdFit() {
+    const below = root.classList.contains("is-teardown") && !card.hidden && window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
+    if (!below) { root.style.removeProperty("--td-bottom"); return; }
+    const m = mainEl.getBoundingClientRect(), r = root.getBoundingClientRect();
+    const top = r.bottom - (parseFloat(getComputedStyle(card).bottom) || 0) - card.offsetHeight;
+    root.style.setProperty("--td-bottom", Math.max(0, Math.round(m.bottom - top + 10)) + "px");
   }
   // Inside the camera: two drawings made by _teardown/rangefinder (assets/img/teardown), each a
   // set of frames that line up exactly. "In action": one frame per distance on the lens's scale,
   // the subject 1 m away. "Taken apart": the camera coming apart, step by step, named when apart.
   // The slider, or a drag across the drawing, picks the frame; in action, the finder beside it
   // shows the two images coming together as the lens is focused on the subject.
-  const tdFig = $(".fg__td-fig"), tdIn = $("#fg-td-at"), tdOut = $(".fg__td-bar output"), tdLab = $(".fg__td-bar label"), tdNote = $(".fg__td-note");
+  const tdFig = $(".fg__td-fig"), tdIn = $("#fg-td-at"), tdOut = $(".fg__td-bar output"), tdLab = $(".fg__td-bar label");
+  const tdLong = $(".fg__td-long"), tdShort = $(".fg__td-short"), tdEye = $(".fg__td-eye"), tdRoot = $(".fg__td"), mainEl = $(".fg__main");
   const tdLayers = root.querySelectorAll(".fg__td-layer"), tdWait = $(".fg__td-wait");
+  // in action the finder itself stands beside the slider; anywhere else it is back in the middle
+  function finderTo(beside) {
+    if (beside ? finder.parentNode === tdEye : finder.parentNode === mainEl) return;
+    if (beside) tdEye.insertBefore(finder, tdEye.firstChild); else mainEl.insertBefore(finder, tdRoot);
+    resize();
+  }
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 599px)") : { matches: false };
   const TDK = {
-    action: { file: "rangefinder-action.json", label: "Lens focused at", note: "Not to scale: angles drawn nine times their size, the lens's travel nearly twice. The classic layout of a coincident-image rangefinder, drawn as an illustration rather than any one camera's construction." },
-    apart: { file: "rangefinder-apart.json", label: "Take it apart", note: "The main parts of a Leica M-style camera, drawn as an illustration rather than any one camera's construction." }
+    action: { file: "rangefinder-action.json", label: "Lens focused at", note: "Not to scale: angles drawn nine times their size, the lens's travel nearly twice. The classic layout of a coincident-image rangefinder, drawn as an illustration rather than any one camera's construction.", short: "Not to scale. An illustration, not any one camera's construction." },
+    apart: { file: "rangefinder-apart.json", label: "Take it apart", note: "The main parts of a Leica M-style camera, drawn as an illustration rather than any one camera's construction.", short: "An illustration, not any one camera's construction." }
   };
   const tdData = {}, tdVal = { action: 0, apart: 0 }, tdSeen = {};
   let tdTab = "action", tdFront = 0, tdShownKey = "", tdPlay = 0, tdV = 0;
@@ -538,7 +555,9 @@ export function start(o) {
     Array.prototype.forEach.call(root.querySelectorAll("[data-td]"), (b) => b.setAttribute("aria-pressed", b.getAttribute("data-td") === tab ? "true" : "false"));
     root.classList.toggle("is-apart", tab === "apart");
     tdLab.textContent = TDK[tab].label;
-    tdNote.textContent = TDK[tab].note;
+    tdLong.textContent = TDK[tab].note;
+    tdShort.textContent = TDK[tab].short;
+    finderTo(tab === "action");
     tdIn.max = String(tdMax());
     tdShownKey = "";
     tdStop();
@@ -882,10 +901,11 @@ export function start(o) {
         cam.updateProjectionMatrix();
       }
     }
+    tdFit();
     need = true;
   }
   const ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
-  if (ro) ro.observe(root); else window.addEventListener("resize", resize);
+  if (ro) { ro.observe(root); ro.observe(card); } else window.addEventListener("resize", resize);
 
   function frameLoop(now) {
     raf = requestAnimationFrame(frameLoop);
