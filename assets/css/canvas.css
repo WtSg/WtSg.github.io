@@ -503,7 +503,8 @@ html.cv-on { touch-action: pan-x pan-y; }
 .gl__controls {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "prev roll next close";
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "prev roll next focus close";
   align-items: center;
   gap: .7rem;
 }
@@ -511,6 +512,15 @@ html.cv-on { touch-action: pan-x pan-y; }
 .gl [data-gl="next"] { grid-area: next; }
 .gl__film { grid-area: roll; }
 .gl .gl__btn--close { grid-area: close; }
+/* the focus challenge (focus-game.js): a small game, opened from here */
+.gl .gl__btn--focus { grid-area: focus; display: inline-flex; align-items: center; gap: .5rem; padding: .55rem .9rem .55rem .7rem; }
+.gl .gl__btn--focus[hidden] { display: none; }
+.gl .gl__btn--focus .gl-ico { color: var(--led); }
+.gl.is-game .gl__stage, .gl.is-game .gl__info, .gl.is-game .gl__controls { visibility: hidden; }
+@media (max-width: 420px) {
+  .gl .gl__btn--focus span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .gl .gl__btn--focus { padding: .55rem .8rem; }
+}
 .gl__count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .gl .gl__btn {
   min-width: 2.75rem;
@@ -607,8 +617,10 @@ html.cv-on { touch-action: pan-x pan-y; }
     width: min(100% - 1.8rem, calc((100svh - 24rem) * var(--ar, 1.5)));
   }
   .gl[open] { grid-template-rows: auto auto auto; align-content: center; gap: 1.6rem; }
-  .gl__controls { grid-template-columns: auto 1fr auto; grid-template-areas: "roll roll roll" "prev close next"; }
+  .gl__controls { grid-template-columns: auto 1fr 1fr auto; grid-template-areas: "roll roll roll roll" "prev focus close next"; }
   .gl .gl__btn--close { justify-self: center; }
+  .gl .gl__btn--focus { justify-self: end; }
+  .gl__controls:has(.gl__btn--focus:not([hidden])) .gl__btn--close { justify-self: start; }
   .gl__frm img { height: 2.4rem; }
   .gl__gate { height: calc(2.4rem + 8px); }
   .gl__film { --strip-h: 3.8rem; }
@@ -686,8 +698,10 @@ html.cv-on { touch-action: pan-x pan-y; }
   .gl .gl__spec { flex-direction: column; flex-wrap: nowrap; align-items: center; gap: .1rem; }
   .gl .gl__spec div { max-width: 100%; min-width: 0; }
   .gl .gl__spec dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gl__controls { grid-template-columns: auto 1fr auto; grid-template-areas: "roll roll roll" "prev close next"; gap: .45rem; }
+  .gl__controls { grid-template-columns: auto 1fr 1fr auto; grid-template-areas: "roll roll roll roll" "prev focus close next"; gap: .45rem; }
   .gl .gl__btn--close { justify-self: center; }
+  .gl .gl__btn--focus { justify-self: end; }
+  .gl__controls:has(.gl__btn--focus:not([hidden])) .gl__btn--close { justify-self: start; }
   .gl__film { --strip-h: 3.4rem; }
   .gl__frm img { height: 2.1rem; }
   .gl__gate { height: calc(2.1rem + 8px); }
