@@ -640,6 +640,7 @@
   }
 
   dialog.addEventListener("click", function (e) {
+    if (game) return;
     var frm = e.target.closest("[data-gl-i]");
     if (frm) { api.go(+frm.getAttribute("data-gl-i")); return; }
     var act = e.target.closest("[data-gl]");
@@ -647,6 +648,7 @@
       var a = act.getAttribute("data-gl");
       if (a === "prev") step(-1);
       else if (a === "next") step(1);
+      else if (a === "focus") openFocus();
       else close();
       return;
     }
@@ -729,17 +731,50 @@
   // The arrows step at any time, wherever the focus is (opened with a click, it is still on
   // the wall behind), full screen too; not while typing, nor with a modifier held.
   document.addEventListener("keydown", function (e) {
-    if (!dialog.open || closing || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!dialog.open || closing || game || e.altKey || e.ctrlKey || e.metaKey) return;
     var t = e.target, tag = t && t.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
     if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
   });
   dialog.addEventListener("cancel", function (e) {
+    // Escape in the focus challenge leaves the game, not the close-up (the game handles it)
+    if (game) { e.preventDefault(); return; }
     // Escape in full screen comes back out of it first
     if (full) { e.preventDefault(); fullSet(false); return; }
     if (!still()) { e.preventDefault(); close(); }
   });
+  /* ---------- The focus challenge ---------- */
+  // A small game over the close-up (focus-game.js, loaded when asked for): a rangefinder
+  // camera, its focus ring turned until the two images in the finder's patch become one.
+  // While it is open the close-up's own keys, clicks and Escape leave it alone.
+  var focusBtn = dialog.querySelector('[data-gl="focus"]'), focusSrc = dialog.getAttribute("data-focus-src"), game = null;
+  if (focusBtn && focusSrc && window.WebGLRenderingContext) focusBtn.hidden = false;
+  function openFocus() {
+    if (game || !focusSrc) return;
+    zoomOff();
+    game = { loading: true };
+    dialog.classList.add("is-game");
+    var done = function () {
+      game = null;
+      api.game = null;
+      dialog.classList.remove("is-game");
+    };
+    import(focusSrc).then(function (m) {
+      if (!dialog.open) { done(); return; }
+      game = api.game = m.start({
+        host: dialog,
+        photos: photos,
+        index: index,
+        still: still(),
+        onClose: function () {
+          done();
+          if (focusBtn && dialog.open) focusBtn.focus({ preventScroll: true });
+        }
+      });
+    }, done);
+  }
+
   /* ---------- Zooming into the photograph ---------- */
   // A pinch (two fingers, a trackpad, or Ctrl and the wheel) zooms into the photograph itself,
   // never the page. Zoomed in, a finger or the mouse moves it about, always covering its own
@@ -1083,6 +1118,7 @@
   stage.addEventListener("pointerup", function (e) { release(e, false); });
   stage.addEventListener("pointercancel", function (e) { release(e, true); });
   dialog.addEventListener("close", function () {
+    if (game && game.close) game.close();
     if (full) fullSet(false);
     clearTimeout(clickT);
     clickAt = null;

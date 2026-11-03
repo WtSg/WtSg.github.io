@@ -1,0 +1,147 @@
+/* The focus challenge (focus-game.js), over the close-up: the camera's finder on one side,
+   the camera itself on the other, the round and its clock above, the release below. In the
+   wall's own world: near black, warm ink, the red of the readout for the clock. */
+.fg {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "top top" "finder cam" "foot foot";
+  gap: .9rem clamp(.8rem, 2vw, 1.4rem);
+  padding: clamp(.9rem, 2.4vw, 1.6rem);
+  background: #050505;
+  color: var(--ink, #edebe6);
+  font: 400 .82rem/1.5 var(--ui, sans-serif);
+  outline: none;
+  overscroll-behavior: contain;
+  animation: fg-in .28s ease-out both;
+}
+@keyframes fg-in { from { opacity: 0; } }
+.fg.is-leaving { opacity: 0; transition: opacity .18s ease-in; }
+@media (max-aspect-ratio: 1/1) {
+  .fg {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1.05fr) minmax(0, 1fr) auto;
+    grid-template-areas: "top" "finder" "cam" "foot";
+  }
+}
+
+.fg__top { grid-area: top; position: relative; z-index: 3; display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.fg__title { margin: 0; font: 500 .72rem/1 var(--mono, monospace); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.fg__round { margin: 0; flex: 1; min-width: 0; color: var(--muted, #9a978f); font: 400 .72rem/1.3 var(--mono, monospace); letter-spacing: .06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fg__clock { display: flex; align-items: center; gap: .6rem; }
+.fg__secs { min-width: 3.2ch; font: 700 1.25rem/1 var(--seg, monospace); color: var(--led, #ff4a2e); text-shadow: 0 0 .5rem rgba(255, 74, 46, .45); text-align: right; }
+.fg__bar { position: relative; width: clamp(4rem, 12vw, 9rem); height: 3px; background: rgba(255, 74, 46, .14); border-radius: 2px; overflow: hidden; }
+.fg__bar i { position: absolute; inset: 0; background: var(--led, #ff4a2e); transform-origin: left center; }
+.fg:not(.is-late) .fg__secs { color: #ffd2c6; text-shadow: none; }
+.fg__x, .fg__btn, .fg__go {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: .25rem;
+  background: rgba(0, 0, 0, .8);
+  color: var(--ink, #edebe6);
+  font: 400 .72rem/1 var(--mono, monospace);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease-out, background-color .12s ease-out, border-color .12s ease-out;
+}
+.fg__x { display: grid; place-items: center; padding: 0; }
+.fg__btn { padding: .7rem 1.1rem; }
+.fg__btn--solid { background: var(--ink, #edebe6); border-color: var(--ink, #edebe6); color: #0c0c0c; }
+@media (hover: hover) {
+  .fg__x:hover, .fg__btn:not(.fg__btn--solid):hover { color: var(--led, #ff4a2e); border-color: rgba(255, 74, 46, .45); }
+  .fg__btn--solid:hover { background: #fff; }
+  .fg__go:not(:disabled):hover { border-color: var(--led, #ff4a2e); }
+}
+.fg__x:active, .fg__btn:active, .fg__go:active { transform: scale(.94); transition-duration: 0s; }
+.fg :focus-visible { outline: 2px solid var(--ink, #edebe6); outline-offset: 2px; }
+
+.fg__finder, .fg__cam { position: relative; min-width: 0; min-height: 0; border-radius: .6rem; overflow: hidden; }
+.fg__finder { grid-area: finder; background: #000; }
+.fg__cam { grid-area: cam; background: #070707; }
+.fg__vf, .fg__gl { display: block; width: 100%; height: 100%; }
+.fg__gl { cursor: ew-resize; touch-action: none; }
+.fg__how {
+  position: absolute;
+  left: 50%;
+  bottom: .8rem;
+  translate: -50% 0;
+  margin: 0;
+  padding: .4rem .65rem;
+  border-radius: .25rem;
+  background: rgba(0, 0, 0, .62);
+  color: var(--muted, #9a978f);
+  font: 400 .66rem/1 var(--mono, monospace);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity .3s ease-out;
+}
+.fg__how.is-gone, .fg.has-card .fg__how { opacity: 0; }
+
+.fg__foot { grid-area: foot; display: flex; align-items: center; gap: 1rem; min-height: 2.75rem; }
+.fg__hint { margin: 0; flex: 1; min-width: 0; color: var(--muted, #9a978f); font-size: .78rem; }
+.fg__go {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .7rem 1.2rem .7rem .9rem;
+}
+.fg__go::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; background: var(--led, #ff4a2e); box-shadow: 0 0 .5rem rgba(255, 74, 46, .6); }
+.fg__go:disabled { opacity: .35; cursor: default; }
+
+/* The cards: how to play, each round's frame, the score. Over a dimmed game. */
+.fg.has-card::after { content: ""; position: absolute; inset: 0; z-index: 1; background: rgba(0, 0, 0, .42); }
+.fg__card {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(25rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  padding: 1.35rem 1.4rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: .6rem;
+  background: rgba(11, 11, 11, .95);
+  box-shadow: 0 1.4rem 4rem rgba(0, 0, 0, .65);
+  animation: fg-card .32s cubic-bezier(.2, .8, .2, 1) both;
+}
+.fg__card[hidden] { display: none; }
+@keyframes fg-card { from { opacity: 0; translate: -50% calc(-50% + .6rem); } }
+.fg__card p { margin: 0 0 .8rem; }
+.fg__h { margin: 0 0 .7rem; font: 500 1.3rem/1.2 var(--ui, sans-serif); letter-spacing: -.01em; }
+.fg__small { color: var(--muted, #9a978f); font-size: .74rem; }
+.fg__best { margin-left: .4rem; padding: .2rem .4rem; border: 1px solid rgba(255, 74, 46, .5); border-radius: .2rem; color: var(--led, #ff4a2e); font: 400 .6rem/1 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; vertical-align: middle; }
+.fg__shot { margin: 0 0 .9rem; border-radius: .3rem; overflow: hidden; background: #000; }
+.fg__shot img { display: block; width: 100%; max-height: 34vh; object-fit: cover; transform: scale(1.04); }
+.fg__acc { display: flex; align-items: baseline; gap: .7rem; }
+.fg__acc b { font: 700 1.6rem/1 var(--seg, monospace); color: var(--led, #ff4a2e); text-shadow: 0 0 .6rem rgba(255, 74, 46, .4); }
+.fg__v { font: 400 .7rem/1 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; }
+.fg__v--ok { color: var(--ink, #edebe6); }
+.fg__v--off { color: var(--muted, #9a978f); }
+.fg__nums { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1rem; margin: 0 0 1rem; }
+.fg__nums dt { color: var(--muted, #9a978f); font: 400 .62rem/1.2 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; }
+.fg__nums dd { margin: .15rem 0 0; font: 400 .9rem/1.2 var(--mono, monospace); }
+.fg__list { margin: 0 0 .9rem; padding: 0; list-style: none; font: 400 .78rem/1.2 var(--mono, monospace); }
+.fg__list li { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: .6rem; padding: .4rem 0; border-top: 1px solid rgba(255, 255, 255, .08); }
+.fg__list li span:first-child { color: var(--led, #ff4a2e); }
+.fg__list li span:last-child { color: var(--muted, #9a978f); }
+.fg__row { display: flex; flex-wrap: wrap; gap: .6rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fg, .fg__card { animation: none; }
+  .fg.is-leaving { transition: none; }
+}
+/* narrow: the round's own line keeps the room the title had */
+@media (max-width: 480px) {
+  .fg__title { display: none; }
+  .fg__top { gap: .7rem; }
+}

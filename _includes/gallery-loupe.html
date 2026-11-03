@@ -1,4 +1,4 @@
-<dialog class="gl" aria-label="A photograph, up close">
+<dialog class="gl" aria-label="A photograph, up close"{% if include.focus %} data-focus-src="{{ include.focus }}"{% endif %}>
   <figure class="gl__stage"><img class="gl__img" src="" alt="" draggable="false"><span class="gl__frame" aria-hidden="true"></span></figure>
   <div class="gl__info">
     <div class="gl__led" aria-hidden="true"></div>
@@ -14,6 +14,9 @@
       <div class="gl__track"><ol class="gl__roll" aria-label="Every photograph"></ol><span class="gl__gate" aria-hidden="true"></span></div>
       <svg class="gl__can" viewBox="0 0 44 96" aria-hidden="true" focusable="false"><defs><linearGradient id="gl-can-side" x1="0" x2="1"><stop offset="0" stop-color="#0e0d0c"/><stop offset=".3" stop-color="#34312c"/><stop offset=".5" stop-color="#5d5850"/><stop offset=".72" stop-color="#2a2824"/><stop offset="1" stop-color="#0c0b0a"/></linearGradient><pattern id="gl-knurl" patternUnits="userSpaceOnUse" width="2.6" height="10" data-scroll=".5"><rect x="0" y="0" width="1.1" height="10"/></pattern></defs><rect class="gl__can-body" x="8" y="7" width="32" height="82" rx="4" fill="url(#gl-can-side)"/><rect class="gl__can-band" x="8" y="34" width="32" height="28"/><rect class="gl__can-cap" x="6" y="4.5" width="36" height="6" rx="2"/><rect class="gl__can-cap" x="6" y="85.5" width="36" height="6" rx="2"/><rect class="gl__can-lip" x="0" y="13" width="14" height="70" rx="1.5"/><rect class="gl__can-felt" x="0.8" y="14.2" width="12.4" height="1.6"/><rect class="gl__can-felt" x="0.8" y="80.2" width="12.4" height="1.6"/><rect class="gl__can-knob" x="17" y="0" width="14" height="5.5" rx="1.5"/><rect class="gl__can-knurl" x="17" y="0" width="14" height="5.5" rx="1.5" fill="url(#gl-knurl)"/><rect class="gl__can-tick" x="23.4" y=".6" width="1.2" height="4.3" data-tick="24 6.2"/></svg>
     </div>
+    {%- if include.focus %}
+    <button class="gl__btn gl__btn--focus" type="button" data-gl="focus" aria-label="Focus challenge" hidden>{% include gl-icon.html name="focus" %}<span>Focus challenge</span></button>
+    {%- endif %}
     <button class="gl__btn gl__btn--close" type="button" data-gl="close" autofocus>{{ include.close | default: "Close" }}</button>
   </div>
 </dialog>
