@@ -67,10 +67,9 @@ const SAFE = V(-1.44, 0, 0.17);
 const LINE = { x0: -1.42, x1: 1.42, y: 1.16, sag: 0.075 };
 const LAMP = V(0.34, 1.42, -0.46);
 // The drying room: rows of lines behind the bench, repeating without end.
-const HALL = { z0: -1.62, gap: 1.06, rows: 10, y: 1.2, per: 20, lampY: 2.04, tubeY: 2.42, bay: 2.8 };
+const HALL = { z0: -1.62, gap: 1.7, rows: 8, y: 1.2, per: 20, lampY: 2.04, tubeY: 2.42, bay: 2.8 };
 const DEV_SHOWN = 90;
 const EXP_SECONDS = 8;
-const FLICKER = [0.7, 0.05, 0.45, 0.1, 0.9];
 
 /* Development: blank paper, then shadows, then mid-tones, then colour. */
 const DEV_KEYS = [
@@ -369,8 +368,11 @@ export function start(o) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const SAFE_BG = new THREE.Color(0x070202), LIT_BG = new THREE.Color(0x8a8a86);
-  const FOG = { safe: [3.0, 14], lit: [3.0, 13] };
+  // Under the tubes the room is charcoal, not grey: the prints stand out and the far lines sink into it.
+  const SAFE_BG = new THREE.Color(0x070202), LIT_BG = new THREE.Color(0x2f2e2c);
+  // Under the tubes the far lines fade out before the farthest one wraps round to the back
+  // of the room as the camera walks in, so no line ever appears out of nothing.
+  const FOG = { safe: [3.0, 14], lit: [2.6, (HALL.rows - 2) * HALL.gap - 0.9] };
   scene.background = SAFE_BG.clone();
   scene.fog = new THREE.Fog(0x070202, 3.0, 14);
 
@@ -835,6 +837,24 @@ export function start(o) {
     return { pw: (ph - 2 * B) * ar + 2 * B, ph };
   }
   const loader = new THREE.TextureLoader();
+  // Every print, on the line and down the drying room, wears a small picture; only the one
+  // being worked on wears its full one. Small means this many pixels on its long side: a
+  // gallery of hundreds then still fits a phone's memory (900 px prints took about 2.9 MB
+  // each on the GPU; these about 0.5 MB).
+  const THUMB_PX = 384;
+  function shrink(img, max) {
+    const w = img && (img.naturalWidth || img.width), h = img && (img.naturalHeight || img.height);
+    if (!w || !h || Math.max(w, h) <= max) return img;
+    const k = max / Math.max(w, h), c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * k));
+    c.height = Math.max(1, Math.round(h * k));
+    const g = c.getContext("2d");
+    if (!g) return img;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const hallMats = [];
   const prints = photos.map((ph, i) => {
@@ -893,6 +913,7 @@ export function start(o) {
       sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n  totalEmissiveRadiance *= vColor;\n#endif");
     };
     loader.load(ph.thumb, (t) => {
+      t.image = shrink(t.image, THUMB_PX);
       t.colorSpace = THREE.SRGBColorSpace;
       t.anisotropy = maxAniso;
       p.texThumb = t;
@@ -1077,23 +1098,23 @@ export function start(o) {
 
   /* ---------- The drying room: rows of lines behind the bench, without end ---------- */
   const hall = (() => {
-    const per = HALL.per, rows = HALL.rows, slots = [], count = photos.map(() => 0);
-    const lines = [];
+    // Every photograph hangs somewhere in the room: one shuffled round of them after another,
+    // cut into lines, never the same photograph twice in a row.
+    const rows = HALL.rows, per = Math.max(HALL.per, Math.ceil(N / rows)), slots = [], count = photos.map(() => 0);
+    const lines = [], all = [], rs = rng(101);
+    while (all.length < per * rows) {
+      const batch = photos.map((_, n) => n);
+      for (let k = batch.length - 1; k > 0; k--) { const j = Math.floor(rs() * (k + 1)); [batch[k], batch[j]] = [batch[j], batch[k]]; }
+      if (all.length && N > 1 && batch[0] === all[all.length - 1]) batch.push(batch.shift());
+      all.push(...batch);
+    }
     for (let r = 0; r < rows; r++) {
-      // every photograph in a different order on each line, never the same one twice in a row
-      const rr = rng(101 + r * 7), seq = [];
-      while (seq.length < per) {
-        const batch = photos.map((_, n) => n);
-        for (let k = batch.length - 1; k > 0; k--) { const j = Math.floor(rr() * (k + 1)); [batch[k], batch[j]] = [batch[j], batch[k]]; }
-        if (seq.length && N > 1 && batch[0] === seq[seq.length - 1]) batch.push(batch.shift());
-        seq.push(...batch);
-      }
-      seq.length = per;
+      const rr = rng(101 + r * 7), seq = all.slice(r * per, (r + 1) * per);
       let x = 0;
       const line = { r, slots: [], period: 0, shift: rr() * 3 };
       seq.forEach((photo, j) => {
         const { pw, ph } = printSize(photos[photo].ar);
-        const gap = 0.15 + rr() * 0.08;
+        const gap = 0.34 + rr() * 0.12;
         const s = { r, j, photo, pw, ph, x: x + pw / 2, inst: count[photo]++, phase: rr() * 6.28, a: 0, v: 0, sx: 0, z: 0 };
         x += pw + gap;
         slots.push(s);
@@ -1307,20 +1328,26 @@ export function start(o) {
   scene.environment = safeEnv;
 
   /* ---------- Poses: where a print can be, and how it is held ---------- */
+  // The line over the bench holds the last few prints at their own size, not every print
+  // shrunk to fit: each print has its place on it (k mod lineN, left to right), and once the
+  // line is full the oldest print is taken down, out of sight, while the next is in the fixer.
+  const LINE_N = 6;
   const slots = [];
+  let lineN = 1;
   function layoutLine() {
-    const gap = 0.07, avail = LINE.x1 - LINE.x0 - 0.3;
-    const need = prints.reduce((s, p) => s + p.pw + gap, -gap);
-    const f = Math.min(1, avail / need);
-    let x = -(need * f) / 2;
+    const slotW = (LINE.x1 - LINE.x0 - 0.3) / LINE_N;
+    lineN = Math.max(1, Math.min(LINE_N, N));
+    const x0 = -(lineN * slotW) / 2;
     slots.length = 0;
-    prints.forEach((p) => {
-      const cx = x + (p.pw * f) / 2;
-      slots.push({ x: cx, s: f });
-      x += (p.pw + gap) * f;
+    prints.forEach((p, k) => {
+      slots.push({ x: x0 + ((k % lineN) + 0.5) * slotW, s: Math.min(1, (slotW - 0.06) / p.pw) });
     });
   }
   layoutLine();
+  // While print i is in the fixer (camera down on the trays), the print in its place comes down.
+  const TAKE_DOWN = 0.185;
+  // Is print k (k < i) still on the line at step f of print i?
+  const onLine = (k, i, f) => k > i - lineN || (k === i - lineN && f < TAKE_DOWN);
   const pose = {
     safe: (p) => ({ pos: V(SAFE.x + 0.01, 0.03, SAFE.z - p.ph / 2 + 0.02), rx: -Math.PI / 2, rz: 0.16, s: 1 }),
     easel: (p) => ({ pos: V(EASEL.x, 0.041, EASEL.z - p.ph / 2), rx: -Math.PI / 2, rz: 0.03, s: 1 }),
@@ -1382,9 +1409,11 @@ export function start(o) {
   }
   // The line full of prints, seen whole: where the last step ends.
   function wholeLineFrame() {
-    const xs = slots.map((sl, k) => [sl.x - (prints[k].pw * sl.s) / 2, sl.x + (prints[k].pw * sl.s) / 2]);
+    const ks = [];
+    for (let k = Math.max(0, N - lineN); k < N; k++) ks.push(k);
+    const xs = ks.map((k) => [slots[k].x - (prints[k].pw * slots[k].s) / 2, slots[k].x + (prints[k].pw * slots[k].s) / 2]);
     const xa = Math.min(...xs.map((x) => x[0])), xb = Math.max(...xs.map((x) => x[1]));
-    const hMax = Math.max(...prints.map((p, k) => p.ph * slots[k].s));
+    const hMax = Math.max(...ks.map((k) => prints[k].ph * slots[k].s));
     const cx = (xa + xb) / 2;
     const look = V(cx, lineY(cx) - hMax * 0.5, LINE_Z);
     const d = fitDist((xb - xa) * (aspect < 0.85 ? 1.02 : 1.12), hMax * 1.9);
@@ -1424,11 +1453,19 @@ export function start(o) {
     tmpEuler.set(q.rx, 0, q.rz);
     return V(0, (-p.ph / 2) * q.s, 0).applyEuler(tmpEuler).add(q.pos);
   }
-  // Wandering the lit drying room: along the lines (x) and between them (depth).
+  // Wandering the lit drying room: along the lines (x) and between them (depth). The lights
+  // always come up on the room from its entrance, over the bench; from there the scroll walks
+  // in (walkT follows the page; litFrom is where the page was when the lights came on), and
+  // so does a drag. The room repeats every HALL.rows lines, so a long walk is folded back by
+  // whole repeats (hallShift), where nothing on screen changes: the way back stays short.
   const travel = { x: 0, d: 0, vx: 0, vd: 0, ax: 0, ad: 0 };
+  let walkT = 0, litFrom = 0, hallShift = 0;
+  const HALL_REPEAT = HALL.rows * HALL.gap, FOLD_AT = 4;
+  // one scroll, one line further in: each stop has the nearest line whole in view
+  const walked = () => travel.ad + Math.max(0, walkT - litFrom) * HALL.gap - hallShift;
   function hallView() {
     const portrait = aspect < 0.85;
-    const d = travel.ad + pos * HALL.gap * 0.85;
+    const d = Math.max(0, walked());
     const p = V(0.22 + travel.ax, portrait ? 1.5 : 1.62, (portrait ? 2.3 : 2.2) - d);
     return { pos: p, look: p.clone().add(V(0, portrait ? -0.4 : -0.62, -3)) };
   }
@@ -1500,7 +1537,7 @@ export function start(o) {
   // prints per second, so about five seconds a print.
   const PLAY = 0.2;
   let posV = 0;
-  let lightsOn = false, lightE = 0, lightM = 0, appliedM = -1, flickerUntil = 0, lightWaiters = [], litAt = -1e9;
+  let lightsOn = false, lightE = 0, lightV = 0, lightM = 0, appliedM = -1, lightWaiters = [], litAt = -1e9;
   let shown = -1, hudKey = "";
   let prevI = 0, prevF = 0, prevQ = 0;
   function mixView(a, b, k) {
@@ -1555,7 +1592,7 @@ export function start(o) {
   // Where print k is at this point on the path, how far it has developed, and what holds it.
   function pathState(k, pp, q) {
     const pr = prints[k], { i, f } = split(pp);
-    if (k < i) return { pose: pose.line(pr), dev: 1, vis: true, hung: true };
+    if (k < i) return onLine(k, i, f) ? { pose: pose.line(pr), dev: 1, vis: true, hung: true } : { pose: pose.line(pr), dev: 1, vis: false };
     if (k === i) {
       if (k === 0 && q < 1) return sheetState(pr, q, IN);
       const tDev = pose.tray(pr, devTray), tStop = pose.tray(pr, stopTray), tFix = pose.tray(pr, fixTray), line = pose.line(pr);
@@ -1660,9 +1697,9 @@ export function start(o) {
     if (on !== lightsOn) {
       lightsOn = on;
       if (on) {
-        // the tubes catch: a few stutters, then full light, row after row down the room
-        flickerUntil = reduce ? 0 : now + 380;
+        // the tubes come up row after row down the room
         litAt = now;
+        if (lightE === 0) { litFrom = walkT = target; hallShift = 0; }
       } else {
         travel.vx = travel.vd = 0;
       }
@@ -1672,11 +1709,6 @@ export function start(o) {
       if (lightE === (on ? 1 : 0)) res();
       else lightWaiters.push(res);
     });
-  }
-  function flick(t) {
-    if (t < 0) return 0;
-    if (t >= 380) return 1;
-    return FLICKER[Math.min(FLICKER.length - 1, Math.floor((t / 380) * FLICKER.length))];
   }
 
   /* ---------- Hands on: picking, rocking, flicking, the enlarger switch, wandering ---------- */
@@ -1892,67 +1924,62 @@ export function start(o) {
 
     // The path follows the scroll like film through a gate. Slow scrubbing is followed
     // closely, but a flick of the page doesn't skip through the process: it plays at
-    // its own pace, hurrying only to make up a long way. Under the tubes the scroll
-    // walks the drying room instead, and is followed at once.
-    if (reduce) {
-      pos = target;
+    // its own pace, hurrying only to make up a long way. Under the tubes the bench stands
+    // still where it was and the scroll walks the drying room instead, followed at once.
+    walkT = reduce ? target : walkT + (target - walkT) * (1 - Math.exp(-dt / 110));
+    if (lightsOn || lightE > 0) {
       posV = 0;
-    } else if (lightsOn || lightE > 0) {
-      pos += (target - pos) * (1 - Math.exp(-dt / 110));
+    } else if (reduce) {
+      pos = target;
       posV = 0;
     } else {
       const st = pace(pos, posV, target, intro, ds);
       pos = st.pos;
       posV = st.v;
     }
-    if (Math.abs(target - pos) < 0.0005) { pos = target; posV = 0; }
+    if (Math.abs(target - pos) < 0.0005 && !lightsOn && lightE === 0) { pos = target; posV = 0; }
     if (intro < 1 && introStart >= 0) intro = clamp((now - introStart) / INTRO_MS, 0, 1);
     const q = intro;
 
     // Lights: the mix (what the lamps do) and the move (the camera to the room).
+    // The light comes up and goes down in one smooth fade, never in flashes: the room's
+    // colour, its fog and the tubes all follow it, and the camera sets off as it rises.
     if (lightsOn) {
-      if (now < flickerUntil) lightM = flick(380 - (flickerUntil - now));
-      else lightM = 1;
-      if (now > flickerUntil - 100) lightE = reduce ? 1 : Math.min(1, lightE + dt / 1500);
+      lightV = reduce ? 1 : Math.min(1, lightV + dt / 520);
+      if (now - litAt > 180) lightE = reduce ? 1 : Math.min(1, lightE + dt / 1500);
     } else {
-      lightM = 0;
+      lightV = reduce ? 0 : Math.max(0, lightV - dt / 700);
       lightE = reduce ? 0 : Math.max(0, lightE - dt / 1200);
     }
+    lightM = smooth(lightV);
     if (Math.abs(lightM - appliedM) > 0.001) { setLightMix(lightM); appliedM = lightM; }
     if (lightWaiters.length && lightE === (lightsOn ? 1 : 0)) lightWaiters.splice(0).forEach((f) => f());
     const eAll = E.inOut(lightE);
-    // the tubes catch row after row, away down the room, and the room opens up behind them
+    // the tubes come up row after row, away down the room
     for (let r = 0; r < hall.rows; r++) {
       const rowDepth = Math.max(0, (HALL.z0 - hall.rowZ[r]) - Math.max(0, HALL.z0 - camPos.z));
-      hall.tubeOn[r] = lightsOn ? (reduce ? 1 : flick(now - litAt - 120 - rowDepth * 95)) : 0;
+      hall.tubeOn[r] = reduce ? (lightsOn ? 1 : 0) : Math.min(lightM, smooth(clamp((now - litAt - 60 - rowDepth * 70) / 300, 0, 1)));
     }
-    const reveal = lightsOn ? (reduce ? 1 : clamp((now - litAt - 150) / 1500, 0, 1)) : 0;
     scene.fog.near = lerp(FOG.safe[0], FOG.lit[0], lightM);
-    scene.fog.far = lerp(FOG.safe[1], FOG.lit[1], smooth(reveal) * lightM);
+    scene.fog.far = lerp(FOG.safe[1], FOG.lit[1], lightM);
     hall.setMix(lightM, scene.fog.near, scene.fog.far);
 
-    // Every print: where the path puts it, pulled up onto the line by the light.
+    // Every print: where the path puts it.
     const { i, f } = split(pos);
     let inDev = null, held = null;
     trayHolds[0] = trayHolds[1] = trayHolds[2] = null;
-    const stagger = Math.min(0.06, 0.4 / Math.max(1, N));
     prints.forEach((pr, k) => {
       const st = pathState(k, pos, q);
-      const ek = lightE > 0 ? smooth(clamp((lightE - k * stagger) / (1 - (N - 1) * stagger), 0, 1)) : 0;
-      let pz = st.pose, vis = st.vis, dev = st.dev;
-      if (ek > 0) {
-        pz = blendPose(st.vis ? st.pose : pose.easel(pr), pose.line(pr), ek, 0.1);
-        vis = true;
-        dev = Math.max(dev, smooth(clamp(ek * 1.6, 0, 1)));
-      }
-      pr.hang.visible = vis && !!pr.ready;
+      let pz = st.pose;
+      const dev = st.dev;
+      pr.hang.visible = st.vis && !!pr.ready;
       if (!pr.hang.visible) return;
-      if (st.tray && ek < 0.02) pz = rideTray(pz, st.tray);
+      if (st.tray) pz = rideTray(pz, st.tray);
       setPose(pr, pz);
       if (pz.tilt) { pr.hang.quaternion.premultiply(pz.tilt); }
-      const hung = (st.hung && ek < 0.02) || ek > 0.98;
+      const hung = !!st.hung;
       // clipped on: it swings, and settles
-      if (hung && !pr.wasHung && !reduce) pr.sw.v += ek > 0.98 ? 0.5 : 1.2;
+      if (hung && !pr.wasHung && !reduce) pr.sw.v += 1.2;
       pr.wasHung = hung;
       pr.clips.forEach((c) => (c.visible = hung));
       if (hung && !reduce) {
@@ -1966,11 +1993,11 @@ export function start(o) {
         pr.sw.a = pr.sw.v = pr.sw.b = pr.sw.w = 0;
       }
       if (Math.abs(pr.devK - dev) > 0.0005 || appliedM !== pr.mAt) { pr.devK = dev; pr.mAt = appliedM; applyDev(pr); }
-      if (st.tray && ek < 0.5) {
+      if (st.tray) {
         trayHolds[st.tray.idx] = pr;
         if (st.tray === devTray) inDev = pr;
       }
-      if (st.held && ek < 0.5) held = pr;
+      if (st.held) held = pr;
     });
 
     // Splashes where paper meets the liquid or leaves it, whichever way the scroll runs.
@@ -2096,9 +2123,18 @@ export function start(o) {
       travel.vx *= decay;
       travel.vd *= decay;
     }
-    if (!lightsOn && lightE === 0) { travel.x = travel.d = travel.vx = travel.vd = 0; }
+    if (!lightsOn && lightE === 0) { travel.x = travel.d = travel.vx = travel.vd = 0; hallShift = 0; }
     travel.ax = reduce ? travel.x : lerp(travel.ax, travel.x, 1 - Math.exp(-dt / 90));
     travel.ad = reduce ? travel.d : lerp(travel.ad, travel.d, 1 - Math.exp(-dt / 90));
+    if (lightE === 1) {
+      const w = walked(), fold = w > FOLD_AT + HALL_REPEAT ? HALL_REPEAT : w < FOLD_AT && hallShift > 0 ? -HALL_REPEAT : 0;
+      if (fold) {
+        // camera and its goal move back (or on) by one repeat together, so it doesn't fly
+        hallShift += fold;
+        view.pos.z += fold;
+        view.look.z += fold;
+      }
+    }
     const pc = pathCam(pos, q);
     const goalView = eAll > 0 ? mixView(pc, hallView(), eAll) : pc;
     if (reduce) {
