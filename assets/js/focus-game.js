@@ -463,9 +463,11 @@ export function start(o) {
   function renderGuide() {
     const st = GUIDE[gstep], n = GUIDE.length;
     modeEl.textContent = "How to focus · " + (gstep + 1) + " of " + n;
+    // after any shot in a hands-on step, another go: a fresh start, as often as wanted
+    const again = st.act && (gdone || gnote) ? '<button class="fg__btn" type="button" data-fg="gretry">Try again</button>' : "";
     const btns = st.end
       ? '<button class="fg__btn fg__btn--solid" type="button" data-fg="roll">Shoot a roll</button><button class="fg__btn" type="button" data-fg="day">Today\'s roll</button>'
-      : gdone ? '<button class="fg__btn fg__btn--solid" type="button" data-fg="gnext">Next</button>' : "";
+      : (gdone ? '<button class="fg__btn fg__btn--solid" type="button" data-fg="gnext">Next</button>' : "") + again;
     showCard(
       '<p class="fg__step">' + (gstep + 1) + " / " + n + "</p>" +
       '<h2 class="fg__h">' + st.t + "</h2><p>" + st.x + "</p>" +
@@ -686,6 +688,7 @@ export function start(o) {
     if (a === "roll" || a === "day" || a === "guide") begin(a, now);
     else if (a === "gnext") { gstep = Math.min(GUIDE.length - 1, gstep + 1); guideStep(now); }
     else if (a === "gback") { gstep = Math.max(0, gstep - 1); guideStep(now); }
+    else if (a === "gretry") guideStep(now);
     else if (a === "gskip") { gstep = GUIDE.length - 1; guideStep(now); }
     else if (a === "close") close();
     else if (a === "view") openView(+b.getAttribute("data-k"), b);
