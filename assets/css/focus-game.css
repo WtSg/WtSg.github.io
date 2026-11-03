@@ -379,7 +379,9 @@ button.fg__shot img { transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
 /* too narrow for the names: the drawing alone, larger, the card names the parts */
 @media (max-width: 599px) {
   .fg__td .td-rangefinder [data-annotations], .fg__td .td-rangefinder [data-leaders] { display: none; }
-  .fg__main { --eye-w: clamp(7rem, 30cqw, 10rem); }
+  .fg__main { --eye-w: clamp(6.5rem, 26cqw, 9rem); }
+  .fg.is-teardown .fg__main > .fg__finder { left: .9rem; bottom: calc(46% + .4rem); }
+  .fg__td-eye { left: .95rem; bottom: calc(.4rem + var(--eye-w) * 2 / 3 + .3rem); }
 }
 @media (prefers-reduced-motion: reduce) { .fg__td-layer { transition: none; } }
 

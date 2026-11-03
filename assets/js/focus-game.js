@@ -924,6 +924,8 @@ export function start(o) {
     if (closed) return;
     closed = true;
     cancelAnimationFrame(raf);
+    tdStop();
+    if (narrow.removeEventListener) narrow.removeEventListener("change", tdNarrow);
     window.removeEventListener("keydown", onKey, true);
     host.removeEventListener("cancel", onCancel, true);
     if (ro) ro.disconnect(); else window.removeEventListener("resize", resize);
