@@ -1,7 +1,7 @@
 /*
  * The camera, taken apart (photography/camera): a Leica M-style rangefinder drawn with the
  * teardown skill (_teardown/rangefinder). The camera taken apart, with every part picked out on
- * its own; how it works, in three steps (the lens, with the spot one point makes on the film; the
+ * its own; how it works, step by step (the lens, with the spot one point makes on the film; the
  * rangefinder at work; the shutter); every part listed with what it does. Light ink on the
  * photography pages' dark ground, its lines the same width on screen at any size: what moves
  * when the lens is focused in amber, the light in the LED red, the glass in pale blue, the
@@ -144,7 +144,7 @@ button { font: inherit; color: inherit; }
 .cm-fig.cm-fig--shutter { aspect-ratio: auto; min-height: 9rem; cursor: default; touch-action: auto; }
 .cm-fig--shutter svg { height: auto; }
 
-/* ---------- how it works: three steps ---------- */
+/* ---------- how it works ---------- */
 .cm-how { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
 .cm-step { position: relative; margin: 0 0 clamp(2rem, 7vw, 3.4rem); padding-top: .2rem; }
 .cm-step__n { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; margin: 0 0 .55rem; border: 1px solid var(--td-move); border-radius: 50%; color: var(--td-move); font: 400 .8rem/1 var(--mono); }
