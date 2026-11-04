@@ -327,6 +327,8 @@ export function start(o) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     scene.background = new THREE.Color(0x070707);
+    // the table fades into the dark away from the camera, instead of ending in an edge
+    scene.fog = new THREE.Fog(0x070707, 44, 92);
     scene.environment = studio(renderer);
     buildCamera(scene);
     const key = new THREE.DirectionalLight(0xfff4e6, 1.6);
@@ -347,6 +349,41 @@ export function start(o) {
     const e = ease(k), a = fly.from.pos, c = new THREE.Vector3(14, 17, -16), b = EYE.clone().add(new THREE.Vector3(0, 0, -0.35));
     const p = a.clone().multiplyScalar((1 - e) * (1 - e)).add(c.clone().multiplyScalar(2 * e * (1 - e))).add(b.clone().multiplyScalar(e * e));
     return { pos: p, look: fly.from.look.clone().lerp(EYE.clone().add(new THREE.Vector3(0, 0, 8)), ease(clamp(k * 1.25, 0, 1))) };
+  }
+
+  // On the title the camera stands in the space the card leaves free (above it on a phone, beside
+  // it on a wide screen) and fills it without running off its edges: the view is shifted and
+  // the field of view set for that space. Lifting the camera to the eye eases back to the plain view.
+  let titleDirty = true, tv = null;
+  function measureTitle() {
+    titleDirty = false;
+    const g = gl.getBoundingClientRect();
+    if (!g.width || !g.height) { tv = null; return; }
+    let fx = 0, fy = 0, fw = g.width, fh = g.height;
+    if (!card.hidden && card.classList.contains("fg__card--title")) {
+      const c = card.getBoundingClientRect();
+      if (c.top > g.top + g.height * 0.3) fh = Math.max(g.height * 0.35, c.top - g.top - 6);
+      else if (c.right < g.left + g.width * 0.65) { fx = c.right - g.left + 6; fw = Math.max(g.width * 0.3, g.right - c.right - 6); }
+    }
+    const dx = fx + fw / 2 - g.width / 2, dy = fy + fh / 2 - g.height / 2;
+    const fullW = g.width + 2 * Math.abs(dx), fullH = g.height + 2 * Math.abs(dy);
+    // the camera spans about 0.4 (in tangent of the angle) across at the orbit's distance
+    const k = 1.7 * Math.min(fw, fh * 1.05);
+    tv = { fov: clamp((2 * Math.atan(fullH / (2 * k)) * 180) / Math.PI, 18, 78), w: g.width, h: g.height, dx, dy };
+  }
+  function titleView(f) {
+    const w = tv ? tv.w : cam.aspect, h = tv ? tv.h : 1, plain = w / h < 1 ? 38 : 28;
+    if (!tv || f <= 0.001) {
+      cam.clearViewOffset();
+      cam.aspect = w / h;
+      cam.fov = plain;
+    } else {
+      const ax = Math.abs(tv.dx) * f, ay = Math.abs(tv.dy) * f, fullW = w + 2 * ax, fullH = h + 2 * ay;
+      cam.aspect = fullW / fullH;
+      cam.fov = plain + (tv.fov - plain) * f;
+      cam.setViewOffset(fullW, fullH, ax - tv.dx * f, ay - tv.dy * f, w, h);
+    }
+    cam.updateProjectionMatrix();
   }
 
   /* ---------- The game ---------- */
@@ -370,6 +407,7 @@ export function start(o) {
     card.innerHTML = html;
     card.hidden = false;
     root.classList.add("has-card");
+    titleDirty = true;
     const b = card.querySelector(".fg__btn--solid") || card.querySelector("[data-fg]");
     if (noFocus) root.focus({ preventScroll: true });
     else if (b) b.focus({ preventScroll: true });
@@ -756,6 +794,7 @@ export function start(o) {
         cam.aspect = cr.width / cr.height;
         cam.fov = cam.aspect < 1 ? 38 : 28;
         cam.updateProjectionMatrix();
+        titleDirty = true;
       }
     }
     need = true;
@@ -769,10 +808,14 @@ export function start(o) {
     lastNow = now;
     // the title camera: turning slowly, then lifted to the eye
     if (renderer && (state === "title" || state === "lift")) {
-      if (state === "title") view = still ? orbit(0) : orbit(now);
-      else {
+      if (state === "title") {
+        view = still ? orbit(0) : orbit(now);
+        if (titleDirty) measureTitle();
+        titleView(1);
+      } else {
         const k = clamp((now - fly.at) / 1100, 0, 1);
         view = flyAt(k);
+        titleView(1 - ease(clamp(k * 1.4, 0, 1)));
         if (k >= 1) toPlay(now);
       }
       cam.position.copy(view.pos);
