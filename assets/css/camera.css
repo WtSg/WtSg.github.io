@@ -193,14 +193,26 @@ button { font: inherit; color: inherit; }
 /* ---------- every part ---------- */
 .cm-parts { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
 .cm-group { margin: 0 0 1.4rem; }
-.cm-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
-.cm-part { display: grid; gap: .2rem; width: 100%; padding: .75rem .85rem; border: 1px solid var(--rule); border-radius: .5rem; background: none; text-align: left; cursor: pointer; }
-.cm-part b { font-weight: 500; }
-.cm-part span { color: var(--muted); font-size: .88rem; line-height: 1.45; }
-.cm-part:hover { border-color: rgba(255, 255, 255, .28); }
-.cm-part[aria-pressed="true"] { border-color: var(--td-pick); background: rgba(255, 210, 122, .06); }
-.cm-part[aria-pressed="true"] b { color: var(--td-pick); }
-.no-js .cm-part { cursor: default; }
+/* the catalogue: every part drawn small, its name under it; the card with what it does comes to
+   stand under the tapped tile's row */
+.cm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: dense; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.cm-tile { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .35rem; width: 100%; min-height: 100%; padding: .4rem .4rem .55rem; border: 1px solid var(--rule); border-radius: .5rem; background: var(--panel); text-align: center; cursor: pointer; }
+.cm-tile__fig { display: block; aspect-ratio: 1; border-radius: .3rem; background: #0a0a09; }
+.cm-tile__fig svg { display: block; width: 100%; height: 100%; padding: 6%; box-sizing: border-box; }
+.cm-tile b { display: block; align-self: start; font: 500 .72rem/1.25 var(--ui); text-wrap: balance; }
+.js .cm-tile__text { display: none; }
+.no-js .cm-grid { grid-template-columns: minmax(0, 1fr); }
+.no-js .cm-tile { text-align: left; }
+.no-js .cm-tile__fig { display: none; }
+.no-js .cm-tile__text { color: var(--muted); font-size: .88rem; line-height: 1.45; }
+.cm-tile:hover { border-color: rgba(255, 255, 255, .28); }
+.cm-tile[aria-pressed="true"] { border-color: var(--td-pick); background: rgba(255, 210, 122, .06); }
+.cm-tile[aria-pressed="true"] b { color: var(--td-pick); }
+.cm-tile[aria-pressed="true"] .td-rangefinder path { stroke: var(--td-pick); }
+.cm-grid__card { grid-column: 1 / -1; }
+.cm-grid__card .cm-pick { margin-top: .1rem; }
+.cm-pick [data-up] { display: none; }
+.cm-grid__card .cm-pick [data-up] { display: inline-block; }
 
 /* ---------- how it focuses ---------- */
 .cm-focus { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
@@ -222,7 +234,8 @@ button { font: inherit; color: inherit; }
   .cm-fig--focus { aspect-ratio: 16 / 8.5; }
   .cm-fig .td-rangefinder [data-annotations], .cm-fig .td-rangefinder [data-leaders] { display: inline; }
   .cm-pick { grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); }
-  .cm-list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+  .cm-grid { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .6rem; }
+  .cm-tile b { font-size: .76rem; }
   .cm-focus__deck { grid-template-columns: minmax(0, 14rem) minmax(0, 26rem); }
   .td-rangefinder [data-line-role="outline"] { stroke-width: 1.5px; }
   .td-rangefinder [data-line-role="edge"] { stroke-width: 1px; }

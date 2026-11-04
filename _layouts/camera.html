@@ -70,6 +70,7 @@
           <div class="cm-pick__keys">
             <button class="cm-btn" type="button" data-step="-1" aria-label="Previous part">← Previous</button>
             <button class="cm-btn" type="button" data-step="1" aria-label="Next part">Next →</button>
+            <button class="cm-btn cm-btn--quiet" type="button" data-up>See it in the camera ↑</button>
             <button class="cm-btn cm-btn--quiet" type="button" data-clear>All parts</button>
           </div>
         </div>
@@ -158,13 +159,13 @@
 
     <section class="cm-parts" id="parts" aria-labelledby="cm-parts-h">
       <h2 class="cm-h2" id="cm-parts-h">Every part</h2>
-      <p class="cm-body">Tap a part to see it on its own, picked out in the camera taken apart.</p>
+      <p class="cm-body">Tap a part to read what it does and see it picked out in the camera taken apart.</p>
       {%- for g in groups %}
       <div class="cm-group">
         <h3 class="cm-h3">{{ g.group }}</h3>
-        <ul class="cm-list">
+        <ul class="cm-grid">
           {%- for p in g.parts %}
-          <li><button class="cm-part" type="button" data-part="{{ p.id }}" data-group="{{ g.group }}" aria-pressed="false"><b>{{ p.name }}</b><span>{{ p.text }}</span></button></li>
+          <li><button class="cm-tile" type="button" data-part="{{ p.id }}" data-group="{{ g.group }}" aria-pressed="false"><span class="cm-tile__fig" aria-hidden="true"></span><b>{{ p.name }}</b><span class="cm-tile__text">{{ p.text }}</span></button></li>
           {%- endfor %}
         </ul>
       </div>
