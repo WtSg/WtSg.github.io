@@ -1,10 +1,11 @@
 /*
- * The light through the lens (photography/camera): the section through the lens and the mount to
- * the film (assets/img/teardown/lens.json, made by _teardown/rangefinder/lens-section.cjs from the
- * lens's prescription), and the light from one point of a subject 1 m away traced through it, surface
- * by surface (Snell's law, in the plane of the section). The aperture's blades stop the outer rays;
- * focusing slides the optical unit forward. Where the rays meet the film, a small magnified view
- * shows the spot they make: a point when the lens is focused on the subject, a disc when not.
+ * The light through the lens (photography/camera): the section through the lens to the film
+ * (assets/img/teardown/lens.json, made by _teardown/rangefinder/lens-section.cjs from the lens's
+ * prescription), and the light from one point of a subject 1 m away traced through it, surface by
+ * surface (Snell's law, in the plane of the section). Focusing slides the optical unit forward; the
+ * aperture's blades stop the outer rays. Beside it, the spot that point makes on the film, the
+ * lens's point spread function, for the focus and aperture set (assets/img/teardown/lens-psf.json,
+ * worked out by wave optics in _teardown/rangefinder/lens-psf.cjs with this script's own tracer).
  * Exposes window.CameraLens.figure(element, data, options).
  */
 (function () {
@@ -23,12 +24,13 @@
   // one ray, from a point in a direction, through the lens moved forward by shift; it stops where
   // glass or the blades stop it, or at the film
   function trace(L, from, dir, shift, rStop) {
-    var p = from.slice(), d = dir.slice(), n = 1, pts = [p.slice()], S = L.surfaces;
+    var p = from.slice(), d = dir.slice(), n = 1, pts = [p.slice()], S = L.surfaces, opl = 0;
     for (var i = 0; i < S.length; i++) {
       var s = S[i], zv = s.z - shift, t;
       if (s.stop || s.R === null) {
         t = (zv - p[0]) / d[0];
         p = [p[0] + d[0] * t, p[1] + d[1] * t];
+        opl += n * t;
         pts.push(p.slice());
         if (s.stop) { if (Math.abs(p[1]) > rStop) return { pts: pts, blocked: true }; continue; }
         if (Math.abs(p[1]) > s.clear) return { pts: pts, blocked: true };
@@ -38,6 +40,7 @@
         if (D < 0) return { pts: pts, blocked: true };
         t = s.R > 0 ? -b - Math.sqrt(D) : -b + Math.sqrt(D);
         p = [p[0] + d[0] * t, p[1] + d[1] * t];
+        opl += n * t;
         pts.push(p.slice());
         if (Math.abs(p[1]) > s.clear) return { pts: pts, blocked: true };
         d = refract([-(p[0] - c) / s.R, -p[1] / s.R], d, n, s.n);
@@ -45,10 +48,11 @@
       if (!d) return { pts: pts, blocked: true };
       n = s.n;
     }
+    var last = p.slice(), dir1 = d.slice();
     t = (L.film - p[0]) / d[0];
     p = [p[0] + d[0] * t, p[1] + d[1] * t];
     pts.push(p);
-    return { pts: pts, blocked: false, hit: p[1] };
+    return { pts: pts, blocked: false, hit: p[1], opl: opl, last: last, dir: dir1 };
   }
   // a ray from the subject's point toward a height on the front of the lens
   function fromSubject(L, dist, shift, h, rStop) {
@@ -74,6 +78,67 @@
     }
     return (lo + hi) / 2;
   }
+  /* ---------- the spot on the film, painted from the worked-out table ---------- */
+  // dark, through the light's red and amber, to white; v is already set for the screen (0..255)
+  var LUT = (function () {
+    var t, k, lut = new Uint8ClampedArray(256 * 3);
+    for (k = 0; k < 256; k++) {
+      t = k / 255;
+      lut[k * 3] = 255 * Math.min(1, 0.06 + 1.6 * t);
+      lut[k * 3 + 1] = 255 * Math.min(1, 0.05 + Math.max(0, 1.5 * t - 0.35));
+      lut[k * 3 + 2] = 255 * Math.min(1, 0.045 + Math.max(0, 2.2 * t - 1.3));
+    }
+    return lut;
+  })();
+  function bytes(b64) {
+    var s = atob(b64), a = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+    return a;
+  }
+  // one square view: the canvas sized to the screen's pixels, each pixel the light at its distance
+  // from the middle (rings: the light averaged over each ring; samples: read between them); a scale
+  // bar, bottom left, and, if asked, the square that the closer view shows, each in light ink on
+  // the dark and dark ink on a bright disc
+  function paint(canvas, a, view, bar, box) {
+    var dpr = window.devicePixelRatio || 1, css = canvas.clientWidth || 160;
+    var w = Math.max(96, Math.min(720, Math.round(css * dpr)));
+    if (canvas.width !== w) { canvas.width = w; canvas.height = w; }
+    var ctx = canvas.getContext("2d"), img = ctx.createImageData(w, w), px = img.data;
+    var mm = 2 * view.half / w, n = a.length, ring = !!view.bin, unit = ring ? view.bin : view.step, c = w / 2;
+    // the light at a distance from the middle, in the screen's pixels
+    var at = function (r) {
+      var f = r * mm / unit - (ring ? 0.5 : 0);               // ring k is centred at k + 0.5
+      if (f <= 0) return a[0];
+      var k = f | 0;
+      return k + 1 < n ? a[k] + (a[k + 1] - a[k]) * (f - k) : 0;
+    };
+    for (var y = 0; y < w; y++) {
+      for (var x = 0; x < w; x++) {
+        var o = (y * w + x) * 4, l = (at(Math.sqrt((x + 0.5 - c) * (x + 0.5 - c) + (y + 0.5 - c) * (y + 0.5 - c))) + 0.5 | 0) * 3;
+        px[o] = LUT[l]; px[o + 1] = LUT[l + 1]; px[o + 2] = LUT[l + 2]; px[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    var ink = function (r) { return at(r) > 120 ? "rgba(18, 16, 13, .8)" : "rgba(237, 235, 230, .88)"; };
+    var bx = Math.round(w * 0.07), by = Math.round(w * 0.9), bw = Math.round(bar / (2 * view.half) * w);
+    ctx.fillStyle = ink(Math.sqrt((bx + bw / 2 - c) * (bx + bw / 2 - c) + (by - c) * (by - c)));
+    ctx.fillRect(bx, by, bw, Math.max(2, Math.round(w * 0.012)));
+    if (box) {
+      var lw = Math.max(1, Math.round(dpr)), side = Math.round(box / (2 * view.half) * w), x0 = Math.round(c - side / 2) + (lw % 2) / 2;
+      ctx.strokeStyle = ink(side / 2);
+      ctx.lineWidth = lw;
+      ctx.strokeRect(x0, x0, side, side);
+    }
+  }
+  // a length on the film, for reading
+  function size(d) {
+    if (d === null || d === undefined) return "more than 1.6 mm";
+    if (d >= 1) return d.toFixed(2) + " mm";
+    var u = d * 1000;
+    return (u < 20 ? u.toFixed(1) : Math.round(u)) + " µm";
+  }
+  var LAMBDA = 0.00055;
+
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -83,7 +148,8 @@
   var f2 = function (n) { return Number(n.toFixed(2)); };
 
   /*
-   * figure(holder, data, {subject: mm, focus: mm (Infinity for ∞), stop: f-number, rays: count})
+   * figure(holder, data, {subject: mm, focus: mm (Infinity for ∞), stop: f-number, rays: count,
+   *   spots: lens-psf.json, psfHolder: element for the spot on the film, still: no easing})
    * returns {set({focus, stop}), state()}
    */
   function figure(holder, L, o) {
@@ -102,17 +168,43 @@
     labels.innerHTML = L.labels;
     holder.appendChild(svg);
 
-    // the magnified spot on the film, in a holder of its own beside the drawing
-    var eyeSpot = null, eyeCap = null;
-    if (o.inset) {
-      var eye = document.createElement("figure");
-      eye.className = "ls-eye";
-      eye.innerHTML = '<svg viewBox="-1.25 -1.25 2.5 2.5" aria-hidden="true" focusable="false"><defs><radialGradient id="' + o.inset + '-g"><stop offset="0" stop-color="#fff3e0"/><stop offset=".45" stop-color="#ffb35a"/><stop offset="1" stop-color="#ff4a2e" stop-opacity="0"/></radialGradient></defs>' +
-        '<rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="#15130f"/><circle class="ls-eye__spot" r=".05" fill="url(#' + o.inset + '-g)"/></svg>' +
-        '<figcaption><b>On the film</b>, magnified<span></span></figcaption>';
-      (o.insetHolder || holder).appendChild(eye);
-      eyeSpot = eye.querySelector(".ls-eye__spot");
-      eyeCap = eye.querySelector("figcaption span");
+    // the spot that point makes on the film, in a holder of its own: on the film as it is, and its
+    // middle 25 times closer; read from the table worked out for every focus and aperture
+    var spots = o.spots || null, ui = null;
+    if (o.psfHolder && spots) {
+      var panel = document.createElement("div");
+      panel.className = "ls-psf";
+      panel.innerHTML =
+        '<figure class="ls-psf__view"><canvas width="160" height="160" aria-hidden="true"></canvas><figcaption><b>On the film</b><span>1.6 mm across · bar 0.5 mm</span></figcaption></figure>' +
+        '<figure class="ls-psf__view"><canvas width="160" height="160" aria-hidden="true"></canvas><figcaption><b>The small square, 25× closer</b><span>64 µm across · bar 20 µm</span></figcaption></figure>' +
+        '<p class="ls-psf__read" aria-live="polite"></p>';
+      o.psfHolder.appendChild(panel);
+      var cv = panel.querySelectorAll("canvas");
+      ui = { a: cv[0], b: cv[1], read: panel.querySelector(".ls-psf__read"), at: null, d80: null, width: 0 };
+    }
+    function showSpot() {
+      if (!ui) return;
+      var fi = spots.focus.indexOf(cur.focus === Infinity ? null : cur.focus), si = spots.stops.indexOf(cur.stop);
+      if (fi < 0 || si < 0) return;
+      var s = spots.spots[fi][si];
+      if (!s.wb) { s.wb = bytes(s.w); s.cb = bytes(s.c); }
+      paint(ui.a, s.wb, spots.wide, 0.5, 2 * spots.centre.half);
+      paint(ui.b, s.cb, spots.centre, 0.02);
+      ui.at = [fi, si]; ui.d80 = s.d80; ui.width = ui.a.clientWidth;
+      // each reading ends in a stop that only a screen reader hears
+      var end = '<i class="cm-sr">. </i>';
+      ui.read.innerHTML =
+        "<span>80% of the light within <b>" + size(s.d80) + "</b>" + end + "</span>" +
+        "<span>diffraction alone, the Airy disc: <b>" + (2.44 * LAMBDA * cur.stop * 1000).toFixed(1) + " µm</b>" + end + "</span>" +
+        "<span>light let in: <b>" + (si === 0 ? "wide open" : "1/" + Math.pow(2, si) + " of wide open") + "</b>" + end + "</span>";
+    }
+    // repainted to the screen's pixels when the page is resized
+    if (ui) {
+      var resized = 0;
+      window.addEventListener("resize", function () {
+        clearTimeout(resized);
+        resized = setTimeout(function () { if (ui.a.clientWidth && ui.a.clientWidth !== ui.width) showSpot(); }, 150);
+      });
     }
 
     var cur = { shift: extension(L, o.focus == null ? subject : o.focus), r: rStop2 * 2 / (o.stop || 2), stop: o.stop || 2, focus: o.focus == null ? subject : o.focus };
@@ -155,13 +247,6 @@
       var blur = isFinite(lo) ? hi - lo : 0;
       out.blur = blur;
       spot.setAttribute("d", isFinite(lo) ? "M" + f2(L.film) + " " + f2(-hi - 0.15) + "L" + f2(L.film) + " " + f2(-lo + 0.15) : "");
-      if (eyeSpot) {
-        // the light that gets through falls with the opening's area; spread over the spot, it dims
-        var rad = Math.max(blur / 2, 0.11), amount = Math.pow(rStop / rStop2, 2), level = amount * Math.pow(0.11 / rad, 2);
-        eyeSpot.setAttribute("r", rad.toFixed(3));
-        eyeSpot.setAttribute("opacity", Math.min(1, 0.22 + 0.78 * Math.sqrt(level)).toFixed(3));
-        eyeCap.textContent = blur < 0.15 ? ": a sharp point" : ": a blurred disc, " + blur.toFixed(1) + " mm across";
-      }
     }
     function step() {
       var k = still ? 1 : 0.25;
@@ -172,14 +257,17 @@
       anim = requestAnimationFrame(step);
     }
     draw();
+    showSpot();
     return {
       set: function (s) {
         if (s.focus !== undefined) { cur.focus = s.focus; target.shift = extension(L, s.focus); }
         if (s.stop !== undefined) { cur.stop = s.stop; target.r = rStop2 * 2 / s.stop; }
         if (!anim) anim = requestAnimationFrame(step);
+        showSpot();
       },
-      state: function () { return { shift: cur.shift, r: cur.r, blur: out.blur, focus: cur.focus, stop: cur.stop, target: target.shift, sharp: out.blur < 0.15 }; }
+      state: function () { return { shift: cur.shift, r: cur.r, blur: out.blur, focus: cur.focus, stop: cur.stop, target: target.shift, d80: ui ? ui.d80 : null, spot: ui ? ui.at : null }; }
     };
   }
-  window.CameraLens = { figure: figure, STOPS: STOPS, extension: extension };
+  // the tracer is shared with _teardown/rangefinder/lens-psf.cjs, which works out the spots with it
+  window.CameraLens = { figure: figure, STOPS: STOPS, extension: extension, fromSubject: fromSubject, stopAtF2: stopAtF2 };
 })();

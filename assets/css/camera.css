@@ -1,7 +1,8 @@
 /*
  * The camera, taken apart (photography/camera): a Leica M-style rangefinder drawn with the
  * teardown skill (_teardown/rangefinder). The camera taken apart, with every part picked out on
- * its own; every part listed with what it does; the rangefinder at work. Light ink on the
+ * its own; how it works, in three steps (the lens, with the spot one point makes on the film; the
+ * rangefinder at work; the shutter); every part listed with what it does. Light ink on the
  * photography pages' dark ground, its lines the same width on screen at any size: what moves
  * when the lens is focused in amber, the light in the LED red, the glass in pale blue, the
  * see-through shells dimmed. Phone first.
@@ -143,7 +144,7 @@ button { font: inherit; color: inherit; }
 .cm-fig.cm-fig--shutter { aspect-ratio: auto; min-height: 9rem; cursor: default; touch-action: auto; }
 .cm-fig--shutter svg { height: auto; }
 
-/* ---------- how it works: four steps ---------- */
+/* ---------- how it works: three steps ---------- */
 .cm-how { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
 .cm-step { position: relative; margin: 0 0 clamp(2rem, 7vw, 3.4rem); padding-top: .2rem; }
 .cm-step__n { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; margin: 0 0 .55rem; border: 1px solid var(--td-move); border-radius: 50%; color: var(--td-move); font: 400 .8rem/1 var(--mono); }
@@ -174,11 +175,18 @@ button { font: inherit; color: inherit; }
 .ls-spot { stroke: #ffd27a; stroke-width: 4px; stroke-linecap: round; }
 .ls-label path { stroke: rgba(217, 213, 204, .55); stroke-width: .6px; }
 .ls-label text { fill: var(--td-ink); font: 400 2.5px var(--mono); letter-spacing: .08px; }
-.ls-eye { display: flex; gap: .75rem; align-items: center; margin: 0; }
-.ls-eye svg { flex: none; width: 4.6rem; height: 4.6rem; border-radius: .4rem; box-shadow: 0 0 0 1px rgba(255, 255, 255, .16); }
-.ls-eye__spot { transition: r .25s ease-out, opacity .25s ease-out; }
-.ls-eye figcaption { color: var(--muted); font: 400 .74rem/1.4 var(--mono); }
-.ls-eye figcaption b { color: var(--ink); font-weight: 400; }
+/* the lens's step: the section, the spot on the film, and the two rings to set them */
+.cm-lab { display: grid; gap: .75rem; margin: .7rem 0 1rem; }
+.cm-lab .cm-lens { margin: 0; }
+.cm-lab__ctl .cm-ctl { grid-template-columns: 5.6rem minmax(0, 1fr) auto; padding: .15rem 0; }
+/* the spot one point makes on the film: two square views, and what they measure */
+.ls-psf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .6rem; }
+.ls-psf__view { margin: 0; }
+.ls-psf canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: .4rem; background: #0f0d0b; box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); }
+.ls-psf figcaption { margin-top: .35rem; color: var(--muted); font: 400 .64rem/1.4 var(--mono); }
+.ls-psf figcaption b { display: block; color: var(--ink); font: 500 .76rem/1.3 var(--ui); }
+.ls-psf__read { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .15rem 1.1rem; margin: 0; color: var(--muted); font: 400 .7rem/1.45 var(--mono); }
+.ls-psf__read b { color: var(--td-move); font-weight: 400; }
 
 /* ---------- the part picked out ---------- */
 .cm-pick { display: grid; grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr); gap: .9rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--rule); border-radius: .6rem; background: var(--panel); }
@@ -255,10 +263,21 @@ button { font: inherit; color: inherit; }
 /* wider screens: one readable column per step, the drawings capped so their lettering stays small */
 @media (min-width: 600px) {
   .cm-step { max-width: 54rem; }
-  .cm-lens { max-width: 40rem; }
+  .cm-lens, .cm-lab__ctl { max-width: 40rem; }
+  .ls-psf { max-width: 30rem; }
   .ls-label text { font-size: 2.1px; }
   .cm-step > .cm-fig, .cm-step > .cm-focus__deck { max-width: 54rem; }
 }
+/* wide screens: the spot on the film beside the section, the rings under the section */
+@media (min-width: 1000px) {
+  .cm-step--lens { max-width: 58rem; }
+  .cm-lab { grid-template-columns: minmax(0, 40rem) minmax(0, 14rem); grid-template-areas: "draw psf" "ctl psf"; column-gap: 1.3rem; align-items: start; }
+  .cm-lab .cm-lens { grid-area: draw; }
+  .cm-lab .cm-lens__psf { grid-area: psf; }
+  .cm-lab__ctl { grid-area: ctl; }
+  .ls-psf { grid-template-columns: minmax(0, 1fr); }
+  .ls-psf__read { flex-direction: column; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .cm-layer, .cm-eye__ghost, .td-rangefinder path, .td-rangefinder text, .ls-eye__spot { transition: none; }
+  .cm-layer, .cm-eye__ghost, .td-rangefinder path, .td-rangefinder text { transition: none; }
 }
