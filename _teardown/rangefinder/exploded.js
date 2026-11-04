@@ -170,6 +170,10 @@ self.DrawingModels['rangefinder-exploded'] = (parameters, options) => {
   const gFront = glassGroup('glass-front', 'Front element', ['l1'], 196);
 
   const parts = [cover, rewind, speed, advance, release, vfWin, frame, rfWin, splitter, eye, mirror, lever, rocker, roller, body, shutter, base, cassette, spool, cam, bayonet, helicoid, ring, optics, aperture, gRear, gRearPair, iris, gFrontPair, gFront];
+  // the light's path: the lens's axis, from in front of the front element (moving with it as the
+  // lens comes apart) through every group and the mount to the film inside the body. Drawn as an
+  // axis trail, so the parts it passes behind hide it and the glass does not
+  const trails = [{a: [XL, FRONT + ax(0) + 26, ZL], b: [XL, FRONT - 27.8, ZL], from: 'glass-front', role: 'axis'}];
   const camera = options.camera ?? {azimuth: -42, elevation: 26, roll: 0};
-  return TechnicalProjection.render(parts, {...options, camera});
+  return TechnicalProjection.render(parts, {...options, camera, trails});
 };

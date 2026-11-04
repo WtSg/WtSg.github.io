@@ -130,11 +130,16 @@ button { font: inherit; color: inherit; }
 .td-rangefinder [data-item="exposure"] path { stroke: #ffd27a; }
 .td-rangefinder.has-pick [data-fills] path:not(.is-pick) { opacity: .25; }
 .td-rangefinder.has-pick [data-fills] path.is-pick { fill: #3b2f16; }
+/* the light's path through the camera taken apart: the lens's axis, dashed in the light's red */
+.td-rangefinder [data-light] path { stroke: var(--td-light); stroke-width: 1.4px; stroke-dasharray: 7 4; stroke-linecap: butt; opacity: .95; }
+.td-rangefinder.has-pick [data-light] path { opacity: .35; }
 .cm-legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: .5rem 0 .3rem; color: var(--muted); font: 400 .7rem/1.4 var(--mono); }
 .cm-legend i { display: inline-block; width: .8rem; height: .2rem; margin-right: .35rem; vertical-align: middle; border-radius: 1px; }
 .cm-legend .is-move { background: var(--td-move); }
 .cm-legend .is-slit { background: #ffd27a; }
 .cm-legend .is-light { background: var(--td-light); }
+.cm-legend .is-path { background: repeating-linear-gradient(90deg, var(--td-light) 0 5px, transparent 5px 8px); }
+.cm-legend .is-glass { background: var(--td-glass); }
 .cm-fig.cm-fig--shutter { aspect-ratio: auto; min-height: 9rem; cursor: default; touch-action: auto; }
 .cm-fig--shutter svg { height: auto; }
 
@@ -225,8 +230,9 @@ button { font: inherit; color: inherit; }
   .td-rangefinder [data-line-role="texture"] { stroke-width: .5px; }
 }
 @media (min-width: 1000px) {
-  .cm-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); grid-template-areas: "h h" "ctl ctl" "fig pick" "hint pick"; column-gap: 1.2rem; align-items: start; }
+  .cm-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); grid-template-areas: "h h" "ctl ctl" "fig pick" "key pick" "hint pick"; column-gap: 1.2rem; align-items: start; }
   .cm-stage > .cm-h2 { grid-area: h; }
+  .cm-stage > .cm-legend { grid-area: key; }
   .cm-stage > .cm-ctl { grid-area: ctl; max-width: 40rem; }
   .cm-stage > .cm-fig { grid-area: fig; }
   .cm-stage > .cm-hint { grid-area: hint; }

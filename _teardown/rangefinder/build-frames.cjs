@@ -109,8 +109,8 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
   const runs = STEPS.map(t => models['rangefinder-exploded']({}, {explosion: ease(t), fitExplosion: 1, isolated: null, fill: true, annotate: true, labels: t === 1}));
   const crop = cropper(), inkOnly = cropper();
   runs.forEach(r => {
-    crop.ink(r.markup);
-    inkOnly.ink(r.markup.replace(/<g data-annotations="">[\s\S]*?<\/g>/, ''));
+    crop.ink(r.markup.replace('<g data-trails="">', '<g data-light="">'));
+    inkOnly.ink(r.markup.replace(/<g data-annotations="">[\s\S]*?<\/g>/, '').replace('<g data-trails="">', '<g data-light="">'));
     for (const [, x, y, anchor, text] of r.markup.matchAll(/<text[^>]* x="([^"]*)" y="([^"]*)"[^>]*text-anchor="([^"]*)"[^>]*>([^<]*)<\/text>/g)) crop.text(+x, +y, anchor, text);
   });
   // each label, its leader and its dot carry the id of the part they name, so a page can pick one out
@@ -121,7 +121,8 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
     const f = ` data-for="${id}"`;
     return l.replace('<path', '<path' + f) + c.replace('<circle', '<circle' + f) + t.replace('<text', '<text' + f) + '>' + name + '</text>';
   });
-  const data = pack(runs.map(r => groupsOf(tag(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '').replace(/font-size="3\.2"/g, `font-size="${LABEL}"`)))), {
+  // (the light's path is kept: an axis trail through the lens; it marks the groups data-light)
+  const data = pack(runs.map(r => groupsOf(tag(r.markup.replace('<g data-trails="">', '<g data-trails="" data-light="">').replace(/font-size="3\.2"/g, `font-size="${LABEL}"`)))), {
     viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(inkOnly.box).join(' '), steps: STEPS.length,
     title: 'A Leica M-style camera taken apart: the top cover and its dials, the viewfinder and rangefinder parts, the body, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis'
   });
