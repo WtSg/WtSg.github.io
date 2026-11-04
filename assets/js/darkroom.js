@@ -19,8 +19,12 @@
   var body = document.body;
   function mq(q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; }
   // Straight to a place on the page, past the page's smooth scrolling (Safari before 15.4
-  // does not know "instant" and throws).
+  // does not know "instant" and throws), with the page's snapping off for the moment: Safari
+  // on iOS does not always scroll a page that snaps to where it is told (WebKit bug 245722).
+  var snapOff = 0;
   function jumpTo(y) {
+    snapOff++;
+    root.style.scrollSnapType = "none";
     try { window.scrollTo({ top: y, behavior: "instant" }); }
     catch (e) {
       var was = root.style.scrollBehavior;
@@ -28,6 +32,10 @@
       window.scrollTo(0, y);
       root.style.scrollBehavior = was;
     }
+    // snapping back on once the page is there, so it does not pull the page anywhere
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { if (--snapOff === 0) root.style.scrollSnapType = ""; });
+    });
   }
   var reduce = mq("(prefers-reduced-motion: reduce)");
   var fine = mq("(hover: hover) and (pointer: fine)");
@@ -596,10 +604,36 @@
     }
     function onScroll() {
       queued = false;
-      ctrl.setProgress(progress());
+      var pr = progress();
+      // a swipe on a phone goes one print on at most (below)
+      if (swipe) { pr = Math.max(swipe.lo, Math.min(swipe.hi, pr)); settleLater(); }
+      ctrl.setProgress(pr);
       wanted = indexFromScroll();
       if (window.pageYOffset - wrapTop > stepPx * 0.08) hudHint.classList.add("is-gone");
     }
+    // On a phone the page scrolls itself, and its snap points stop a swipe at the next print.
+    // Where a swipe's glide carries the page past it all the same, the scene is held to one
+    // print on from where the finger landed, and once the page has come to rest it is put
+    // back on that print.
+    var swipe = null, touching = false, settleT = 0;
+    function settleLater() { clearTimeout(settleT); settleT = setTimeout(settle, 160); }
+    function settle() {
+      if (touching || !swipe) return;
+      var at = (window.pageYOffset - wrapTop) / stepPx, s = swipe;
+      swipe = null;
+      if (at > s.hi + 0.02 && s.hi >= 0 && s.hi <= N) go(s.hi);
+      else if (at < s.lo - 0.02 && s.lo >= 0 && s.lo <= N) go(s.lo);
+      else ctrl.setProgress(progress());
+    }
+    window.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1 || (dialog && dialog.open)) { swipe = null; return; }
+      touching = true;
+      var at = (window.pageYOffset - wrapTop) / stepPx, from = at < -0.02 ? -1 : Math.round(at);
+      swipe = { lo: from - 1, hi: from + 1 };
+    }, { passive: true });
+    function touchEnd() { touching = false; if (swipe) settleLater(); }
+    window.addEventListener("touchend", touchEnd, { passive: true });
+    window.addEventListener("touchcancel", touchEnd, { passive: true });
     window.addEventListener("scroll", function () {
       if (!queued) { queued = true; requestAnimationFrame(onScroll); }
     }, { passive: true });
@@ -616,9 +650,10 @@
       jumpTo(wrapTop + i * stepPx);
     }
     // One scroll, one print (the owner: "in each scroll ... put one image on the hanger",
-    // "the scroll is too sensitive"): a turn of the wheel or a swipe on a trackpad, glide and
-    // all, moves the page on by exactly one print, however hard it is, and the scene plays
-    // that print's whole step. Another swipe adds one more.
+    // "the scroll is too sensitive", then "sometimes I scroll once, it shows multiple images"):
+    // a turn of the wheel or a swipe on a trackpad, glide and all, moves the page on by exactly
+    // one print, however hard it is, and the scene plays that print's whole step. Another swipe
+    // adds one more.
     function step(dir) { go(indexFromScroll() + dir); }
     // Where the page is within the prints, or -1 above them, N + 1 below (the footer).
     function band() {
@@ -627,25 +662,52 @@
       if (y > N * stepPx + 2) return N + 1;
       return Math.round(y / stepPx);
     }
-    var wheelLast = 0, wheelStep = 0, wheelLow = Infinity;
+    // A new push of the wheel starts after a pause, or rises out of a glide that had been dying
+    // away (fingers back on the pad); the rest of a push, and its glide, only carry it. Read by
+    // the events' own clock (when the device sent them), and how hard an event pushes is its
+    // distance per 16 ms of that clock. While the page is too busy to draw, a browser holds the
+    // wheel's events back and hands them over merged into one: a long gap then, but carrying
+    // the glide at its own pace, which is not a pause. And two steps are never closer than
+    // STEP_GAP, so nothing one gesture does can take two prints.
+    var STEP_GAP = 650;
+    var wh = { t: -1e9, d: 0, v: 0, rising: false, calm: -1e9, calmTop: 0, riseOn: false, low: Infinity, push: -1e9, stepAt: -1e9 };
+    function wheelPush(e, dy) {
+      var now = performance.now();
+      // (the page's clock; a browser that stamps events in epoch time gets the page's own time)
+      var t = e.timeStamp > 0 && e.timeStamp < 1e11 ? e.timeStamp : now;
+      var d = Math.abs(dy), gap = t - wh.t, v = d * 16 / Math.min(1000, Math.max(16, gap));
+      // merged: several events' distance in one, and no faster than the glide was going (a new
+      // swipe starts small; a mouse wheel's clicks are all one size)
+      var merged = wh.v >= 3 && d >= wh.d * 3 && v <= wh.v * 1.5 && gap < 2500;
+      wh.t = t; wh.d = d;
+      var pause = gap > 220 && !merged;
+      // a rise: harder than the event before. It counts as fingers back on the pad only if
+      // what came before it was a glide: easing off for a quarter second at least, to under
+      // half of where it started (a slow, uneven push of the fingers is not a glide)
+      if (v > wh.v * 1.15 + 1) {
+        if (!wh.rising) { wh.rising = true; wh.riseOn = t - wh.calm > 250 && wh.v < wh.calmTop * 0.5; }
+      } else if (wh.rising) { wh.rising = false; wh.calm = t; wh.calmTop = v; wh.riseOn = false; }
+      else if (v > wh.calmTop) wh.calmTop = v;
+      wh.v = v;
+      var rise = wh.rising && wh.riseOn && t - wh.push > 400 && v > 20 && v > wh.low * 2 + 12;
+      if (pause || rise) { wh.push = t; wh.low = Infinity; wh.riseOn = false; }
+      else if (t - wh.push > 250) wh.low = Math.min(wh.low, v);
+      return { fresh: pause || rise, pause: pause, t: t };
+    }
     window.addEventListener("wheel", function (e) {
       if ((dialog && dialog.open) || e.ctrlKey) return;
       var dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
       if (!dy || Math.abs(dy) < Math.abs(e.deltaX)) return;
-      var dir = dy > 0 ? 1 : -1, at = band(), t = performance.now(), gap = t - wheelLast, mag = Math.abs(dy);
-      wheelLast = t;
+      // every event is read, the ones above and below the prints too, so a swipe that scrolls
+      // the page down onto the first print has had its push there and only glides on
+      var w = wheelPush(e, dy), dir = dy > 0 ? 1 : -1, at = band();
       // above the prints or below them, the page scrolls as usual
       if (at < 0 || at > N || (at === 0 && dir < 0)) return;
       // past the last print: the glide of the swipe that brought it up stays here, a new swipe goes on down
-      if (at === N && dir > 0) { if (gap < 220) e.preventDefault(); return; }
+      if (at === N && dir > 0) { if (!w.pause) e.preventDefault(); return; }
       e.preventDefault();
-      // A new gesture after a pause, or a fresh swipe on top of a dying glide: the glide only
-      // ever slows, so a swipe shows as the push rising well above where it had sunk to.
-      var fresh = gap > 220 || (t - wheelStep > 400 && mag > 20 && mag > wheelLow * 2 + 12);
-      // (the low point counts from a quarter second in, once the fingers have pushed it up)
-      wheelLow = fresh ? Infinity : t - wheelStep > 250 ? Math.min(wheelLow, mag) : wheelLow;
-      if (!fresh) return;
-      wheelStep = t;
+      if (!w.fresh || w.t - wh.stepAt < STEP_GAP) return;
+      wh.stepAt = w.t;
       step(dir);
     }, { passive: false });
     // The keyboard list: focusing a print brings it to the tray; pressing opens it.
