@@ -73,7 +73,9 @@
 .fg.is-holding .fg__finder { cursor: grabbing; }
 .fg__vf { display: block; width: 100%; height: 100%; }
 .fg.is-title .fg__finder, .fg.is-play .fg__gl { display: none; }
-.fg.is-title .fg__readout, .fg.is-title .fg__time, .fg.is-title .fg__strip, .fg.is-title .fg__hint { visibility: hidden; }
+/* on the title the camera has the whole height: the readout and the roll below are not there yet */
+.fg.is-title .fg__main { grid-row: 2 / -1; }
+.fg.is-title .fg__readout, .fg.is-title .fg__time, .fg.is-title .fg__strip, .fg.is-title .fg__hint { display: none; }
 
 /* the shutter: one dark curtain across the finder and away */
 .fg__curtain { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .25), rgba(8, 8, 8, .92) 18%, rgba(8, 8, 8, .92) 82%, rgba(0, 0, 0, .25)); transform: translateX(-102%); pointer-events: none; }
