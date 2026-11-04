@@ -4,7 +4,8 @@
 // a camera is loaded), and the lens spread along its axis. An illustrative concept on the same
 // layout and dimensions as model.js (the classic coincident-image rangefinder, not any one
 // camera's construction; no maker's name or mark). Seen from behind, as the photographer holds
-// it: the viewfinder at the left end, the rangefinder window at the right.
+// it: the viewfinder at the left end, the rangefinder window at the right. Needs optics.js loaded
+// first (self.LensOptics), for the lens's glass.
 self.DrawingModels ??= {};
 self.DrawingModels['rangefinder-exploded'] = (parameters, options) => {
   const G = TechnicalGeometry;
@@ -112,38 +113,63 @@ self.DrawingModels['rangefinder-exploded'] = (parameters, options) => {
   G.lathe(spool, [[0, 0], [0, 9], [1.6, 9], [1.6, 6.4], [36, 6.4], [36, 9], [37.6, 9], [37.6, 0]], {axis: 'z', at: [47, -2, 6], segments: 72});
   for (const a of [0.4, 2.5, 4.6]) G.line(spool, [47 + 6.45 * Math.cos(a), -2 + 6.45 * Math.sin(a), 12], [47 + 6.45 * Math.cos(a), -2 + 6.45 * Math.sin(a), 36], 'detail');
 
-  // The lens, set at infinity and spread along its axis: the cam, the bayonet, the helicoid,
-  // the focus ring with its tab, the aperture ring, the optical unit
-  const STEP = 21;
-  const cam = G.part('cam', 'Focusing cam', [0, STEP * 2, 0]);
+  // The lens, set at infinity and spread along its axis, built to the same section as the light's
+  // drawing (lens-section.cjs) and holding the same glass (optics.js): the focusing cam, the
+  // bayonet, the helicoid's sleeve, the focus ring with its tab, the optical unit that slides in
+  // the sleeve, the aperture ring; then, out of the front of the unit in their order, the rear
+  // element, the rear cemented pair, the aperture blades, the front pair and the front element.
+  const O = self.LensOptics, FLANGE = 38.8;                 // the lens's flange, in the glass's own axis coordinates
+  const ax = z => FLANGE - z;                               // from the glass's axis (front vertex 0) to ours
+  const lensAt = [XL, FRONT, ZL];
+  const cam = G.part('cam', 'Focusing cam', [0, 20, 0]);
   G.lathe(cam, [[0, 12], [0, 19.5], [3, 19.5], [3, 12]], {axis: 'y', at: [XL, 10.5, ZL], segments: 120});
-  const bayonet = G.part('bayonet', 'Lens bayonet', [0, STEP * 3, 0]);
-  G.lathe(bayonet, [[0, 11.5], [0, 25], [2.5, 25], [2.5, 22.5], [4.5, 22.5], [4.5, 20], [2.5, 20], [2.5, 11.5]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
-  for (const a of [0.3, 2.4, 4.5]) G.lathe(bayonet, [[0, 20.2], [0, 23.4], [2.6, 23.4], [2.6, 20.2]], {axis: 'y', at: [XL, FRONT - 2.6, ZL], start: a, end: a + 0.75, segments: 120});
-  G.line(bayonet, [XL, FRONT + 2.7, ZL + 22.55], [XL, FRONT + 4.4, ZL + 22.55], 'detail');
-  const helicoid = G.part('helicoid', 'Helicoid', [0, STEP * 4, 0]);
-  G.lathe(helicoid, [[0, 19], [0, 20.4], [9, 20.4], [9, 19]], {axis: 'y', at: [XL, FRONT + 4.5, ZL], segments: 120});
-  G.merge(helicoid, G.transform(G.helix(G.piece(), {x0: 0.6, x1: 8.4, radius: 20.45, pitch: 1.6, role: 'texture'}), onY(XL, FRONT + 4.5, ZL)));
-  const ring = G.part('focus-ring', 'Focus ring and tab', [0, STEP * 5, 0]);
-  G.lathe(ring, [[4.6, 20.5], [4.6, 23], [7, 23], [7, 24], [13, 24], [13, 20.5]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
-  ribs(ring, 30, 24.05, FRONT + 8, FRONT + 12);
+  const bayonet = G.part('bayonet', 'Lens bayonet', [0, 26, 0]);
+  G.lathe(bayonet, [[0, 20.3], [0, 25.6], [2.4, 25.6], [2.4, 20.3]], {axis: 'y', at: lensAt, segments: 120});
+  for (const a of [0.3, 2.4, 4.5]) G.lathe(bayonet, [[0, 20.6], [0, 23.4], [2.6, 23.4], [2.6, 20.6]], {axis: 'y', at: [XL, FRONT - 2.6, ZL], start: a, end: a + 0.75, segments: 120});
+  G.line(bayonet, [XL, FRONT + 0.4, ZL + 25.65], [XL, FRONT + 2, ZL + 25.65], 'detail');
+  const helicoid = G.part('helicoid', 'Helicoid', [0, 32, 0]);
+  G.lathe(helicoid, [[0, 17.8], [0, 20.3], [30.6, 20.3], [30.6, 17.8]], {axis: 'y', at: lensAt, segments: 120});
+  G.merge(helicoid, G.transform(G.helix(G.piece(), {x0: 0.8, x1: 29.8, radius: 20.35, pitch: 1.1, role: 'texture'}), onY(XL, FRONT, ZL)));
+  const ring = G.part('focus-ring', 'Focus ring and tab', [0, 56, 0]);
+  G.lathe(ring, [[ax(29), 20.3], [ax(29), 23.2], [ax(18), 23.2], [ax(18), 20.3]], {axis: 'y', at: lensAt, segments: 120});
+  ribs(ring, 30, 23.25, FRONT + ax(26.5), FRONT + ax(19.2));
   {
     const a = -2.35, u = [Math.sin(a), 0, Math.cos(a)], w = [Math.cos(a), 0, -Math.sin(a)];   // the tab, below and to the left
-    G.merge(ring, G.transform(G.extrude(G.piece(), [[23.5, -3.4], [29, -2.4], [29.6, 0], [29, 2.4], [23.5, 3.4]], {depth: 5}), {origin: [XL, FRONT + 6.5, ZL], xAxis: u, yAxis: w, zAxis: [0, 1, 0]}));
+    G.merge(ring, G.transform(G.extrude(G.piece(), [[22.8, -3.4], [28.3, -2.4], [28.9, 0], [28.3, 2.4], [22.8, 3.4]], {depth: 5}), {origin: [XL, FRONT + ax(23.5) - 2.5, ZL], xAxis: u, yAxis: w, zAxis: [0, 1, 0]}));
   }
   for (const d of [0, 1 / 3, 1 / 2, 1 / 1.5, 1, 1 / 0.7]) {
     const a = -d * 70 * Math.PI / 180;
-    G.line(ring, [XL + 23.05 * Math.sin(a), FRONT + 4.7, ZL + 23.05 * Math.cos(a)], [XL + 23.05 * Math.sin(a), FRONT + (d ? 6.1 : 6.9), ZL + 23.05 * Math.cos(a)], 'detail');
+    G.line(ring, [XL + 23.25 * Math.sin(a), FRONT + ax(29) + 0.2, ZL + 23.25 * Math.cos(a)], [XL + 23.25 * Math.sin(a), FRONT + ax(29) + (d ? 1.4 : 2.2), ZL + 23.25 * Math.cos(a)], 'detail');
   }
-  const aperture = G.part('aperture', 'Aperture ring', [0, STEP * 6.2, 0]);
-  G.lathe(aperture, [[22, 20.8], [22, 22.6], [27, 22.6], [27, 20.8]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
-  ribs(aperture, 24, 22.65, FRONT + 22.6, FRONT + 26.4);
-  const optics = G.part('optics', 'Optical unit', [0, STEP * 7.6, 0]);
-  G.lathe(optics, [[13, 0], [13, 20], [21.8, 20], [21.8, 19.4], [27.2, 19.4], [27.2, 21], [33, 21], [33, 20], [34, 20], [34, 0]], {axis: 'y', at: [XL, FRONT, ZL], segments: 120});
-  G.circle(optics, [XL, FRONT + 34.05, ZL], 15, [0, 1, 0], {role: 'detail', segments: 96});
-  G.circle(optics, [XL, FRONT + 34.05, ZL], 17.5, [0, 1, 0], {role: 'detail', segments: 96});
+  // the optical unit: the barrel holding the glass, stepped inside to each group's rim
+  const optics = G.part('optics', 'Optical unit', [0, 82, 0]);
+  G.lathe(optics, [[2.4, 17.5], [40.2, 17.5], [40.2, 10.6], [39.0, 10.6], [39.0, 12.0], [21.9, 12.0], [21.9, 13.5], [7.6, 13.5], [7.6, 15.0], [4.0, 15.0], [4.0, 13.6], [2.4, 13.6]].map(([z, r]) => [ax(z), r]), {axis: 'y', at: lensAt, segments: 120});
+  const aperture = G.part('aperture', 'Aperture ring', [0, 92, 0]);
+  G.lathe(aperture, [[ax(7.4), 17.5], [ax(7.4), 20.2], [ax(2.4), 20.2], [ax(2.4), 17.5]], {axis: 'y', at: lensAt, segments: 120});
+  ribs(aperture, 24, 20.25, FRONT + ax(6.6), FRONT + ax(3.2));
+  // the glass, from optics.js: four groups (two cemented pairs), and the blades between them
+  const glassGroup = (id, name, els, dy) => {
+    const g = G.part(id, name, [0, dy, 0]);
+    for (const e of els) G.lathe(g, O.profile(O.elements.find(x => x.id === e), 14).map(([z, h]) => [ax(z), h]), {axis: 'y', at: lensAt, segments: 72, creaseAngle: 30});
+    g.transparent = true;
+    return g;
+  };
+  const gRear = glassGroup('glass-rear', 'Rear element', ['l6'], 128);
+  const gRearPair = glassGroup('glass-rear-pair', 'Rear cemented pair', ['l4', 'l5'], 146);
+  const iris = G.part('iris', 'Aperture blades', [0, 162, 0]);
+  {
+    const zs = O.surfaces[O.stopIndex].z, y = FRONT + ax(zs), open = 7.37, wall = 13.4;
+    G.lathe(iris, [[ax(zs) - 0.25, open], [ax(zs) - 0.25, wall], [ax(zs) + 0.25, wall], [ax(zs) + 0.25, open]], {axis: 'y', at: lensAt, segments: 96});
+    for (let i = 0; i < 10; i++) {      // the blades' edges, curving in from the wall to the opening
+      const pts = [];
+      for (let k = 0; k <= 8; k++) { const r = wall - (wall - open) * k / 8, t = i / 10 * Math.PI * 2 + k / 8 * 0.9; pts.push([XL + r * Math.cos(t), y - 0.26, ZL + r * Math.sin(t)]); }
+      G.polyline(iris, pts, {role: 'detail'});
+    }
+  }
+  const gFrontPair = glassGroup('glass-front-pair', 'Front cemented pair', ['l2', 'l3'], 176);
+  const gFront = glassGroup('glass-front', 'Front element', ['l1'], 196);
 
-  const parts = [cover, rewind, speed, advance, release, vfWin, frame, rfWin, splitter, eye, mirror, lever, rocker, roller, body, shutter, base, cassette, spool, cam, bayonet, helicoid, ring, aperture, optics];
+  const parts = [cover, rewind, speed, advance, release, vfWin, frame, rfWin, splitter, eye, mirror, lever, rocker, roller, body, shutter, base, cassette, spool, cam, bayonet, helicoid, ring, optics, aperture, gRear, gRearPair, iris, gFrontPair, gFront];
   const camera = options.camera ?? {azimuth: -42, elevation: 26, roll: 0};
   return TechnicalProjection.render(parts, {...options, camera});
 };

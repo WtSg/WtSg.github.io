@@ -69,21 +69,38 @@
       text: Comes off to load the film, since the camera loads from the bottom. A key underneath locks it in place.
 - group: The lens
   parts:
-    - id: cam
-      name: Focusing cam
-      text: A ring at the back of the lens that moves as the lens is focused. The camera's roller rests on it, so the cam tells the rangefinder where the lens is focused.
-    - id: bayonet
-      name: Lens bayonet
-      text: Locks the lens into the camera's mount with a short twist.
-    - id: helicoid
-      name: Helicoid
-      text: A fine thread inside the lens. Turning the focus ring screws the glass forward, away from the film, for nearer subjects.
     - id: focus-ring
       name: Focus ring and tab
       text: Turned to focus, often by the small tab underneath, under one fingertip. Its scale shows the distance the lens is focused at.
     - id: aperture
       name: Aperture ring
-      text: Sets the size of the opening inside the lens, how much light comes through and how deep the sharp zone is.
+      text: Turned to set the aperture. It opens and closes the blades inside the lens.
     - id: optics
       name: Optical unit
-      text: The lens's glass in its barrel. It forms the picture on the film.
+      text: The barrel that holds all the glass. Turning the focus ring screws it forward, away from the film, for nearer subjects.
+    - id: helicoid
+      name: Helicoid
+      text: A fine thread around the optical unit. As the focus ring turns, it screws the unit forward or back.
+    - id: cam
+      name: Focusing cam
+      text: A ring at the back of the lens that moves with the optical unit. The camera's roller rests on it, so the cam tells the rangefinder where the lens is focused.
+    - id: bayonet
+      name: Lens bayonet
+      text: Locks the lens into the camera's mount with a short twist.
+- group: The lens's glass
+  parts:
+    - id: glass-front
+      name: Front element
+      text: The first glass the light meets. Its curves start bending the light from every point of the scene towards a point behind the lens.
+    - id: glass-front-pair
+      name: Front cemented pair
+      text: Two kinds of glass cemented together. Each bends colours a little differently, and paired they cancel the coloured fringes one glass alone would leave.
+    - id: iris
+      name: Aperture blades
+      text: Thin blades between the two halves of the glass. Closed down, they leave a smaller opening, so less light gets through and more of the scene is sharp.
+    - id: glass-rear-pair
+      name: Rear cemented pair
+      text: Nearly the front pair's mirror image, on the far side of the blades. Two halves so alike cancel much of each other's distortion.
+    - id: glass-rear
+      name: Rear element
+      text: The last glass, closest to the film. It brings the light to its point on the film.

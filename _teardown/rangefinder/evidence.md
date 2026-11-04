@@ -9,8 +9,14 @@ maker's name or mark.
 
 - `model.js` (`rangefinder`): the rangefinder at work. Seen from behind, as the photographer holds
   the camera, the shell drawn see-through. One parameter, the distance the lens is focused at.
-- `exploded.js` (`rangefinder-exploded`): the camera taken apart, from the same side, in 25
-  parts, each also drawn on its own for the page's part cards.
+- `exploded.js` (`rangefinder-exploded`): the camera taken apart, from the same side, in 30
+  parts (the lens's glass in its four groups and the aperture blades among them), each also
+  drawn on its own for the page's part cards.
+- `optics.js`: the lens's glass, shared by the camera taken apart and the section below.
+- `lens-section.cjs`: a section through the lens to the film (`assets/img/teardown/lens.json`);
+  the page traces the light through it (`assets/js/camera-lens.js`).
+- `shutter.js` (`shutter-film`): the shutter caught mid-travel and the film behind it, seen from
+  the lens's side.
 
 Orientation, as the owner asked: from the photographer's side the viewfinder's big window (and
 the eyepiece behind it) is at the left end of the top cover, the rangefinder's small window at
@@ -33,13 +39,18 @@ reading on a screen, and dropped on screens narrower than 600 px.
 | Light from the subject, and the rangefinder's line of sight | Concepts with no physical form | Lines; the mirror is the exact bisector of the line of sight and the path across to the half-silvered mirror, so the line of sight crosses the viewfinder's where the lens is focused |
 | Angles and travel | Real parallax angles are a few degrees at most (about 5.6° at 0.7 m, 3.9° at 1 m), invisible on paper | The parallax angle, and the mirror's swing with it, drawn nine times their size; the lens's travel comes out at 6.7 mm at 0.7 m, nearly twice a 50 mm lens's 3.9 mm. The page says "not to scale" |
 | The subject 1 m away | Concept | A post, at the distance (nine-times angles) where the two lines of sight meet when the lens is focused at 1 m |
+| The lens's glass: six elements in four groups (a front element, a cemented pair, the aperture blades, a cemented pair, a rear element) | The classic double-Gauss form, the textbook design scaled to a 50 mm focal length; the layout of many 50 mm lenses | Illustrative: not any one lens's prescription and named for none. Ray-traced: about 49.8 mm focal length, the film 28.7 mm behind the last glass (27.8 mm behind the bayonet's face), every element's edge of positive thickness; at f/2 the light from infinity meets within 0.03 mm |
+| The light through the lens | Concept, computed | Traced surface by surface with Snell's law in the plane of the section, from a point 1 m from the film; the aperture's opening for each f-number from the f/2 marginal ray; the optical unit's travel for each distance found by tracing. Glass outside an element's clear aperture stops the light |
+| The section's barrel, rings, bayonet, film and pressure plate | Hidden construction | Illustrative proportions, drawn to the skill's section conventions: cut solids hatched (the moving optical unit one way, the fixed parts the other), glass left clear with a pale tint, one centreline |
+| The shutter mid-travel and the film path | Features of two-curtain focal-plane shutters and bottom-loading 35 mm cameras | Illustrative: a 36 × 24 frame, 35 mm film with its perforations, the slit between the curtains at one moment of their travel |
 
 ## Rebuild and proof
 
 From `_teardown/rangefinder/`:
 
 ```sh
-node build-frames.cjs      # writes ../../assets/img/teardown/rangefinder-action.json, -apart.json and -parts.json
+node build-frames.cjs      # writes ../../assets/img/teardown/rangefinder-action.json, -apart.json, -parts.json and shutter.json
+node lens-section.cjs      # writes ../../assets/img/teardown/lens.json
 PATH="$PWD/../.bin:$PATH" node ../tools/scripts/proof.cjs drawing.json proof/ --quick
 ```
 
