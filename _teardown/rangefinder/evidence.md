@@ -15,6 +15,10 @@ maker's name or mark.
 - `optics.js`: the lens's glass, shared by the camera taken apart and the section below.
 - `lens-section.cjs`: a section through the lens to the film (`assets/img/teardown/lens.json`);
   the page traces the light through it (`assets/js/camera-lens.js`).
+- `lens-psf.cjs`: the spot that one point of the subject makes on the film, the lens's point
+  spread function, for each of the lens's eleven distance settings and seven apertures
+  (`assets/img/teardown/lens-psf.json`); the page paints it beside the section as the focus and
+  aperture sliders move.
 - `shutter.js` (`shutter-film`): the shutter caught mid-travel and the film behind it, seen from
   the lens's side.
 
@@ -42,6 +46,7 @@ reading on a screen, and dropped on screens narrower than 600 px.
 | The lens's glass: six elements in four groups (a front element, a cemented pair, the aperture blades, a cemented pair, a rear element) | The classic double-Gauss form, the textbook design scaled to a 50 mm focal length; the layout of many 50 mm lenses | Illustrative: not any one lens's prescription and named for none. Ray-traced: about 49.8 mm focal length, the film 28.7 mm behind the last glass (27.8 mm behind the bayonet's face), every element's edge of positive thickness; at f/2 the light from infinity meets within 0.03 mm |
 | The light's path through the camera taken apart | Concept with no physical form | The lens's axis, drawn as an axis trail from in front of the front element (moving with it as the lens comes apart) to the film inside the body; the parts it passes behind hide it, the glass does not |
 | The light through the lens | Concept, computed | Traced surface by surface with Snell's law in the plane of the section, from a point 1 m from the film; the aperture's opening for each f-number from the f/2 marginal ray; the optical unit's travel for each distance found by tracing. Glass outside an element's clear aperture stops the light |
+| The spot on the film (the lens's point spread function) | Concept, computed | Wave optics for green light (550 nm): every ray from a point 1 m from the film traced with the page's own tracer (`camera-lens.js`, run in Node), its optical path to a sphere centred on the film's axis point giving the wavefront, and the Debye integral of the round pupil (a Hankel transform, J0 from Abramowitz and Stegun 9.4.1 and 9.4.3) giving the light on the film. 7,200 rays across the pupil (the phase between neighbours at most 0.27 rad); the light on the film adds up to 99.7–100% of the light through the pupil in all 77 states. The lens focused as the drawing and the rangefinder's cam focus it, where the rays near the axis meet; this textbook design then leaves, wide open, a halo from the outer zones of the glass, whose light meets up to 0.2 mm in front of the film (spherical aberration). 80% of the light within 75 µm at f/2, 51 at f/2.8, 20 at f/4, 10 at f/5.6, 8.6 at f/8, 12 at f/11, 17 at f/16; focused at ∞, 1.11 mm at f/2 and 0.14 mm at f/16. Each view scaled to its own brightest and gamma-encoded (0.45) for the screen; the 1.6 mm view averages the light over rings 4 µm wide, as a pixel would collect it |
 | The section's barrel, rings, bayonet, film and pressure plate | Hidden construction | Illustrative proportions, drawn to the skill's section conventions: cut solids hatched (the moving optical unit one way, the fixed parts the other), glass left clear with a pale tint, one centreline |
 | The shutter mid-travel and the film path | Features of two-curtain focal-plane shutters and bottom-loading 35 mm cameras | Illustrative: a 36 × 24 frame, 35 mm film with its perforations, the slit between the curtains at one moment of their travel |
 
@@ -52,6 +57,7 @@ From `_teardown/rangefinder/`:
 ```sh
 node build-frames.cjs      # writes ../../assets/img/teardown/rangefinder-action.json, -apart.json, -parts.json and shutter.json
 node lens-section.cjs      # writes ../../assets/img/teardown/lens.json
+node lens-psf.cjs          # writes ../../assets/img/teardown/lens-psf.json (about 10 s; after lens.json)
 PATH="$PWD/../.bin:$PATH" node ../tools/scripts/proof.cjs drawing.json proof/ --quick
 ```
 
@@ -64,6 +70,10 @@ their leaders follow the moving parts; taken apart, the parts are named only whe
 prints, for each distance, the mirror's swing, the lens's travel and the linkage's checks (the pin
 inside the rocker's slot, the roller on the cam's face).
 
+`lens-psf.cjs` prints, for each distance and aperture, the diameter holding 80% of the light, how
+much of the light the calculation holds and the largest phase step between neighbouring rays, and
+stops if the light does not add up or the rays are too sparse.
+
 The proof script looks for `chromium` on the PATH; `../.bin/chromium` (not kept in the repository)
 was a two-line wrapper running the build machine's headless Chrome with `--no-sandbox`.
 
@@ -71,4 +81,5 @@ Checked: the quick proofs of both drawings; renders of the frames at ∞, 1 m an
 camera together, half apart and apart; the linkage figures (slot 6.9–8.0 mm of 5.6–9.6, the roller
 on the cam at 15.5–16.4 mm from the lens's axis, within the cam's 12–19.5 mm). On the page, at
 430 × 932, 390 × 844 and 1280 × 800, the page (sliders, drag, picking a part by tap, list and
-keys, every part's own drawing, the finder) was checked in a browser.
+keys, every part's own drawing, the finder, the lens's focus and aperture together with the spot
+on the film, in focus and not, f/2 to f/16) was checked in a browser.

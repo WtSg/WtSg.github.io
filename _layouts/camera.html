@@ -40,7 +40,7 @@
       <p class="cm-note">An illustration of the classic rangefinder layout, not any one camera's construction. Seen from behind, as you hold it, unless a drawing says otherwise.</p>
       <ol class="cm-toc" aria-label="On this page">
         <li><a href="#apart">Take it apart</a></li>
-        <li><a href="#how">How it works, in four steps</a></li>
+        <li><a href="#how">How it works, in three steps</a></li>
         <li><a href="#parts">Every part</a></li>
       </ol>
     </section>
@@ -77,38 +77,37 @@
       </article>
     </section>
 
-    <!-- How it works: four steps, each one drawing and at most one control -->
+    <!-- How it works: three steps, each with its drawing and the controls that work it -->
     <section class="cm-how" id="how" aria-labelledby="cm-how-h">
-      <h2 class="cm-h2" id="cm-how-h">How it works, in four steps</h2>
+      <h2 class="cm-h2" id="cm-how-h">How it works, in three steps</h2>
 
-      <article class="cm-step" aria-labelledby="cm-s1">
+      <article class="cm-step cm-step--lens" aria-labelledby="cm-s1">
         <p class="cm-step__n">1</p>
         <h3 class="cm-step__h" id="cm-s1">The lens brings the light to a point</h3>
-        <p class="cm-body">The lens is a stack of glass, here six elements in four groups. Each curved surface bends the light a little, so the light that spreads out from one point of your subject is gathered and brought back together at one point on the film. Between the two halves of the glass, the aperture blades set how wide that bundle of light can be.</p>
-        <figure class="cm-lens" data-lens="aperture"><div class="cm-lens__draw"><p class="cm-wait">Drawing…</p></div><div class="cm-lens__eye"></div></figure>
-        <div class="cm-ctl">
-          <label for="cm-stop">Aperture</label>
-          <input id="cm-stop" type="range" min="0" max="6" step="1" value="0" aria-valuetext="f/2">
-          <output for="cm-stop">f/2</output>
+        <p class="cm-body">The lens is a stack of glass, here six elements in four groups. Each curved surface bends the light a little, so the light that spreads out from one point of your subject is brought back together at one point on the film. The nearer the subject, the further behind the lens that point falls, so the focus ring screws the whole optical unit forward on its helicoid until the point lands on the film. Between the two halves of the glass, the aperture blades set how wide the bundle of light can be.</p>
+        <div class="cm-lab">
+          <figure class="cm-lens" data-lens="lens"><div class="cm-lens__draw"><p class="cm-wait">Drawing…</p></div></figure>
+          <div class="cm-lens__psf"></div>
+          <div class="cm-lab__ctl">
+            <div class="cm-ctl">
+              <label for="cm-focus-lens">Focused at</label>
+              <input id="cm-focus-lens" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity">
+              <output for="cm-focus-lens">∞</output>
+            </div>
+            <div class="cm-ctl">
+              <label for="cm-stop">Aperture</label>
+              <input id="cm-stop" type="range" min="0" max="6" step="1" value="0" aria-valuetext="f/2">
+              <output for="cm-stop">f/2</output>
+            </div>
+          </div>
         </div>
-        <p class="cm-note">Each step closes the blades a little: it lets in half as much light, and the light from things nearer or further than the focus spreads less, so more of the scene is sharp.</p>
+        <p class="cm-body">The two dark views show the spot that one point of the subject, 1 m away, makes on the film: the lens's point spread function. Focused anywhere else, it is a disc, and closing the aperture shrinks it; that is depth of field. Focused at 1 m and wide open, most of the light still lies in a halo round the point: the outer parts of the glass bring their light together a little in front of the film (spherical aberration, in this textbook design). Closing down cuts the halo away, until from about f/8 the small opening itself spreads the light into rings (diffraction). So the spot is smallest in between, here at f/5.6 to f/8.</p>
+        <p class="cm-note">Worked out with wave optics, for green light (550 nm). Each step of the aperture lets in half as much light.</p>
       </article>
 
       <article class="cm-step" aria-labelledby="cm-s2">
         <p class="cm-step__n">2</p>
-        <h3 class="cm-step__h" id="cm-s2">Focusing moves the glass</h3>
-        <p class="cm-body">The nearer the subject, the further behind the lens its light comes back together. So turning the focus ring screws the whole optical unit forward on its helicoid, away from the film, until the light meets exactly on the film. Here the subject is 1 m away: with the lens at ∞ its light would meet just behind the film, and on the film it makes a blurred disc.</p>
-        <figure class="cm-lens" data-lens="focus"><div class="cm-lens__draw"><p class="cm-wait">Drawing…</p></div><div class="cm-lens__eye"></div></figure>
-        <div class="cm-ctl">
-          <label for="cm-focus-lens">Lens focused at</label>
-          <input id="cm-focus-lens" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity">
-          <output for="cm-focus-lens">∞</output>
-        </div>
-      </article>
-
-      <article class="cm-step" aria-labelledby="cm-s3">
-        <p class="cm-step__n">3</p>
-        <h3 class="cm-step__h" id="cm-s3">The rangefinder shows when it is right</h3>
+        <h3 class="cm-step__h" id="cm-s2">The rangefinder shows when it is right</h3>
         <p class="cm-body">You do not look through the lens. You look through the big window beside it, and in the middle of the view a small patch shows the scene a second time, seen from the small window a few centimetres along. The focusing cam at the back of the lens moves with the glass; a roller rests on it and, through two levers, turns the mirror behind the small window. When the lens is focused on your subject, the two lines of sight meet on it, and in the patch the two images become one.</p>
         <div class="cm-focus__deck">
           <figure class="cm-eye" aria-hidden="true">
@@ -145,9 +144,9 @@
         </figure>
       </article>
 
-      <article class="cm-step" aria-labelledby="cm-s4">
-        <p class="cm-step__n">4</p>
-        <h3 class="cm-step__h" id="cm-s4">The shutter lets the light onto the film</h3>
+      <article class="cm-step" aria-labelledby="cm-s3">
+        <p class="cm-step__n">3</p>
+        <h3 class="cm-step__h" id="cm-s3">The shutter lets the light onto the film</h3>
         <p class="cm-body">Press the release, and two curtains just in front of the film run across it, one after the other. The first opens the frame; the second follows and closes it. The light reaches the film through the slit between them: at fast speeds a narrow slit, at slow ones the whole frame, open at once. Then a stroke of the advance lever winds the film on, from its cassette across the gate onto the take-up spool, and cocks the shutter for the next picture.</p>
         <figure class="cm-fig cm-fig--shutter" data-fig="shutter">
           <p class="cm-wait">Drawing…</p>

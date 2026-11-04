@@ -6,6 +6,9 @@
  *     what it does (rangefinder-parts.json); Previous and Next walk through every part;
  *   - the rangefinder at work, one frame per distance on the lens's scale, with a small finder
  *     whose second image comes onto the first as the lens reaches the subject.
+ * And a section through the lens with the light traced through it (camera-lens.js): its focus and
+ * aperture set together, with the spot one point of the subject makes on the film beside it; and
+ * the shutter and the film.
  * The camera comes apart by itself once, unless less motion is asked for. A part's id in the
  * address (#part-cam) opens the page with it picked out.
  */
@@ -259,13 +262,13 @@
     io.observe(focusFig);
   } else startAction();
 
-  /* ---------- The light through the lens: aperture, then focusing ---------- */
+  /* ---------- The light through the lens: focus and aperture, and the spot on the film ---------- */
   // the lens's distance scale, in millimetres from the film (the rangefinder's own stops)
   var DIST = [[Infinity, "∞", "infinity"], [10000, "10 m", "10 metres"], [5000, "5 m", "5 metres"], [3000, "3 m", "3 metres"], [2000, "2 m", "2 metres"],
     [1500, "1.5 m", "1.5 metres"], [1200, "1.2 m", "1.2 metres"], [1000, "1 m", "1 metre"], [900, "0.9 m", "0.9 metres"], [800, "0.8 m", "0.8 metres"], [700, "0.7 m", "0.7 metres"]];
   var SUBJECT = 1000, SUBJECT_STOP = 7;
-  var lensFigs = {}, lensData = null;
-  // a slider, and a drag across its figure that moves it
+  var lensHost = document.querySelector('[data-lens="lens"]'), lens = null, lensData = null;
+  // a slider, and a drag across the drawing that moves it
   function dragSlider(fig, input, onChange) {
     var drag = null;
     fig.addEventListener("pointerdown", function (e) { if (!e.button) drag = { id: e.pointerId, x: e.clientX, y: e.clientY, from: +input.value, moved: false, per: Math.max(22, fig.clientWidth * 0.62 / +input.max) }; });
@@ -286,31 +289,26 @@
     fig.addEventListener("pointercancel", end);
     input.addEventListener("input", function () { onChange(+input.value, false); });
   }
-  function lensFigure(kind) {
-    var host = document.querySelector('[data-lens="' + kind + '"]');
-    if (!host || !lensData || !window.CameraLens) return null;
-    var draw = host.querySelector(".cm-lens__draw"), eyeHolder = host.querySelector(".cm-lens__eye");
-    draw.innerHTML = "";
-    var stops = window.CameraLens.STOPS;
-    if (kind === "aperture") {
-      var inA = document.getElementById("cm-stop"), outA = document.querySelector('output[for="cm-stop"]');
-      var fa = window.CameraLens.figure(draw, lensData, { subject: SUBJECT, focus: SUBJECT, stop: 2, inset: "cm-lens-a", insetHolder: eyeHolder, still: still });
-      var showA = function (i) { var N = stops[i]; outA.textContent = "f/" + N; inA.setAttribute("aria-valuetext", "f/" + N); fa.set({ stop: N }); };
-      dragSlider(host, inA, showA);
-      showA(+inA.value);
-      return fa;
-    }
+  // one figure: the section with the light through it, the spot on the film beside it, and both
+  // rings; a drag across the drawing turns the focus ring
+  function lensFigure(spots) {
+    var draw = lensHost.querySelector(".cm-lens__draw"), stops = window.CameraLens.STOPS;
     var inF = document.getElementById("cm-focus-lens"), outF = document.querySelector('output[for="cm-focus-lens"]');
-    var ff = window.CameraLens.figure(draw, lensData, { subject: SUBJECT, focus: Infinity, stop: 2, inset: "cm-lens-f", insetHolder: eyeHolder, still: still });
+    var inA = document.getElementById("cm-stop"), outA = document.querySelector('output[for="cm-stop"]');
+    draw.innerHTML = "";
+    var fig = window.CameraLens.figure(draw, lensData, { subject: SUBJECT, focus: DIST[+inF.value][0], stop: stops[+inA.value], spots: spots, psfHolder: document.querySelector(".cm-lens__psf"), still: still });
     var timer = 0;
     var showF = function (i, fromUser) {
       if (fromUser !== undefined && timer) { clearTimeout(timer); timer = 0; }
-      var d = DIST[i]; outF.textContent = d[1]; inF.setAttribute("aria-valuetext", d[2]); ff.set({ focus: d[0] });
+      var d = DIST[i]; outF.textContent = d[1]; inF.setAttribute("aria-valuetext", d[2]); fig.set({ focus: d[0] });
     };
-    dragSlider(host, inF, showF);
+    var showA = function (i) { var N = stops[i]; outA.textContent = "f/" + N; inA.setAttribute("aria-valuetext", "f/" + N); fig.set({ stop: N }); };
+    dragSlider(draw, inF, showF);
+    inA.addEventListener("input", function () { showA(+inA.value); });
     showF(+inF.value);
+    showA(+inA.value);
     // the first time it is seen, the lens focuses by itself from infinity to the subject
-    ff.play = function () {
+    fig.play = function () {
       if (still) { inF.value = String(SUBJECT_STOP); showF(SUBJECT_STOP); return; }
       var tick = function () {
         var i = +inF.value;
@@ -320,19 +318,19 @@
       };
       timer = setTimeout(tick, 500);
     };
-    ff.stop = function () { if (timer) clearTimeout(timer); timer = 0; };
-    ff.playing = function () { return !!timer; };
-    return ff;
+    fig.stop = function () { if (timer) clearTimeout(timer); timer = 0; };
+    fig.playing = function () { return !!timer; };
+    return fig;
   }
   function startLens() {
-    if (lensData) return;
-    fetch(SRC + "lens.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-      if (!d) return;
-      lensData = d;
-      lensFigs.aperture = lensFigure("aperture");
-      lensFigs.focus = lensFigure("focus");
-      watch(document.querySelector('[data-lens="focus"]'), function () { if (lensFigs.focus) lensFigs.focus.play(); }, "0px");
-    }, function () {});
+    if (lensData || !window.CameraLens) return;
+    var get = function (f) { return fetch(SRC + f).then(function (r) { return r.ok ? r.json() : null; }, function () { return null; }); };
+    Promise.all([get("lens.json"), get("lens-psf.json")]).then(function (d) {
+      if (!d[0]) { lensHost.querySelector(".cm-wait").textContent = "The drawing could not be loaded."; return; }
+      lensData = d[0];
+      lens = lensFigure(d[1]);
+      watch(lensHost, function () { if (lens) lens.play(); }, "0px");
+    });
   }
 
   /* ---------- Taking the picture: the shutter and the film ---------- */
@@ -359,7 +357,7 @@
     }, { rootMargin: (margin || "400px") + " 0px" });
     io.observe(el);
   }
-  watch(document.querySelector('[data-lens="aperture"]'), startLens);
+  watch(lensHost, startLens);
   watch(shutterFig, startShutter);
 
   // the names leave the drawings on narrow screens, and the drawings crop closer
@@ -372,9 +370,9 @@
     apart: function () { return { value: apart.value, out: apart.output.textContent, loaded: !!data.apart, playing: !!apart.timer, texts: (apart.current() || apart.fig).querySelectorAll("text").length }; },
     action: function () { return { value: action.value, out: action.output.textContent, loaded: !!data.action, playing: !!action.timer, ghost: ghost.getAttribute("transform") }; },
     pick: function () { return { id: pick, card: !card.hidden, title: card.querySelector(".cm-pick__h").textContent, drawn: !!cardFig.querySelector("svg"), lit: (apart.current() || apart.fig).querySelectorAll('.is-pick').length, where: inGrid() ? "grid" : "stage", tiles: document.querySelectorAll(".cm-tile svg").length }; },
-    lens: function (k) { var f = lensFigs[k]; return f ? f.state() : null; },
-    lensPlaying: function () { return !!(lensFigs.focus && lensFigs.focus.playing()); },
+    lens: function () { return lens ? lens.state() : null; },
+    lensPlaying: function () { return !!(lens && lens.playing()); },
     shutter: function () { var svg = shutterFig.querySelector("svg"); return { loaded: !!svg, parts: svg ? svg.querySelectorAll("[data-item]").length : 0 }; },
-    stop: function () { apart.stop(); action.stop(); if (lensFigs.focus) lensFigs.focus.stop(); }
+    stop: function () { apart.stop(); action.stop(); if (lens) lens.stop(); }
   };
 })();
