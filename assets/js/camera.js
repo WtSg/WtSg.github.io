@@ -106,10 +106,35 @@
     var t = i === 0 ? "Together" : i === +document.getElementById("cm-apart").max ? "Apart" : "Coming apart";
     return [t, t.toLowerCase()];
   });
-  var buttons = Array.prototype.slice.call(document.querySelectorAll(".cm-part"));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll(".cm-tile"));
   var order = buttons.map(function (b) { return b.getAttribute("data-part"); });
   var card = document.querySelector(".cm-pick"), cardFig = card.querySelector(".cm-pick__fig");
+  var cardHome = card.parentNode, cardWrap = null;
   var pick = null;
+  // the card stands under the drawing, or, picked from the catalogue, right under that tile's row
+  function placeCard(tile) {
+    if (!tile) {
+      if (card.parentNode !== cardHome) cardHome.appendChild(card);
+      if (cardWrap && cardWrap.parentNode) cardWrap.parentNode.removeChild(cardWrap);
+      return;
+    }
+    if (!cardWrap) { cardWrap = document.createElement("li"); cardWrap.className = "cm-grid__card"; }
+    cardWrap.appendChild(card);
+    var li = tile.closest("li");
+    li.parentNode.insertBefore(cardWrap, li.nextSibling);
+  }
+  var inGrid = function () { return !!(cardWrap && card.parentNode === cardWrap && cardWrap.parentNode); };
+  // every tile gets its part's own drawing once they are loaded
+  function fillTiles(d) {
+    if (!d) return;
+    buttons.forEach(function (b) {
+      var fig = b.querySelector(".cm-tile__fig");
+      if (fig.firstChild) return;
+      for (var k = 0; k < d.parts.length; k++) {
+        if (d.parts[k].id === b.getAttribute("data-part")) { fig.innerHTML = '<svg class="td-rangefinder" viewBox="' + d.parts[k].viewBox + '" focusable="false">' + d.parts[k].markup + "</svg>"; break; }
+      }
+    });
+  }
 
   // light up the picked part and its name in the drawing on show
   function mark(svg) {
@@ -128,16 +153,19 @@
     mark(apart.current());
     if (!pick) {
       card.hidden = true;
+      placeCard(null);
       if (history.replaceState && /^#part-/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
       return;
     }
     var b = buttons[order.indexOf(pick)];
+    placeCard(opts.tile ? b : null);
     card.querySelector(".cm-pick__group").textContent = b.getAttribute("data-group");
     card.querySelector(".cm-pick__h").textContent = b.querySelector("b").textContent;
-    card.querySelector(".cm-pick__p").textContent = b.querySelector("span").textContent;
+    card.querySelector(".cm-pick__p").textContent = b.querySelector(".cm-tile__text").textContent;
     card.hidden = false;
     cardFig.innerHTML = "";
     load("parts").then(function (d) {
+      fillTiles(d);
       if (!d || pick !== id) return;
       var p = null;
       for (var k = 0; k < d.parts.length; k++) if (d.parts[k].id === id) p = d.parts[k];
@@ -154,15 +182,16 @@
   buttons.forEach(function (b) {
     b.addEventListener("click", function () {
       var id = b.getAttribute("data-part");
-      select(pick === id ? null : id, { scroll: true });
+      select(pick === id ? null : id, { tile: true });
     });
   });
   card.addEventListener("click", function (e) {
     var t = e.target.closest("button");
     if (!t) return;
     if (t.hasAttribute("data-clear")) { select(null); return; }
+    if (t.hasAttribute("data-up")) { apart.fig.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" }); return; }
     var step = +t.getAttribute("data-step");
-    if (step) select(order[(order.indexOf(pick) + step + order.length) % order.length]);
+    if (step) select(order[(order.indexOf(pick) + step + order.length) % order.length], { tile: inGrid() });
   });
   // a tap on the drawing picks the smallest part under the finger, or lets go of the pick
   apart.onTap = function (e) {
@@ -192,8 +221,9 @@
     apart.show(still ? apart.max() : 0, true);
     // it comes apart by itself, once, when it is first seen
     if (!still) apart.run(apart.max(), 230);
-    setTimeout(function () { load("parts"); }, 1500);
+    setTimeout(function () { load("parts").then(fillTiles); }, 1500);
   });
+  watch(document.querySelector(".cm-parts"), function () { load("parts").then(fillTiles); });
 
   /* ---------- The rangefinder at work ---------- */
   var focusFig = document.querySelector('[data-fig="action"]');
@@ -341,7 +371,7 @@
   window.CameraPage = {
     apart: function () { return { value: apart.value, out: apart.output.textContent, loaded: !!data.apart, playing: !!apart.timer, texts: (apart.current() || apart.fig).querySelectorAll("text").length }; },
     action: function () { return { value: action.value, out: action.output.textContent, loaded: !!data.action, playing: !!action.timer, ghost: ghost.getAttribute("transform") }; },
-    pick: function () { return { id: pick, card: !card.hidden, title: card.querySelector(".cm-pick__h").textContent, drawn: !!cardFig.querySelector("svg"), lit: (apart.current() || apart.fig).querySelectorAll('.is-pick').length }; },
+    pick: function () { return { id: pick, card: !card.hidden, title: card.querySelector(".cm-pick__h").textContent, drawn: !!cardFig.querySelector("svg"), lit: (apart.current() || apart.fig).querySelectorAll('.is-pick').length, where: inGrid() ? "grid" : "stage", tiles: document.querySelectorAll(".cm-tile svg").length }; },
     lens: function (k) { var f = lensFigs[k]; return f ? f.state() : null; },
     lensPlaying: function () { return !!(lensFigs.focus && lensFigs.focus.playing()); },
     shutter: function () { var svg = shutterFig.querySelector("svg"); return { loaded: !!svg, parts: svg ? svg.querySelectorAll("[data-item]").length : 0 }; },
