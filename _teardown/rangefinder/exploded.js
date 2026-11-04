@@ -43,40 +43,48 @@ self.DrawingModels['rangefinder-exploded'] = (parameters, options) => {
   G.lathe(speed, [[0, 0], [0, 10], [4.6, 10], [4.6, 9.2], [5.4, 9.2], [5.4, 0]], {axis: 'z', at: [38, 2, H], segments: 96});
   for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; G.line(speed, [38 + 10.05 * Math.cos(a), 2 + 10.05 * Math.sin(a), H + 0.6], [38 + 10.05 * Math.cos(a), 2 + 10.05 * Math.sin(a), H + 4], 'texture'); }
   G.line(speed, [38, 2 - 6, H + 5.45], [38, 2 - 9, H + 5.45], 'detail');          // its index
-  const advance = G.part('advance', 'Advance lever and release', [0, 0, UP]);
+  const advance = G.part('advance', 'Advance lever', [0, 0, UP]);
   G.lathe(advance, [[0, 0], [0, 4.6], [2.4, 4.6], [2.4, 3], [5.6, 3], [5.6, 0]], {axis: 'z', at: [53, -9, H], segments: 48});
   G.merge(advance, G.transform(G.extrude(G.piece(), [[56, -11.5], [32, -16], [31, -13.4], [56, -6.5]], {depth: 1.6}), {origin: [0, 0, H + 2.6]}));
-  G.lathe(advance, [[0, 0], [0, 4], [2.5, 4], [2.5, 2.6], [5.8, 2.6], [5.8, 0]], {axis: 'z', at: [53, 5, H], segments: 48});
+  const release = G.part('release', 'Shutter release', [0, 0, UP + 16]);
+  G.lathe(release, [[0, 0], [0, 4], [2.5, 4], [2.5, 2.6], [5.8, 2.6], [5.8, 0]], {axis: 'z', at: [53, 5, H], segments: 48});
 
-  // The viewfinder's optics: the windows' glass, the front lens, the frame-line window, the
-  // half-silvered mirror and the eyepiece
-  const finder = G.part('finder', 'Viewfinder optics', [0, 0, 34]);
-  finder.transparent = true;
-  const glass = (x, w, h) => G.box(finder, [x - w / 2, FRONT - 2, Z - h / 2], [x + w / 2, FRONT - 0.8, Z + h / 2]);
-  glass(XF, 24, 15);
-  glass(-9, 11, 8);
-  glass(XR, 13, 10);
-  G.lathe(finder, [[0, 0], [0, 7.5], [2.4, 7.5], [2.4, 0]], {axis: 'y', at: [XF, FRONT - 7, Z], segments: 72});
-  G.merge(finder, G.transform(G.box(G.piece(), [-7.5, -0.6, -6.5], [7.5, 0.6, 6.5]), plateFrame(XF, 0, Z, norm(1, -1))));
-  G.lathe(finder, [[0, 0], [0, 6.5], [2, 6.5], [2, 0]], {axis: 'y', at: [XF, BACK + 2, Z], segments: 72});
-  G.merge(finder, G.transform(G.box(G.piece(), [-4, -4, -4], [4, 4, 4]), {origin: [-9, 4, Z], xAxis: [Math.SQRT1_2, -Math.SQRT1_2, 0], yAxis: [Math.SQRT1_2, Math.SQRT1_2, 0], zAxis: [0, 0, 1]}));   // the frame-line prism
+  // The viewfinder: the windows' glass, the front lens, the frame-line window and its prism, the
+  // half-silvered mirror and the eyepiece, each lifted with the rangefinder
+  const FIND = 34;
+  const glassPart = (id, name, explosion) => { const g = G.part(id, name, explosion); g.transparent = true; return g; };
+  const glassPane = (p, x, w, h) => G.box(p, [x - w / 2, FRONT - 2, Z - h / 2], [x + w / 2, FRONT - 0.8, Z + h / 2]);
+  const vfWin = glassPart('vf-window', 'Viewfinder window and lens', [0, 14, FIND]);
+  glassPane(vfWin, XF, 24, 15);
+  G.lathe(vfWin, [[0, 0], [0, 7.5], [2.4, 7.5], [2.4, 0]], {axis: 'y', at: [XF, FRONT - 7, Z], segments: 72});
+  const frame = glassPart('frame-window', 'Frame-line window and prism', [0, 14, FIND]);
+  glassPane(frame, -9, 11, 8);
+  G.merge(frame, G.transform(G.box(G.piece(), [-4, -4, -4], [4, 4, 4]), {origin: [-9, 4, Z], xAxis: [Math.SQRT1_2, -Math.SQRT1_2, 0], yAxis: [Math.SQRT1_2, Math.SQRT1_2, 0], zAxis: [0, 0, 1]}));
+  const rfWin = glassPart('rf-window', 'Rangefinder window', [0, 14, FIND]);
+  glassPane(rfWin, XR, 13, 10);
+  const splitter = glassPart('splitter', 'Half-silvered mirror', [0, 0, FIND]);
+  G.merge(splitter, G.transform(G.box(G.piece(), [-7.5, -0.6, -6.5], [7.5, 0.6, 6.5]), plateFrame(XF, 0, Z, norm(1, -1))));
+  const eye = glassPart('eyepiece', 'Eyepiece', [0, -12, FIND]);
+  G.lathe(eye, [[0, 0], [0, 6.5], [2, 6.5], [2, 0]], {axis: 'y', at: [XF, BACK + 2, Z], segments: 72});
 
-  // The rangefinder: the mirror on its lever, and the roller lever, set for infinity
-  const rf = G.part('rf-mirror', 'Rangefinder mirror and lever', [0, 0, 34]);
-  G.merge(rf, G.transform(G.box(G.piece(), [-5.5, -0.7, -6], [5.5, 0.7, 6]), plateFrame(XR, 0, Z, norm(-1, 1))));
-  G.lathe(rf, [[0, 0], [0, 1.4], [12, 1.4], [12, 0]], {axis: 'z', at: [XR, 0, 50], segments: 36});
-  G.lathe(rf, [[0, 0], [0, 3], [2, 3], [2, 0]], {axis: 'z', at: [XR, 0, 50], segments: 36});
+  // The rangefinder: the mirror, its lever, the roller lever and the roller, set for infinity
+  const mirror = G.part('mirror', 'Rangefinder mirror', [0, 0, FIND + 8]);
+  G.merge(mirror, G.transform(G.box(G.piece(), [-5.5, -0.7, -6], [5.5, 0.7, 6]), plateFrame(XR, 0, Z, norm(-1, 1))));
+  const lever = G.part('lever', 'Mirror lever', [0, 0, FIND - 4]);
+  G.lathe(lever, [[0, 0], [0, 1.4], [12, 1.4], [12, 0]], {axis: 'z', at: [XR, 0, 50], segments: 36});
+  G.lathe(lever, [[0, 0], [0, 3], [2, 3], [2, 0]], {axis: 'z', at: [XR, 0, 50], segments: 36});
   {
     const ARM = [-10, 8], [ux, uy] = norm(ARM[0], ARM[1]), [px, py] = [-uy * 1.8, ux * 1.8];
-    G.merge(rf, G.transform(G.extrude(G.piece(), [[px, py], [ARM[0] + px, ARM[1] + py], [ARM[0] - px, ARM[1] - py], [-px, -py]], {depth: 2}), {origin: [XR, 0, 50]}));
-    G.lathe(rf, [[0, 0], [0, 0.8], [4.5, 0.8], [4.5, 0]], {axis: 'z', at: [XR + ARM[0], ARM[1], 45.5], segments: 24});
+    G.merge(lever, G.transform(G.extrude(G.piece(), [[px, py], [ARM[0] + px, ARM[1] + py], [ARM[0] - px, ARM[1] - py], [-px, -py]], {depth: 2}), {origin: [XR, 0, 50]}));
+    G.lathe(lever, [[0, 0], [0, 0.8], [4.5, 0.8], [4.5, 0]], {axis: 'z', at: [XR + ARM[0], ARM[1], 45.5], segments: 24});
   }
-  const rocker = G.part('rocker', 'Roller lever and roller', [0, 0, 16]);
+  const rocker = G.part('rocker', 'Roller lever', [0, 0, 16]);
   G.merge(rocker, G.transform(G.extrude(G.piece(), [[-12, -2.2], [11.6, -2.2], [11.6, 2.2], [-12, 2.2]], {depth: 1.5, holes: [[[5.6, -1.1], [9.6, -1.1], [9.6, 1.1], [5.6, 1.1]]]}), {origin: [18, 8, 46.5]}));
   G.lathe(rocker, [[0, 0], [0, 1.6], [8.5, 1.6], [8.5, 0]], {axis: 'z', at: [18, 8, 38], segments: 32});
   G.box(rocker, [4.8, 7, 43], [5.6, 9, 46.5]);
   G.box(rocker, [10.4, 7, 43], [11.2, 9, 46.5]);
-  G.lathe(rocker, [[0, 0], [0, 2.5], [4.4, 2.5], [4.4, 0]], {axis: 'x', at: [5.8, 8, 43], segments: 36});
+  const roller = G.part('roller', 'Roller', [0, 0, 11]);
+  G.lathe(roller, [[0, 0], [0, 2.5], [4.4, 2.5], [4.4, 0]], {axis: 'x', at: [5.8, 8, 43], segments: 36});
 
   // The body casting, with the lens mount
   const body = G.part('body', 'Body casting');
@@ -135,7 +143,7 @@ self.DrawingModels['rangefinder-exploded'] = (parameters, options) => {
   G.circle(optics, [XL, FRONT + 34.05, ZL], 15, [0, 1, 0], {role: 'detail', segments: 96});
   G.circle(optics, [XL, FRONT + 34.05, ZL], 17.5, [0, 1, 0], {role: 'detail', segments: 96});
 
-  const parts = [cover, rewind, speed, advance, finder, rf, rocker, body, shutter, base, cassette, spool, cam, bayonet, helicoid, ring, aperture, optics];
+  const parts = [cover, rewind, speed, advance, release, vfWin, frame, rfWin, splitter, eye, mirror, lever, rocker, roller, body, shutter, base, cassette, spool, cam, bayonet, helicoid, ring, aperture, optics];
   const camera = options.camera ?? {azimuth: -42, elevation: 26, roll: 0};
   return TechnicalProjection.render(parts, {...options, camera});
 };
