@@ -1,0 +1,89 @@
+# The page "The camera, taken apart" (photography/camera): every part of the drawing
+# (_teardown/rangefinder/exploded.js), grouped, with what it does. Ids and names match the
+# drawing's parts exactly. Plain descriptions of what each part is for: no specifications,
+# materials or one camera's construction, since the drawing is an illustration.
+- group: The top
+  parts:
+    - id: cover
+      name: Top cover
+      text: Closes over the finder and the rangefinder. Its front carries the three windows; its back, the eyepiece; its top, the dials and the accessory shoe.
+    - id: rewind
+      name: Rewind knob
+      text: At the end of the roll, turned to wind the film back into its cassette before the camera is opened.
+    - id: speed-dial
+      name: Shutter-speed dial
+      text: Sets the shutter speed, how long the film is exposed to the light.
+    - id: advance
+      name: Advance lever
+      text: One stroke winds the film on to the next frame and cocks the shutter for the next picture.
+    - id: release
+      name: Shutter release
+      text: Pressed to take the picture. It lets the cocked shutter run.
+- group: The finder
+  parts:
+    - id: vf-window
+      name: Viewfinder window and lens
+      text: The big window. You look straight out through it, past its front lens, so the whole view is always sharp, wherever the lens is focused.
+    - id: frame-window
+      name: Frame-line window and prism
+      text: A frosted window gathers daylight for the bright frame lines, and the prism behind it sends them into the finder, to show what the lens will take.
+    - id: rf-window
+      name: Rangefinder window
+      text: The small window, a few centimetres along the camera from the big one. It sees the scene from a little to the side, and gives the second image in the patch.
+    - id: splitter
+      name: Half-silvered mirror
+      text: Partly a mirror and partly clear. You look through it at the scene, and it reflects the rangefinder's view into the middle of the finder, the patch where the two images meet.
+    - id: eyepiece
+      name: Eyepiece
+      text: The lens at the back that your eye looks through.
+- group: The rangefinder
+  parts:
+    - id: mirror
+      name: Rangefinder mirror
+      text: Behind the small window, a mirror on a pivot sends what it sees across to the half-silvered mirror. As it turns, the second image slides across the patch.
+    - id: lever
+      name: Mirror lever
+      text: Carries the mirror's pivot, and turns the mirror through a pin at its far end as the roller lever moves.
+    - id: rocker
+      name: Roller lever
+      text: Rocks on a post. One end holds the roller against the lens; the other, slotted, moves the mirror lever's pin. It turns the lens's movement into the mirror's turn.
+    - id: roller
+      name: Roller
+      text: A small wheel resting on the lens's focusing cam, just inside the mount. When the cam moves, so does the roller. This is where the lens and the rangefinder meet.
+- group: The body
+  parts:
+    - id: body
+      name: Body casting
+      text: The camera's frame. It holds the lens mount at the front, the shutter and the film inside, and everything else.
+    - id: shutter
+      name: Focal-plane shutter
+      text: Two curtains just in front of the film. The first opens, the second follows it to close, and the gap between them sets the exposure.
+    - id: cassette
+      name: Film cassette
+      text: The film's light-tight cartridge. It drops into the chamber at the left end, under the rewind knob, when the camera is loaded.
+    - id: spool
+      name: Take-up spool
+      text: At the right end. The film's leader goes into it, and each stroke of the advance lever winds a frame onto it.
+    - id: base
+      name: Base plate
+      text: Comes off to load the film, since the camera loads from the bottom. A key underneath locks it in place.
+- group: The lens
+  parts:
+    - id: cam
+      name: Focusing cam
+      text: A ring at the back of the lens that moves as the lens is focused. The camera's roller rests on it, so the cam tells the rangefinder where the lens is focused.
+    - id: bayonet
+      name: Lens bayonet
+      text: Locks the lens into the camera's mount with a short twist.
+    - id: helicoid
+      name: Helicoid
+      text: A fine thread inside the lens. Turning the focus ring screws the glass forward, away from the film, for nearer subjects.
+    - id: focus-ring
+      name: Focus ring and tab
+      text: Turned to focus, often by the small tab underneath, under one fingertip. Its scale shows the distance the lens is focused at.
+    - id: aperture
+      name: Aperture ring
+      text: Sets the size of the opening inside the lens, how much light comes through and how deep the sharp zone is.
+    - id: optics
+      name: Optical unit
+      text: The lens's glass in its barrel. It forms the picture on the film.

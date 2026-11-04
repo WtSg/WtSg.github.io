@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Renders the two drawings for the focus challenge's guide (the step "Inside the camera"):
+// Renders the drawings for the page "The camera, taken apart" (photography/camera):
 //   assets/img/teardown/rangefinder-action.json  the rangefinder at work, one frame per distance
 //                                                on the lens's scale, from infinity to 0.7 m
 //   assets/img/teardown/rangefinder-apart.json   the camera taken apart, from together to apart
+//   assets/img/teardown/rangefinder-parts.json   every part of it on its own
 // Every frame of a drawing fits the page the same way and shares one crop, so the page swaps
 // frames that line up exactly. Each frame is a list of part drawings; a part drawn the same in
 // two frames is stored once. Styles are left to the page (assets/css/focus-game.css). Each
@@ -111,10 +112,34 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
     inkOnly.ink(r.markup.replace(/<g data-annotations="">[\s\S]*?<\/g>/, ''));
     for (const [, x, y, anchor, text] of r.markup.matchAll(/<text[^>]* x="([^"]*)" y="([^"]*)"[^>]*text-anchor="([^"]*)"[^>]*>([^<]*)<\/text>/g)) crop.text(+x, +y, anchor, text);
   });
-  const data = pack(runs.map(r => groupsOf(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '').replace(/font-size="3\.2"/g, `font-size="${LABEL}"`))), {
-    viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(inkOnly.box).join(' '), steps: STEPS.length,
-    title: 'A Leica M-style camera taken apart: the top cover and dials, the viewfinder optics, the rangefinder mirror and roller lever, the body, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis'
+  // each label, its leader and its dot carry the id of the part they name, so a page can pick one out
+  const names = Object.fromEntries([...runs[N].markup.matchAll(/data-item="([^"]*)" data-name="([^"]*)"/g)].map(m => [m[2].toUpperCase(), m[1]]));
+  const tag = markup => markup.replace(/(<path data-line-role="detail" fill="none" d="[^"]*"\/>)(<circle [^>]*\/>)(<text [^>]*)>([^<]*)<\/text>/g, (all, l, c, t, name) => {
+    const id = names[name.replace(/&amp;/g, '&')];
+    if (!id) throw Error('A label names no part: ' + name);
+    const f = ` data-for="${id}"`;
+    return l.replace('<path', '<path' + f) + c.replace('<circle', '<circle' + f) + t.replace('<text', '<text' + f) + '>' + name + '</text>';
   });
+  const data = pack(runs.map(r => groupsOf(tag(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '').replace(/font-size="3\.2"/g, `font-size="${LABEL}"`)))), {
+    viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(inkOnly.box).join(' '), steps: STEPS.length,
+    title: 'A Leica M-style camera taken apart: the top cover and its dials, the viewfinder and rangefinder parts, the body, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis'
+  });
+  const tagged = (data.groups.join('').match(/<text data-for=/g) || []).length;
+  if (tagged !== Object.keys(names).length) throw Error(`Labels tagged: ${tagged} of ${Object.keys(names).length}`);
   fs.writeFileSync(path.join(out, 'rangefinder-apart.json'), JSON.stringify(data));
   console.log('apart', (JSON.stringify(data).length / 1024).toFixed(0) + ' KB,', data.groups.length, 'part drawings for', data.frames.length, 'frames; crop', data.viewBox);
+
+  // ---------- Every part on its own ----------
+  // each part alone, as it sits in the camera taken apart, fitted and cropped to its own ink
+  const parts = Object.entries(names).map(([, id]) => id);
+  const order = [...runs[N].markup.matchAll(/data-item="([^"]*)" data-name="([^"]*)"/g)].map(m => ({id: m[1], name: m[2]}));
+  const alone = order.map(({id, name}) => {
+    const r = models['rangefinder-exploded']({}, {explosion: 1, fitExplosion: 1, isolated: id, fill: false, annotate: false});
+    const c = cropper();
+    c.ink(r.markup);
+    return {id, name, viewBox: viewBox(c.box, 3).join(' '), markup: tidy(groupsOf(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '')).join('')).replace(/<title>[^<]*<\/title>/g, '')};
+  });
+  if (alone.length !== parts.length) throw Error('Every part must be drawn alone');
+  fs.writeFileSync(path.join(out, 'rangefinder-parts.json'), JSON.stringify({parts: alone}));
+  console.log('parts', (JSON.stringify(alone).length / 1024).toFixed(0) + ' KB,', alone.length, 'parts:', alone.map(p => p.id).join(' '));
 }

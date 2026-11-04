@@ -1,0 +1,177 @@
+/*
+ * The camera, taken apart (photography/camera): a Leica M-style rangefinder drawn with the
+ * teardown skill (_teardown/rangefinder). The camera taken apart, with every part picked out on
+ * its own; every part listed with what it does; the rangefinder at work. Light ink on the
+ * photography pages' dark ground, its lines the same width on screen at any size: what moves
+ * when the lens is focused in amber, the light in the LED red, the glass in pale blue, the
+ * see-through shells dimmed. Phone first.
+ */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("../fonts/schibsted-grotesk-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("../fonts/schibsted-grotesk-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../fonts/geist-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #0c0c0c;
+  --panel: #111110;
+  --ink: #edebe6;
+  --muted: #9a978f;
+  --rule: rgba(255, 255, 255, .1);
+  --led: #ff4a2e;
+  --ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gut: clamp(1rem, 4vw, 2.4rem);
+  --td-ink: #d9d5cc;
+  --td-move: #f2a65a;
+  --td-light: #ff4a2e;
+  --td-glass: #8fc1dc;
+  --td-pick: #ffd27a;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1rem/1.55 var(--ui); }
+a { color: inherit; text-underline-offset: .22em; text-decoration-thickness: 1px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+button { font: inherit; color: inherit; }
+.cm-skip { position: absolute; left: var(--gut); top: -3rem; padding: .4rem .7rem; background: var(--ink); color: var(--bg); z-index: 5; }
+.cm-skip:focus { top: .6rem; }
+.cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.cm-top { padding: var(--gut) var(--gut) 0; }
+.cm-crumb { display: flex; gap: .55rem; margin: 0; font: 400 .78rem/1.3 var(--mono); color: var(--muted); }
+.cm-crumb a { color: var(--ink); text-decoration: none; }
+.cm-crumb a:hover { text-decoration: underline; }
+
+.cm-main { width: min(100%, 78rem); margin: 0 auto; padding: 0 var(--gut); }
+.cm-intro { padding: clamp(1.6rem, 6vw, 3.2rem) 0 1rem; max-width: 44rem; }
+.cm-h1 { margin: 0 0 .6rem; font: 500 clamp(1.7rem, 6.4vw, 2.8rem)/1.08 var(--ui); letter-spacing: -.01em; text-wrap: balance; }
+.cm-lede { margin: 0 0 .7rem; font-size: clamp(1.02rem, 3.6vw, 1.2rem); line-height: 1.45; text-wrap: pretty; }
+.cm-note { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.cm-h2 { margin: 0 0 .9rem; font: 500 clamp(1.3rem, 4.6vw, 1.75rem)/1.15 var(--ui); }
+.cm-h3 { margin: 0 0 .5rem; color: var(--muted); font: 400 .72rem/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.cm-body { margin: 0 0 1rem; max-width: 44rem; text-wrap: pretty; }
+
+/* ---------- controls ---------- */
+.cm-ctl { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .5rem .9rem; padding: .3rem 0 .6rem; }
+.cm-ctl label { color: var(--muted); font: 400 .66rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.cm-ctl input { width: 100%; margin: 0; accent-color: var(--td-move); }
+.cm-ctl output { min-width: 6.5ch; color: var(--td-move); font: 400 .95rem/1 var(--mono); text-align: right; white-space: nowrap; }
+.cm-ctl--stack { grid-template-columns: minmax(0, 1fr); align-content: center; gap: .55rem; padding: 0; }
+.cm-ctl__row { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
+.cm-btn { min-height: 2.5rem; padding: 0 .95rem; border: 1px solid var(--rule); border-radius: .35rem; background: rgba(255, 255, 255, .03); font: 400 .74rem/1 var(--mono); letter-spacing: .06em; cursor: pointer; }
+.cm-btn:hover { border-color: rgba(255, 255, 255, .3); }
+.cm-btn--quiet { border-color: transparent; background: none; color: var(--muted); }
+.cm-hint { margin: .4rem 0 0; color: var(--muted); font: 400 .7rem/1.4 var(--mono); }
+
+/* ---------- the drawings ---------- */
+.cm-fig { position: relative; margin: 0; border-radius: .6rem; background: var(--panel); aspect-ratio: 1 / 1.05; cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; overflow: hidden; }
+.cm-fig.is-dragging { cursor: grabbing; }
+.cm-layer { position: absolute; inset: 0; opacity: 0; transition: opacity .22s ease-out; }
+.cm-layer.is-on { opacity: 1; }
+.cm-fig.is-instant .cm-layer { transition: none; }
+.cm-wait { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 1rem; color: var(--muted); font: 400 .7rem/1.4 var(--mono); letter-spacing: .1em; text-align: center; text-transform: uppercase; }
+.cm-wait[hidden] { display: none; }
+.cm-fig svg, .cm-pick__fig svg { display: block; width: 100%; height: 100%; }
+.td-rangefinder path { fill: none; stroke: var(--td-ink); stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; transition: opacity .2s, stroke .2s; }
+.td-rangefinder [data-line-role="outline"] { stroke-width: 1.25px; }
+.td-rangefinder [data-line-role="edge"] { stroke-width: .85px; }
+.td-rangefinder [data-line-role="detail"] { stroke-width: .65px; }
+.td-rangefinder [data-line-role="texture"] { stroke-width: .4px; }
+.td-rangefinder [data-line-role="axis"] { stroke-width: 1px; stroke-dasharray: 4 3; stroke-linecap: butt; }
+.td-rangefinder text, .td-rangefinder circle { fill: var(--td-ink); transition: opacity .2s, fill .2s; }
+.td-rangefinder text { font-family: var(--mono); letter-spacing: .25px; }
+.td-rangefinder [data-leaders] path, .td-rangefinder [data-annotations] path { stroke-width: .6px; opacity: .7; }
+.td-rangefinder [data-item="body"] path, .td-rangefinder [data-item="cover"] path { opacity: .45; }
+.td-rangefinder [data-item="mirror"] path, .td-rangefinder [data-item="lever"] path,
+.td-rangefinder [data-item="rocker"] path, .td-rangefinder [data-item="roller"] path,
+.td-rangefinder [data-item="cam"] path, .td-rangefinder [data-item="focus-ring"] path,
+.td-rangefinder [data-item="sight"] path { stroke: var(--td-move); }
+.td-rangefinder [data-item="splitter"] path, .td-rangefinder [data-item="eyepiece"] path, .td-rangefinder [data-item="frame-window"] path,
+.td-rangefinder [data-item="vf-window"] path, .td-rangefinder [data-item="rf-window"] path { stroke: var(--td-glass); }
+.td-rangefinder [data-item="light"] path { stroke: var(--td-light); stroke-width: 1.1px; }
+.td-rangefinder [data-item="subject"] path { stroke: var(--td-light); }
+/* one part picked out: the rest dim, it and its name light up */
+.td-rangefinder.has-pick [data-item]:not(.is-pick) path { opacity: .16; }
+.td-rangefinder.has-pick [data-annotations] [data-for]:not(.is-pick) { opacity: .2; }
+.td-rangefinder.has-pick [data-item].is-pick path { stroke: var(--td-pick); opacity: 1; }
+.td-rangefinder.has-pick [data-item].is-pick [data-line-role="outline"] { stroke-width: 1.8px; }
+.td-rangefinder.has-pick [data-annotations] text.is-pick, .td-rangefinder.has-pick [data-annotations] circle.is-pick { fill: var(--td-pick); }
+.td-rangefinder.has-pick [data-annotations] path.is-pick { stroke: var(--td-pick); opacity: 1; }
+/* no room for the names on a phone: the drawing alone, the list names the parts */
+.cm-fig .td-rangefinder [data-annotations], .cm-fig .td-rangefinder [data-leaders] { display: none; }
+
+/* ---------- the part picked out ---------- */
+.cm-pick { display: grid; grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr); gap: .9rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--rule); border-radius: .6rem; background: var(--panel); }
+.cm-pick[hidden] { display: none; }
+.cm-pick__fig { margin: 0; aspect-ratio: 1; border-radius: .4rem; background: #0a0a09; }
+.cm-pick__fig .td-rangefinder path { stroke: var(--td-pick); }
+.cm-pick__group { margin: 0 0 .2rem; color: var(--muted); font: 400 .66rem/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.cm-pick__h { margin: 0 0 .35rem; font: 500 1.1rem/1.25 var(--ui); }
+.cm-pick__p { margin: 0 0 .7rem; font-size: .92rem; line-height: 1.5; text-wrap: pretty; }
+.cm-pick__keys { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/* ---------- every part ---------- */
+.cm-parts { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
+.cm-group { margin: 0 0 1.4rem; }
+.cm-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.cm-part { display: grid; gap: .2rem; width: 100%; padding: .75rem .85rem; border: 1px solid var(--rule); border-radius: .5rem; background: none; text-align: left; cursor: pointer; }
+.cm-part b { font-weight: 500; }
+.cm-part span { color: var(--muted); font-size: .88rem; line-height: 1.45; }
+.cm-part:hover { border-color: rgba(255, 255, 255, .28); }
+.cm-part[aria-pressed="true"] { border-color: var(--td-pick); background: rgba(255, 210, 122, .06); }
+.cm-part[aria-pressed="true"] b { color: var(--td-pick); }
+.no-js .cm-part { cursor: default; }
+
+/* ---------- how it focuses ---------- */
+.cm-focus { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
+.cm-focus__deck { display: grid; grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr); gap: 1rem; align-items: center; margin: 0 0 .9rem; }
+.cm-eye { margin: 0; }
+.cm-eye svg { display: block; width: 100%; height: auto; border-radius: .4rem; box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); }
+.cm-eye figcaption { margin-top: .35rem; color: var(--muted); font: 400 .6rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.cm-eye__ghost { transition: transform .3s ease-out; }
+.cm-fig--focus { aspect-ratio: 1 / 1.2; }
+
+.cm-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.6rem; margin-top: clamp(2.5rem, 9vw, 4.5rem); padding: 1.4rem var(--gut); border-top: 1px solid var(--rule); color: var(--muted); font: 400 .74rem/1.45 var(--mono); }
+.cm-foot p { margin: 0; }
+.cm-foot__links { display: flex; gap: 1.2rem; }
+.cm-foot a { color: var(--ink); }
+
+/* ---------- wider screens: names on the drawings; the picked part beside the drawing ---------- */
+@media (min-width: 600px) {
+  .cm-fig { aspect-ratio: 16 / 10.5; }
+  .cm-fig--focus { aspect-ratio: 16 / 8.5; }
+  .cm-fig .td-rangefinder [data-annotations], .cm-fig .td-rangefinder [data-leaders] { display: inline; }
+  .cm-pick { grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); }
+  .cm-list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+  .cm-focus__deck { grid-template-columns: minmax(0, 14rem) minmax(0, 26rem); }
+  .td-rangefinder [data-line-role="outline"] { stroke-width: 1.5px; }
+  .td-rangefinder [data-line-role="edge"] { stroke-width: 1px; }
+  .td-rangefinder [data-line-role="detail"] { stroke-width: .75px; }
+  .td-rangefinder [data-line-role="texture"] { stroke-width: .5px; }
+}
+@media (min-width: 1000px) {
+  .cm-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); grid-template-areas: "ctl ctl" "fig pick" "hint pick"; column-gap: 1.2rem; align-items: start; }
+  .cm-stage > .cm-ctl { grid-area: ctl; max-width: 40rem; }
+  .cm-stage > .cm-fig { grid-area: fig; }
+  .cm-stage > .cm-hint { grid-area: hint; }
+  .cm-stage > .cm-pick { grid-area: pick; grid-template-columns: minmax(0, 1fr); margin-top: 0; position: sticky; top: 1rem; }
+  .cm-stage > .cm-pick .cm-pick__fig { aspect-ratio: 4 / 3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-layer, .cm-eye__ghost, .td-rangefinder path, .td-rangefinder text { transition: none; }
+}

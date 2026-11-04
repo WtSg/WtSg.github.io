@@ -87,7 +87,7 @@
     {
       "id": "rangefinder-exploded",
       "title": "A Leica M-style camera taken apart",
-      "description": "Illustrative concept of the main parts of a Leica M-style camera, seen from behind: the top cover and its dials, the viewfinder optics, the rangefinder mirror and roller lever, the body casting, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis.",
+      "description": "Illustrative concept of a Leica M-style camera taken apart in 25 parts, seen from behind: the top cover and its dials, the finder glass, the rangefinder mirror, levers and roller, the body casting, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis.",
       "concept": true,
       "initialView": "exploded",
       "parts": [
@@ -105,19 +105,47 @@
         },
         {
           "id": "advance",
-          "name": "Advance lever and release"
+          "name": "Advance lever"
         },
         {
-          "id": "finder",
-          "name": "Viewfinder optics"
+          "id": "release",
+          "name": "Shutter release"
         },
         {
-          "id": "rf-mirror",
-          "name": "Rangefinder mirror and lever"
+          "id": "vf-window",
+          "name": "Viewfinder window and lens"
+        },
+        {
+          "id": "frame-window",
+          "name": "Frame-line window and prism"
+        },
+        {
+          "id": "rf-window",
+          "name": "Rangefinder window"
+        },
+        {
+          "id": "splitter",
+          "name": "Half-silvered mirror"
+        },
+        {
+          "id": "eyepiece",
+          "name": "Eyepiece"
+        },
+        {
+          "id": "mirror",
+          "name": "Rangefinder mirror"
+        },
+        {
+          "id": "lever",
+          "name": "Mirror lever"
         },
         {
           "id": "rocker",
-          "name": "Roller lever and roller"
+          "name": "Roller lever"
+        },
+        {
+          "id": "roller",
+          "name": "Roller"
         },
         {
           "id": "body",

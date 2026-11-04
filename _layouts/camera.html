@@ -1,0 +1,136 @@
+{%- assign me = site.data.personal -%}
+{%- assign base = site.baseurl -%}
+{%- assign groups = site.data.camera_parts -%}
+{%- comment -%} Each build stamps its scripts and styles, so a phone never keeps last deploy's {%- endcomment -%}
+{%- assign v = site.time | date: "%s" -%}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.className = "js";</script>
+  <title>The camera, taken apart · {{ me.name }}</title>
+  <meta name="description" content="A Leica M-style rangefinder camera taken apart, part by part: what each piece does, and how the rangefinder focuses. Technical illustrations by {{ me.name }}.">
+  <link rel="canonical" href="https://www.wshangguan.com/photography/camera/">
+  <meta name="theme-color" content="#0c0c0c">
+  <link rel="preload" href="{{ base }}/assets/fonts/schibsted-grotesk-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/fonts/geist-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base }}/assets/img/teardown/rangefinder-apart.json" as="fetch" type="application/json" crossorigin>
+  <link rel="stylesheet" href="{{ base }}/assets/css/camera.css?v={{ v }}">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+</head>
+<body class="cm">
+  <a class="cm-skip" href="#parts">Skip to every part</a>
+  <header class="cm-top">
+    <p class="cm-crumb"><a href="{{ base }}/">{{ me.name }}</a><span aria-hidden="true">/</span><a href="{{ base }}/photography/">Photography</a></p>
+  </header>
+
+  <main id="main" class="cm-main" data-src="{{ base }}/assets/img/teardown/">
+    <section class="cm-intro">
+      <h1 class="cm-h1">The camera, taken apart</h1>
+      <p class="cm-lede">A Leica M-style rangefinder, part by part: what each piece does, and how they work together when you focus.</p>
+      <p class="cm-note">An illustration of the classic rangefinder layout, not any one camera's construction. Seen from behind, as you hold it.</p>
+    </section>
+
+    <!-- The camera taken apart: a slider (or a drag across it) takes it apart; a tap on a part, or
+         a name in the list, picks that part out and shows it on its own -->
+    <section class="cm-stage" aria-labelledby="cm-apart-h">
+      <h2 class="cm-sr" id="cm-apart-h">The camera taken apart</h2>
+      <div class="cm-ctl">
+        <label for="cm-apart">Take it apart</label>
+        <input id="cm-apart" type="range" min="0" max="8" step="1" value="0" aria-valuetext="together">
+        <output for="cm-apart">Together</output>
+      </div>
+      <figure class="cm-fig" data-fig="apart">
+        <div class="cm-layer"></div><div class="cm-layer"></div>
+        <p class="cm-wait">Drawing…</p>
+        <noscript><p class="cm-wait">The drawings need JavaScript; every part is listed below.</p></noscript>
+      </figure>
+      <p class="cm-hint">Drag across the drawing to take it apart · tap a part to see it on its own</p>
+      <article class="cm-pick" hidden aria-live="polite" aria-labelledby="cm-pick-h">
+        <figure class="cm-pick__fig" aria-hidden="true"></figure>
+        <div class="cm-pick__text">
+          <p class="cm-pick__group"></p>
+          <h3 class="cm-pick__h" id="cm-pick-h"></h3>
+          <p class="cm-pick__p"></p>
+          <div class="cm-pick__keys">
+            <button class="cm-btn" type="button" data-step="-1" aria-label="Previous part">← Previous</button>
+            <button class="cm-btn" type="button" data-step="1" aria-label="Next part">Next →</button>
+            <button class="cm-btn cm-btn--quiet" type="button" data-clear>All parts</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="cm-parts" id="parts" aria-labelledby="cm-parts-h">
+      <h2 class="cm-h2" id="cm-parts-h">Every part</h2>
+      {%- for g in groups %}
+      <div class="cm-group">
+        <h3 class="cm-h3">{{ g.group }}</h3>
+        <ul class="cm-list">
+          {%- for p in g.parts %}
+          <li><button class="cm-part" type="button" data-part="{{ p.id }}" data-group="{{ g.group }}" aria-pressed="false"><b>{{ p.name }}</b><span>{{ p.text }}</span></button></li>
+          {%- endfor %}
+        </ul>
+      </div>
+      {%- endfor %}
+    </section>
+
+    <!-- The rangefinder at work: the lens's distance scale; the lens moves out, the roller follows
+         its cam, the levers swing the mirror; the two lines of sight meet where the lens is focused -->
+    <section class="cm-focus" aria-labelledby="cm-focus-h">
+      <h2 class="cm-h2" id="cm-focus-h">How it focuses</h2>
+      <p class="cm-body">Turn the lens to a distance, with the slider or by dragging across the drawing. The lens moves out; the cam at its back pushes the roller; the levers swing the mirror, and with it the small window's line of sight. Where the two lines of sight cross is where the lens is focused. At 1 m they meet on the subject, and in the finder the two images in the patch become one.</p>
+      <div class="cm-focus__deck">
+        <figure class="cm-eye" aria-hidden="true">
+          <svg viewBox="0 0 150 100" focusable="false">
+            <defs>
+              <clipPath id="cm-eye-clip"><rect x="2" y="2" width="146" height="96" rx="5"/></clipPath>
+              <clipPath id="cm-patch-clip"><rect x="53" y="36" width="44" height="28" rx="1.5"/></clipPath>
+              <radialGradient id="cm-eye-vig" cx=".5" cy=".5" r=".72"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+            </defs>
+            <g clip-path="url(#cm-eye-clip)">
+              <rect width="150" height="100" fill="#1b1a16"/>
+              <rect y="74" width="150" height="26" fill="#23211c"/>
+              <g class="cm-eye__post" fill="#cfcac0"><rect x="73" y="28" width="4" height="50" rx="1.5"/><circle cx="75" cy="25" r="5"/><ellipse cx="75" cy="78" rx="10" ry="2.4"/></g>
+              <g clip-path="url(#cm-patch-clip)">
+                <rect x="53" y="36" width="44" height="28" fill="rgba(255, 214, 128, .1)"/>
+                <g class="cm-eye__ghost" fill="#f2c27a" opacity=".62"><rect x="73" y="28" width="4" height="50" rx="1.5"/><circle cx="75" cy="25" r="5"/></g>
+              </g>
+              <rect x="53.5" y="36.5" width="43" height="27" rx="1.5" fill="none" stroke="rgba(255, 232, 180, .42)" stroke-width=".8"/>
+              <path d="M18 22v-8h10M132 22v-8h-10M18 78v8h10M132 78v8h-10" fill="none" stroke="rgba(255, 246, 222, .9)" stroke-width="1.2"/>
+              <rect width="150" height="100" fill="url(#cm-eye-vig)"/>
+            </g>
+          </svg>
+          <figcaption>In the finder</figcaption>
+        </figure>
+        <div class="cm-ctl cm-ctl--stack">
+          <div class="cm-ctl__row"><label for="cm-focus-at">Lens focused at</label><output for="cm-focus-at">∞</output></div>
+          <input id="cm-focus-at" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity">
+          <p class="cm-note">Not to scale: angles drawn nine times their size, the lens's travel nearly twice.</p>
+        </div>
+      </div>
+      <figure class="cm-fig cm-fig--focus" data-fig="action">
+        <div class="cm-layer"></div><div class="cm-layer"></div>
+        <p class="cm-wait">Drawing…</p>
+      </figure>
+    </section>
+  </main>
+
+  <footer class="cm-foot" id="contact" data-mail-u="{{ me.email_user }}" data-mail-d="{{ me.email_domain }}">
+    <p>© {{ site.time | date: "%Y" }} {{ me.name }}. Drawings made with the teardown skill (MIT licence).</p>
+    <p class="cm-foot__links"><a href="#contact" data-mail>Email me</a><a href="{{ base }}/photography/">Photography</a><a href="{{ base }}/">Homepage</a></p>
+  </footer>
+
+  <script src="{{ base }}/assets/js/site.js?v={{ v }}" defer></script>
+  <script src="{{ base }}/assets/js/camera.js?v={{ v }}" defer></script>
+</body>
+</html>

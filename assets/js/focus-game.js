@@ -153,13 +153,7 @@ export function start(o) {
     '<button class="fg__icon fg__x" type="button" aria-label="Back to the photograph">' + ICON_X + "</button></header>" +
     '<div class="fg__main"><canvas class="fg__gl" aria-hidden="true"></canvas>' +
     '<div class="fg__finder"><canvas class="fg__vf" aria-hidden="true"></canvas><img class="fg__cap" alt="" draggable="false"><span class="fg__curtain" aria-hidden="true"></span><p class="fg__pop" aria-hidden="true"></p></div>' +
-    '<div class="fg__td"><div class="fg__td-bar">' +
-    '<div class="fg__td-eye"><span aria-hidden="true">In the finder</span></div>' +
-    '<div class="fg__td-ctl"><div class="fg__td-tabs" role="group" aria-label="Drawing"><button type="button" data-td="action" aria-pressed="true">In action</button><button type="button" data-td="apart" aria-pressed="false">Taken apart</button></div>' +
-    '<div class="fg__td-set"><label for="fg-td-at">Lens focused at</label><output for="fg-td-at">∞</output></div>' +
-    '<input id="fg-td-at" type="range" min="0" max="10" step="1" value="0" aria-valuetext="infinity">' +
-    '<p class="fg__td-note"><span class="fg__td-long"></span><span class="fg__td-short"></span></p></div></div>' +
-    '<figure class="fg__td-fig"><div class="fg__td-layer"></div><div class="fg__td-layer"></div><p class="fg__td-wait">Drawing…</p></figure></div></div>' +
+    '</div>' +
     '<div class="fg__readout" aria-hidden="true">' +
     '<span class="fg__cell fg__cell--frame"><small>Frame</small><b class="fg__count">01</b><small>/' + FRAMES + "</small></span>" +
     '<span class="fg__cell fg__cell--streak"><small>Streak</small><b class="fg__streak">0</b></span>' +
@@ -252,7 +246,7 @@ export function start(o) {
     const W = vf.width, H = vf.height;
     const m = Math.round(Math.min(W, H) * 0.03), r = Math.min(W, H) * 0.05;
     const ww = W - 2 * m, wh = H - 2 * m;
-    const pw = clamp(ww * 0.3, Math.min(120 * dpr, ww * 0.36), 360 * dpr), ph = Math.min(pw * 0.62, wh * 0.4);
+    const pw = clamp(ww * 0.3, 120 * dpr, 360 * dpr), ph = Math.min(pw * 0.62, wh * 0.4);
     return { W, H, m, r, wx: m, wy: m, ww, wh, pw, ph, px: W / 2 - pw / 2, py: H / 2 - ph / 2 };
   }
   // hl: what the guide points at ("frame" or "patch"), never whether the images are one
@@ -426,10 +420,12 @@ export function start(o) {
   /* ---------- The guide: how a rangefinder is focused, step by step, in the same finder ---------- */
   // The hands-on steps say nothing while the images come together (no lamp, no beep, as on the
   // camera); only after the shutter does the guide say how close they were.
+  // the page with the camera taken apart, part by part (photography/camera)
+  const CAMERA_PAGE = new URL("../../photography/camera/", import.meta.url).pathname;
   const GUIDE = [
     { t: "The finder", hl: "frame", x: "On a Leica M, as on any rangefinder, you look through a window beside the lens, not through the lens itself. So the whole finder is always sharp, wherever the lens is focused, and the bright lines mark what the lens will take." },
     { t: "The patch", hl: "patch", x: "In the middle is a small, brighter patch. It shows the scene a second time, seen from another window a few centimetres along the camera, laid over the first. While the lens is not focused on what is in the patch, the two do not line up: you see it twice, side by side." },
-    { t: "Inside the camera", td: true, x: "A Leica M-style camera seen from behind, as you hold it, its cover see-through: the viewfinder's big window at the left, the rangefinder's small one at the right. Through the big window, light from your subject goes straight to your eye; through the small one it bounces off a mirror and a half-silvered mirror into the middle of the finder: the patch. Turn the focus ring and the lens moves out; a cam at the back of the lens pushes a roller, and levers swing the mirror. Drag across the drawing: at 1 m the two lines of sight meet on the subject, and in the finder the two images become one." },
+    { t: "Inside the camera", x: "Inside a Leica M-style camera, light from your subject comes in through two windows a few centimetres apart. Through the big one it goes straight to your eye; through the small one it bounces off a mirror and a half-silvered mirror into the middle of the finder: the patch. Turning the focus ring moves a cam at the back of the lens, and through a roller and levers it swings that mirror, so the second image slides across. Every part of the camera, and the rangefinder at work, has a page of its own: <a href=\"" + CAMERA_PAGE + "\">the camera, taken apart</a>." },
     { t: "An upright edge", hl: "patch", x: "The second image only ever moves sideways, so put the patch on something upright in your subject: the edge of a face, an eye, a doorframe, a tree trunk. Where there are only level lines, tilt the camera a little." },
     { t: "Turn the ring", act: "still", x: "On the camera you turn the lens's focus ring (on many Leica lenses by a small tab underneath, under one fingertip) and the second image slides across. Here, hold anywhere on the finder and drag. When the two images are one, let go: letting go is the shutter. Nothing lights up or beeps to tell you, just as on the camera: trust your eye." },
     { t: "Past it, and back", act: "still", x: "A habit of rangefinder photographers: turn a little past the point where the images meet, then back. The moment the doubling vanishes is easiest to see coming from either side. Try it, then let go." },
@@ -452,10 +448,6 @@ export function start(o) {
   function guideStep(now) {
     hideCapture();
     const st = GUIDE[gstep];
-    const wasTd = root.classList.contains("is-teardown");
-    root.classList.toggle("is-teardown", !!st.td);
-    if (st.td) openTeardown();
-    else { tdStop(); finderTo(false); if (wasTd) resize(); }
     gdone = !st.act;
     gnote = "";
     adjust = 0;
@@ -482,134 +474,7 @@ export function start(o) {
       "fg__card--guide",
       !!st.act && !gdone
     );
-    tdFit();
   }
-  // where the card stands below the drawing (narrow screens), the drawing comes down to meet it
-  function tdFit() {
-    const below = root.classList.contains("is-teardown") && !card.hidden && window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
-    if (!below) { root.style.removeProperty("--td-bottom"); return; }
-    const m = mainEl.getBoundingClientRect(), r = root.getBoundingClientRect();
-    const top = r.bottom - (parseFloat(getComputedStyle(card).bottom) || 0) - card.offsetHeight;
-    root.style.setProperty("--td-bottom", Math.max(0, Math.round(m.bottom - top + 10)) + "px");
-  }
-  // Inside the camera: two drawings made by _teardown/rangefinder (assets/img/teardown), each a
-  // set of frames that line up exactly. "In action": one frame per distance on the lens's scale,
-  // the subject 1 m away. "Taken apart": the camera coming apart, step by step, named when apart.
-  // The slider, or a drag across the drawing, picks the frame; in action, the finder beside it
-  // shows the two images coming together as the lens is focused on the subject.
-  const tdFig = $(".fg__td-fig"), tdIn = $("#fg-td-at"), tdOut = $(".fg__td-bar output"), tdLab = $(".fg__td-bar label");
-  const tdLong = $(".fg__td-long"), tdShort = $(".fg__td-short"), tdEye = $(".fg__td-eye"), tdRoot = $(".fg__td"), mainEl = $(".fg__main");
-  const tdLayers = root.querySelectorAll(".fg__td-layer"), tdWait = $(".fg__td-wait");
-  // in action the finder itself stands beside the slider; anywhere else it is back in the middle
-  function finderTo(beside) {
-    if (beside ? finder.parentNode === tdEye : finder.parentNode === mainEl) return;
-    if (beside) tdEye.insertBefore(finder, tdEye.firstChild); else mainEl.insertBefore(finder, tdRoot);
-    resize();
-  }
-  const narrow = window.matchMedia ? window.matchMedia("(max-width: 599px)") : { matches: false };
-  const TDK = {
-    action: { file: "rangefinder-action.json", label: "Lens focused at", note: "Not to scale: angles drawn nine times their size, the lens's travel nearly twice. The classic layout of a coincident-image rangefinder, drawn as an illustration rather than any one camera's construction.", short: "Not to scale. An illustration, not any one camera's construction." },
-    apart: { file: "rangefinder-apart.json", label: "Take it apart", note: "The main parts of a Leica M-style camera, drawn as an illustration rather than any one camera's construction.", short: "An illustration, not any one camera's construction." }
-  };
-  const tdData = {}, tdVal = { action: 0, apart: 0 }, tdSeen = {};
-  let tdTab = "action", tdFront = 0, tdShownKey = "", tdPlay = 0, tdV = 0;
-  function tdLoad(tab) {
-    const k = TDK[tab];
-    if (!k.req) k.req = fetch(new URL("../img/teardown/" + k.file, import.meta.url)).then((r) => (r.ok ? r.json() : null)).then((d) => { tdData[tab] = d; return d; }, () => null);
-    return k.req;
-  }
-  function tdMax() { return tdTab === "action" ? 10 : 8; }
-  function tdText(i) {
-    const d = tdData[tdTab];
-    if (tdTab === "action") { const st = d ? d.stops[i] : null; return st ? [st.label, st.speak] : ["", ""]; }
-    const t = i === 0 ? "Together" : i === tdMax() ? "Apart" : "Coming apart";
-    return [t, t.toLowerCase()];
-  }
-  function tdSvg(d, i) {
-    return '<svg class="td-rangefinder" viewBox="' + (narrow.matches ? d.inkBox : d.viewBox) + '" role="img" aria-label="' + d.title + '"><title>' + d.title + "</title>" +
-      d.frames[i].map((k) => d.groups[k]).join("") + (d.labels || "") + "</svg>";
-  }
-  // show frame i of the current drawing: into the hidden layer, then across (at once while dragging)
-  function tdShow(i, instant) {
-    i = clamp(Math.round(i), 0, tdMax());
-    tdVal[tdTab] = i;
-    tdIn.value = String(i);
-    const [txt, speak] = tdText(i);
-    tdOut.textContent = txt;
-    tdIn.setAttribute("aria-valuetext", speak);
-    const d = tdData[tdTab];
-    tdWait.hidden = !!d;
-    if (!d) return;
-    const key = tdTab + i;
-    if (key === tdShownKey) return;
-    tdShownKey = key;
-    tdFront = 1 - tdFront;
-    const on = tdLayers[tdFront], off = tdLayers[1 - tdFront];
-    on.innerHTML = tdSvg(d, i);
-    tdFig.classList.toggle("is-instant", !!instant || still);
-    on.classList.add("is-on");
-    off.classList.remove("is-on");
-  }
-  function tdSetTab(tab) {
-    tdTab = tab;
-    Array.prototype.forEach.call(root.querySelectorAll("[data-td]"), (b) => b.setAttribute("aria-pressed", b.getAttribute("data-td") === tab ? "true" : "false"));
-    root.classList.toggle("is-apart", tab === "apart");
-    tdLab.textContent = TDK[tab].label;
-    tdLong.textContent = TDK[tab].note;
-    tdShort.textContent = TDK[tab].short;
-    finderTo(tab === "action");
-    tdIn.max = String(tdMax());
-    tdShownKey = "";
-    tdStop();
-    tdShow(tdVal[tab], true);
-    resize();
-    tdLoad(tab).then(() => {
-      if (closed || tdTab !== tab) return;
-      tdShow(tdVal[tab], true);
-      // the first time each is shown, it moves by itself, once: focused from infinity to the
-      // subject, or taken apart
-      if (!tdSeen[tab] && !still) { tdSeen[tab] = true; tdRun(tab === "action" ? 7 : tdMax()); }
-      tdSeen[tab] = true;
-      if (tab === "action") tdLoad("apart");
-    });
-  }
-  function tdRun(to) {
-    tdStop();
-    const step = () => {
-      const i = tdVal[tdTab];
-      if (i === to || closed) { tdPlay = 0; return; }
-      tdShow(i + (to > i ? 1 : -1), false);
-      tdPlay = setTimeout(step, tdTab === "action" ? 190 : 260);
-    };
-    tdPlay = setTimeout(step, 450);
-  }
-  function tdStop() { if (tdPlay) clearTimeout(tdPlay); tdPlay = 0; }
-  function openTeardown() { tdSetTab(tdTab); }
-  tdIn.addEventListener("input", () => { tdStop(); tdShow(+tdIn.value, false); });
-  root.querySelector(".fg__td-tabs").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-td]");
-    if (b && b.getAttribute("data-td") !== tdTab) tdSetTab(b.getAttribute("data-td"));
-  });
-  // drag across the drawing: the slider follows the finger, a step for every few dozen pixels
-  let tdDrag = null;
-  tdFig.addEventListener("pointerdown", (e) => {
-    tdStop();
-    tdDrag = { id: e.pointerId, x: e.clientX, from: tdVal[tdTab], per: Math.max(24, tdFig.clientWidth * 0.6 / tdMax()) };
-    try { tdFig.setPointerCapture(e.pointerId); } catch (x) {}
-    tdFig.classList.add("is-dragging");
-  });
-  tdFig.addEventListener("pointermove", (e) => {
-    if (tdDrag && e.pointerId === tdDrag.id) tdShow(tdDrag.from + (e.clientX - tdDrag.x) / tdDrag.per, true);
-  });
-  const tdEnd = (e) => { if (tdDrag && e.pointerId === tdDrag.id) { tdDrag = null; tdFig.classList.remove("is-dragging"); } };
-  tdFig.addEventListener("pointerup", tdEnd);
-  tdFig.addEventListener("pointercancel", tdEnd);
-  const tdNarrow = () => { tdShownKey = ""; tdShow(tdVal[tdTab], true); };
-  if (narrow.addEventListener) narrow.addEventListener("change", tdNarrow);
-  // what the finder shows at the lens's setting: the patch's image off to one side at infinity,
-  // one with the other at 1 m (the subject's distance), off the other way nearer still
-  function tdOffset(v) { return 0.3 * (v - 1); }
-
   // letting go in a hands-on step: the shutter, then how close the two images were
   function guideShoot(now) {
     const st = GUIDE[gstep];
@@ -638,12 +503,6 @@ export function start(o) {
   }
   function guideFrame(now) {
     const st = GUIDE[gstep];
-    if (st.td) {
-      // the finder beside the drawing eases to the lens's setting
-      const d = tdData.action, to = d ? d.stops[tdVal.action].v : 0;
-      if (Math.abs(to - tdV) > 1e-3 || need) { tdV += (to - tdV) * (still ? 1 : 0.22); drawFinder(tdOffset(tdV), { x: 0, y: 0 }, null); }
-      return;
-    }
     drawFinder(st.act && gdone ? gShot : offsetAt(now), { x: 0, y: 0 }, st.hl || null);
   }
   function startFrame(at) {
@@ -850,8 +709,6 @@ export function start(o) {
   function onKey(e) {
     if (closed || !host.open) return;
     const k = e.key;
-    // the teardown's slider takes its own arrows and keys
-    if (e.target === tdIn && k !== "Escape") return;
     if (viewK >= 0 && (k === "Escape" || k === "ArrowLeft" || k === "ArrowRight")) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -901,11 +758,10 @@ export function start(o) {
         cam.updateProjectionMatrix();
       }
     }
-    tdFit();
     need = true;
   }
   const ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
-  if (ro) { ro.observe(root); ro.observe(card); } else window.addEventListener("resize", resize);
+  if (ro) ro.observe(root); else window.addEventListener("resize", resize);
 
   function frameLoop(now) {
     raf = requestAnimationFrame(frameLoop);
@@ -944,8 +800,6 @@ export function start(o) {
     if (closed) return;
     closed = true;
     cancelAnimationFrame(raf);
-    tdStop();
-    if (narrow.removeEventListener) narrow.removeEventListener("change", tdNarrow);
     window.removeEventListener("keydown", onKey, true);
     host.removeEventListener("cancel", onCancel, true);
     if (ro) ro.disconnect(); else window.removeEventListener("resize", resize);
@@ -984,8 +838,6 @@ export function start(o) {
       roll: () => roll.map((r) => ({ src: r.p.src, m: r.m })),
       patch: () => patchCss,
       guide: () => ({ step: gstep, done: gdone, note: gnote, title: GUIDE[gstep].t }),
-      teardown: () => ({ shown: root.classList.contains("is-teardown"), tab: tdTab, value: +tdIn.value, max: +tdIn.max, out: tdOut.textContent, label: tdLab.textContent, loaded: !!tdData[tdTab], frame: tdShownKey, playing: !!tdPlay, texts: (root.querySelector(".fg__td-layer.is-on") || tdFig).querySelectorAll("text").length, u: tdOffset(tdV) }),
-      tdStop: () => tdStop(),
       guideShoot: () => guideShoot(held ? Math.max(lastNow, t0) : performance.now()),
       view: () => ({ k: viewK, open: !viewEl.hidden, filter: viewImg.style.filter, cap: viewCap.textContent, w: viewImg.getBoundingClientRect().width }),
       capture: () => ({ on: cap.classList.contains("is-on"), filter: cap.style.filter, src: cap.getAttribute("src") })
