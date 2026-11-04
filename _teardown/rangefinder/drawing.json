@@ -1,7 +1,9 @@
 {
   "modelScripts": [
+    "optics.js",
     "model.js",
-    "exploded.js"
+    "exploded.js",
+    "shutter.js"
   ],
   "drawings": [
     {
@@ -87,7 +89,7 @@
     {
       "id": "rangefinder-exploded",
       "title": "A Leica M-style camera taken apart",
-      "description": "Illustrative concept of a Leica M-style camera taken apart in 25 parts, seen from behind: the top cover and its dials, the finder glass, the rangefinder mirror, levers and roller, the body casting, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis.",
+      "description": "Illustrative concept of a Leica M-style camera taken apart in 30 parts, seen from behind: the top cover and its dials, the finder glass, the rangefinder mirror, levers and roller, the body casting, the shutter, the base plate, film cassette and take-up spool, and the lens spread along its axis with its glass in four groups and the aperture blades.",
       "concept": true,
       "initialView": "exploded",
       "parts": [
@@ -184,12 +186,78 @@
           "name": "Focus ring and tab"
         },
         {
+          "id": "optics",
+          "name": "Optical unit"
+        },
+        {
           "id": "aperture",
           "name": "Aperture ring"
         },
         {
-          "id": "optics",
-          "name": "Optical unit"
+          "id": "glass-rear",
+          "name": "Rear element"
+        },
+        {
+          "id": "glass-rear-pair",
+          "name": "Rear cemented pair"
+        },
+        {
+          "id": "iris",
+          "name": "Aperture blades"
+        },
+        {
+          "id": "glass-front-pair",
+          "name": "Front cemented pair"
+        },
+        {
+          "id": "glass-front",
+          "name": "Front element"
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "id": "shutter-film",
+      "title": "The shutter and the film",
+      "description": "Illustrative concept, seen from the lens: a two-curtain focal-plane shutter caught mid-travel with the slit of light between its curtains, in front of the film running from its cassette across the gate onto the take-up spool.",
+      "concept": true,
+      "initialView": "assembled",
+      "parts": [
+        {
+          "id": "film",
+          "name": "Film"
+        },
+        {
+          "id": "exposure",
+          "name": "Light through the slit"
+        },
+        {
+          "id": "cassette",
+          "name": "Film cassette"
+        },
+        {
+          "id": "spool",
+          "name": "Take-up spool"
+        },
+        {
+          "id": "gate",
+          "name": "Film gate"
+        },
+        {
+          "id": "first",
+          "name": "First curtain"
+        },
+        {
+          "id": "second",
+          "name": "Second curtain"
+        },
+        {
+          "id": "drums",
+          "name": "Curtain drums"
+        },
+        {
+          "id": "light",
+          "name": "Light from the lens"
         }
       ],
       "parameters": []

@@ -115,6 +115,66 @@ button { font: inherit; color: inherit; }
 /* no room for the names on a phone: the drawing alone, the list names the parts */
 .cm-fig .td-rangefinder [data-annotations], .cm-fig .td-rangefinder [data-leaders] { display: none; }
 
+/* solid parts: each filled a shade darker than its ink, so the drawing reads as objects; the
+   see-through shell and the glass stay open */
+.td-rangefinder [data-fills] path { stroke: none; fill: #1e1d1a; vector-effect: none; transition: opacity .2s; }
+.td-rangefinder [data-fills] [data-fill="body"], .td-rangefinder [data-fills] [data-fill="base"] { fill: #171614; }
+.td-rangefinder [data-fills] [data-fill="mirror"], .td-rangefinder [data-fills] [data-fill="lever"], .td-rangefinder [data-fills] [data-fill="rocker"],
+.td-rangefinder [data-fills] [data-fill="roller"], .td-rangefinder [data-fills] [data-fill="cam"], .td-rangefinder [data-fills] [data-fill="focus-ring"],
+.td-rangefinder [data-fills] [data-fill="iris"], .td-rangefinder [data-fills] [data-fill="first"], .td-rangefinder [data-fills] [data-fill="second"] { fill: #2a1f13; }
+.td-rangefinder [data-fills] [data-fill="film"] { fill: #3a2d1c; }
+.td-rangefinder [data-fills] [data-fill="exposure"] { fill: #ffd27a; }
+.td-rangefinder [data-fills] [data-fill="subject"] { fill: #3a1510; }
+.td-rangefinder [data-item="iris"] path, .td-rangefinder [data-item="first"] path, .td-rangefinder [data-item="second"] path { stroke: var(--td-move); }
+.td-rangefinder [data-item^="glass"] path { stroke: var(--td-glass); }
+.td-rangefinder [data-item="exposure"] path { stroke: #ffd27a; }
+.td-rangefinder.has-pick [data-fills] path:not(.is-pick) { opacity: .25; }
+.td-rangefinder.has-pick [data-fills] path.is-pick { fill: #3b2f16; }
+.cm-legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: .5rem 0 .3rem; color: var(--muted); font: 400 .7rem/1.4 var(--mono); }
+.cm-legend i { display: inline-block; width: .8rem; height: .2rem; margin-right: .35rem; vertical-align: middle; border-radius: 1px; }
+.cm-legend .is-move { background: var(--td-move); }
+.cm-legend .is-slit { background: #ffd27a; }
+.cm-legend .is-light { background: var(--td-light); }
+.cm-fig.cm-fig--shutter { aspect-ratio: auto; min-height: 9rem; cursor: default; touch-action: auto; }
+.cm-fig--shutter svg { height: auto; }
+
+/* ---------- how it works: four steps ---------- */
+.cm-how { padding: clamp(2.2rem, 8vw, 4rem) 0 0; }
+.cm-step { position: relative; margin: 0 0 clamp(2rem, 7vw, 3.4rem); padding-top: .2rem; }
+.cm-step__n { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; margin: 0 0 .55rem; border: 1px solid var(--td-move); border-radius: 50%; color: var(--td-move); font: 400 .8rem/1 var(--mono); }
+.cm-step__h { margin: 0 0 .5rem; font: 500 clamp(1.12rem, 4.2vw, 1.4rem)/1.2 var(--ui); text-wrap: balance; }
+.cm-toc { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; margin: 1rem 0 0; padding: 0; list-style: none; font: 400 .74rem/1.4 var(--mono); }
+.cm-toc a { color: var(--ink); }
+
+/* the section through the lens, drawn by camera-lens.js: cut metal hatched, the moving optical
+   unit one way and the fixed barrel the other, the glass tinted, the light in the LED red */
+.cm-lens { display: grid; gap: .55rem; margin: .7rem 0 .5rem; }
+.cm-lens__draw { position: relative; min-height: 8rem; padding: .35rem .2rem; border-radius: .6rem; background: var(--panel); cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.ls { display: block; width: 100%; height: auto; overflow: visible; }
+.ls path { fill: none; vector-effect: non-scaling-stroke; }
+.ls-cut { fill: #1d1c1a !important; stroke: var(--td-ink); stroke-width: 1px; }
+.ls-unit .ls-cut { fill: #22201c !important; }
+.ls-body .ls-cut { fill: #161514 !important; }
+.ls-hatch { stroke: rgba(217, 213, 204, .36); stroke-width: .5px; }
+.ls-focus .ls-cut { stroke: var(--td-move); }
+.ls-focus .ls-hatch { stroke: rgba(242, 166, 90, .45); }
+.ls-glass { fill: rgba(143, 193, 220, .16) !important; stroke: var(--td-glass); stroke-width: .9px; }
+.ls-detail, .ls-thread { stroke: rgba(217, 213, 204, .55); stroke-width: .5px; }
+.ls-film { stroke: #c9a46a; stroke-width: 3px; }
+.ls-axis { stroke: rgba(217, 213, 204, .3); stroke-width: .6px; stroke-dasharray: 6 2 1 2; }
+.ls-ray { stroke: var(--td-light); stroke-width: 1px; }
+.ls-ray.is-blocked { opacity: .26; }
+.ls-ray.is-beyond { opacity: .38; stroke-dasharray: 2 2; }
+.ls-blade { fill: #2c2a26 !important; stroke: var(--td-move); stroke-width: 1px; }
+.ls-spot { stroke: #ffd27a; stroke-width: 4px; stroke-linecap: round; }
+.ls-label path { stroke: rgba(217, 213, 204, .55); stroke-width: .6px; }
+.ls-label text { fill: var(--td-ink); font: 400 2.5px var(--mono); letter-spacing: .08px; }
+.ls-eye { display: flex; gap: .75rem; align-items: center; margin: 0; }
+.ls-eye svg { flex: none; width: 4.6rem; height: 4.6rem; border-radius: .4rem; box-shadow: 0 0 0 1px rgba(255, 255, 255, .16); }
+.ls-eye__spot { transition: r .25s ease-out, opacity .25s ease-out; }
+.ls-eye figcaption { color: var(--muted); font: 400 .74rem/1.4 var(--mono); }
+.ls-eye figcaption b { color: var(--ink); font-weight: 400; }
+
 /* ---------- the part picked out ---------- */
 .cm-pick { display: grid; grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr); gap: .9rem; margin-top: .8rem; padding: .9rem; border: 1px solid var(--rule); border-radius: .6rem; background: var(--panel); }
 .cm-pick[hidden] { display: none; }
@@ -165,13 +225,21 @@ button { font: inherit; color: inherit; }
   .td-rangefinder [data-line-role="texture"] { stroke-width: .5px; }
 }
 @media (min-width: 1000px) {
-  .cm-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); grid-template-areas: "ctl ctl" "fig pick" "hint pick"; column-gap: 1.2rem; align-items: start; }
+  .cm-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); grid-template-areas: "h h" "ctl ctl" "fig pick" "hint pick"; column-gap: 1.2rem; align-items: start; }
+  .cm-stage > .cm-h2 { grid-area: h; }
   .cm-stage > .cm-ctl { grid-area: ctl; max-width: 40rem; }
   .cm-stage > .cm-fig { grid-area: fig; }
   .cm-stage > .cm-hint { grid-area: hint; }
   .cm-stage > .cm-pick { grid-area: pick; grid-template-columns: minmax(0, 1fr); margin-top: 0; position: sticky; top: 1rem; }
   .cm-stage > .cm-pick .cm-pick__fig { aspect-ratio: 4 / 3; }
 }
+/* wider screens: one readable column per step, the drawings capped so their lettering stays small */
+@media (min-width: 600px) {
+  .cm-step { max-width: 54rem; }
+  .cm-lens { max-width: 40rem; }
+  .ls-label text { font-size: 2.1px; }
+  .cm-step > .cm-fig, .cm-step > .cm-focus__deck { max-width: 54rem; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .cm-layer, .cm-eye__ghost, .td-rangefinder path, .td-rangefinder text { transition: none; }
+  .cm-layer, .cm-eye__ghost, .td-rangefinder path, .td-rangefinder text, .ls-eye__spot { transition: none; }
 }

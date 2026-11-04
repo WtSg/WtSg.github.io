@@ -4,6 +4,7 @@
 //                                                on the lens's scale, from infinity to 0.7 m
 //   assets/img/teardown/rangefinder-apart.json   the camera taken apart, from together to apart
 //   assets/img/teardown/rangefinder-parts.json   every part of it on its own
+//   assets/img/teardown/shutter.json             the shutter mid-travel and the film behind it
 // Every frame of a drawing fits the page the same way and shares one crop, so the page swaps
 // frames that line up exactly. Each frame is a list of part drawings; a part drawn the same in
 // two frames is stored once. Styles are left to the page (assets/css/focus-game.css). Each
@@ -15,7 +16,7 @@ const context = {console, structuredClone};
 context.self = context;
 vm.createContext(context);
 for (const f of ['sheet.js', 'geometry.js', 'projection.js']) vm.runInContext(fs.readFileSync(path.join(tools, f), 'utf8'), context, {filename: f});
-for (const f of ['model.js', 'exploded.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, f), 'utf8'), context, {filename: f});
+for (const f of ['optics.js', 'model.js', 'exploded.js', 'shutter.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, f), 'utf8'), context, {filename: f});
 const {DrawingModels: models, TechnicalProjection: P} = context;
 const out = path.join(__dirname, '../../assets/img/teardown');
 fs.mkdirSync(out, {recursive: true});
@@ -61,7 +62,7 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
   const STOPS = [[0, '∞', 'infinity'], [0.1, '10 m', '10 metres'], [0.2, '5 m', '5 metres'], [1 / 3, '3 m', '3 metres'], [0.5, '2 m', '2 metres'],
     [1 / 1.5, '1.5 m', '1.5 metres'], [1 / 1.2, '1.2 m', '1.2 metres'], [1, '1 m', '1 metre'], [1 / 0.9, '0.9 m', '0.9 metres'], [1 / 0.8, '0.8 m', '0.8 metres'], [1.4286, '0.7 m', '0.7 metres']];
   const REF = 7;                                            // labels are laid out at 1 m, on the subject
-  const runs = STOPS.map(([dioptres]) => models.rangefinder({dioptres}, {explosion: 1, fitExplosion: 1, isolated: null, fill: false, annotate: true, labels: false}));
+  const runs = STOPS.map(([dioptres]) => models.rangefinder({dioptres}, {explosion: 1, fitExplosion: 1, isolated: null, fill: true, annotate: true, labels: false}));
   const {scale, offset} = runs[0];
   if (runs.some(r => Math.abs(r.scale - scale) > 1e-9 || Math.abs(r.offset[0] - offset[0]) > 1e-9 || Math.abs(r.offset[1] - offset[1]) > 1e-9)) throw Error('Frames must fit the page alike');
   const view = P.createCamera(runs[0].camera);
@@ -103,9 +104,9 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
 
 // ---------- The camera taken apart ----------
 {
-  const N = 8, STEPS = Array.from({length: N + 1}, (_, i) => i / N);
+  const N = 6, STEPS = Array.from({length: N + 1}, (_, i) => i / N);
   const ease = t => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;  // even steps of the slider, eased apart
-  const runs = STEPS.map(t => models['rangefinder-exploded']({}, {explosion: ease(t), fitExplosion: 1, isolated: null, fill: false, annotate: true, labels: t === 1}));
+  const runs = STEPS.map(t => models['rangefinder-exploded']({}, {explosion: ease(t), fitExplosion: 1, isolated: null, fill: true, annotate: true, labels: t === 1}));
   const crop = cropper(), inkOnly = cropper();
   runs.forEach(r => {
     crop.ink(r.markup);
@@ -134,7 +135,7 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
   const parts = Object.entries(names).map(([, id]) => id);
   const order = [...runs[N].markup.matchAll(/data-item="([^"]*)" data-name="([^"]*)"/g)].map(m => ({id: m[1], name: m[2]}));
   const alone = order.map(({id, name}) => {
-    const r = models['rangefinder-exploded']({}, {explosion: 1, fitExplosion: 1, isolated: id, fill: false, annotate: false});
+    const r = models['rangefinder-exploded']({}, {explosion: 1, fitExplosion: 1, isolated: id, fill: true, annotate: false});
     const c = cropper();
     c.ink(r.markup);
     return {id, name, viewBox: viewBox(c.box, 3).join(' '), markup: tidy(groupsOf(r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '')).join('')).replace(/<title>[^<]*<\/title>/g, '')};
@@ -142,4 +143,21 @@ const viewBox = ({x0, y0, x1, y1}, pad = 4) => [x0 - pad, y0 - pad, x1 - x0 + 2 
   if (alone.length !== parts.length) throw Error('Every part must be drawn alone');
   fs.writeFileSync(path.join(out, 'rangefinder-parts.json'), JSON.stringify({parts: alone}));
   console.log('parts', (JSON.stringify(alone).length / 1024).toFixed(0) + ' KB,', alone.length, 'parts:', alone.map(p => p.id).join(' '));
+}
+
+// ---------- Taking the picture: the shutter mid-travel and the film behind it ----------
+{
+  const r = models['shutter-film']({}, {explosion: 0, fitExplosion: 0, isolated: null, fill: true, annotate: true});
+  const markup = r.markup.replace(/<g data-trails="">[\s\S]*?<\/g>/, '').replace(/font-size="3\.2"/g, `font-size="${LABEL}"`);
+  const crop = cropper(), inkOnly = cropper();
+  crop.ink(markup);
+  inkOnly.ink(markup.replace(/<g data-annotations="">[\s\S]*?<\/g>/, ''));
+  for (const [, x, y, anchor, text] of markup.matchAll(/<text[^>]* x="([^"]*)" y="([^"]*)"[^>]*text-anchor="([^"]*)"[^>]*>([^<]*)<\/text>/g)) crop.text(+x, +y, anchor, text);
+  const data = {
+    viewBox: viewBox(crop.box).join(' '), inkBox: viewBox(inkOnly.box, 3).join(' '),
+    markup: tidy(groupsOf(markup).join('')).replace(/<title>[^<]*<\/title>/g, ''),
+    title: 'The shutter caught mid-travel, seen from the lens: two curtains in front of the film with the slit of light between them, and the film running from its cassette across the gate onto the take-up spool'
+  };
+  fs.writeFileSync(path.join(out, 'shutter.json'), JSON.stringify(data));
+  console.log('shutter', (JSON.stringify(data).length / 1024).toFixed(0) + ' KB; crop', data.viewBox);
 }
