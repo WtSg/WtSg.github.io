@@ -60,7 +60,7 @@
   name: "SpecDepth: Physics-Guided Reference-Free Adaptation of Depth Priors for Hyperspectral LWIR Ranging"
   dates: Nov 2023 – May 2026
   description: >-
-    Adapts a frozen DINOv2-DPT metric-depth model to a 49-band passive LWIR
+    Adapts a frozen DINOv2-DPT metric-depth model to a 256-band passive LWIR
     hyperspectral cube without depth labels, lidar, stereo or RGB. The model
     predicts depth, temperature and per-band emissivity and is coupled to a
     differentiable radiative-transfer renderer; lidar is used only for
