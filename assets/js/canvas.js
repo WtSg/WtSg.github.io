@@ -969,6 +969,21 @@
   // A new window size: the wall hung again for it, on the same photograph. A phone sends a
   // resize as the page settles with its size unchanged: nothing to do then (it used to skip
   // the opening altogether). Still opening, it opens again from the whole wall, pulled back.
+  // A link straight to the focus challenge (/photography/#focus: from the homepage, the camera
+  // taken apart and the header here): the framed photograph opens close up, the challenge over it.
+  function focusLink() {
+    if (location.hash !== "#focus" || !items.length || !G.focus) return;
+    if (history.replaceState) history.replaceState(null, "", location.pathname + location.search);
+    var n = nearest(ox, oy), it = lockOn || subject || (n && n.it) || items[0];
+    hideHint();
+    hold = 0;
+    opening = false;
+    pendingShot = null;
+    fire({ it: it });
+    G.focus();
+  }
+  setTimeout(focusLink, still() ? 0 : 600);
+  window.addEventListener("hashchange", focusLink);
   var rT = 0;
   window.addEventListener("resize", function () {
     clearTimeout(rT);

@@ -750,6 +750,8 @@
   // While it is open the close-up's own keys, clicks and Escape leave it alone.
   var focusBtn = dialog.querySelector('[data-gl="focus"]'), focusSrc = dialog.getAttribute("data-focus-src"), game = null;
   if (focusBtn && focusSrc && window.WebGLRenderingContext) focusBtn.hidden = false;
+  // for a page that opens the challenge from a link: over the close-up already open
+  api.focus = function () { if (dialog.open && focusBtn && !focusBtn.hidden) openFocus(); };
   function openFocus() {
     if (game || !focusSrc) return;
     zoomOff();

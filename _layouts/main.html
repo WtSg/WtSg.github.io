@@ -261,7 +261,7 @@
           <span class="photo-strip__frame" style="flex: {{ ar }} 1 0; aspect-ratio: {{ ar }}"><img src="{{ base }}{{ ph.thumb }}" alt="{{ ph.title | strip | default: 'Photograph' }}" loading="lazy" decoding="async" draggable="false"></span>
           {%- endfor %}
         </a>
-        <figcaption><span class="figlabel">Figure {{ fig_n }}.</span> Latest photographs. <a href="{{ base }}/photography/">See all {{ gallery.size }} in the gallery</a>.</figcaption>
+        <figcaption><span class="figlabel">Figure {{ fig_n }}.</span> Latest photographs. <a href="{{ base }}/photography/">See all {{ gallery.size }} in the gallery</a>, try the <a href="{{ base }}/photography/#focus">focus challenge</a>, or see <a href="{{ base }}/photography/camera/">the camera taken apart</a>.</figcaption>
       </figure>
       {%- else %}
       <figure class="fig2">
