@@ -23,14 +23,7 @@
   <link rel="preload" href="{{ base }}/assets/fonts/dejavu-sans.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ base }}/assets/css/site.css">
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-PSWJT5W8PE');
-  </script>
+{% include analytics.html %}
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>

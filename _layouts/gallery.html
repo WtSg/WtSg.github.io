@@ -28,14 +28,7 @@
   <link rel="stylesheet" href="{{ base }}/assets/css/darkroom.css">
   <script type="importmap">{"imports": {"three": "{{ base }}/assets/three/three.module.min.js", "three/addons/": "{{ base }}/assets/three/addons/"}}</script>
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-PSWJT5W8PE');
-  </script>
+{% include analytics.html %}
 </head>
 <body class="darkroom" data-lights="safe">
   <a class="skip" href="#main">Skip to the photographs</a>

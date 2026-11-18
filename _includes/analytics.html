@@ -1,0 +1,20 @@
+  <!-- Google Analytics, on every page that has it. The owner's own visits are not counted: a
+       device that has connected the Gallery Studio (it carries the "gallery-studio-owner"
+       marker) sends nothing, and any device can be switched off by opening a page once with
+       ?analytics=off (and back on with ?analytics=on). Google's own opt-out flag does it. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    try {
+      var gaAsk = /[?&]analytics=(on|off)(?:&|$)/.exec(location.search);
+      if (gaAsk) {
+        localStorage.setItem("site-analytics", gaAsk[1]);
+        if (history.replaceState) history.replaceState(null, "", location.pathname + location.search.replace(/[?&]analytics=(on|off)(?=&|$)/, "").replace(/^&/, "?") + location.hash);
+      }
+      var gaSet = localStorage.getItem("site-analytics");
+      if (gaSet === "off" || (gaSet !== "on" && localStorage.getItem("gallery-studio-owner") === "1")) window["ga-disable-G-PSWJT5W8PE"] = true;
+    } catch (e) { /* storage blocked: counted as a visitor */ }
+    gtag('js', new Date());
+    gtag('config', 'G-PSWJT5W8PE');
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
