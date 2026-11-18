@@ -940,12 +940,15 @@
     oy += offY;
   }
   build();
+  // The wall opens on a photograph picked at random, never the newest (the owner: "random
+  // select an image to start, do not select the recent uploaded"); the newest is the first.
+  var first = photos.length > 1 ? 1 + Math.floor(Math.random() * (photos.length - 1)) : 0;
   if (still()) {
-    startAt(0, 0, 0);
+    startAt(first, 0, 0);
     s = restScale();
   } else {
     // pulled right back over the wall, the first photograph off to one side
-    startAt(0, cw * 1.3, ch * 0.8);
+    startAt(first, cw * 1.3, ch * 0.8);
     s = 1;
     opening = true;
     // lamp test: every segment and lamp lit for a moment, as a camera does when it wakes
@@ -953,7 +956,7 @@
     vf.classList.add("is-test");
     setLed("n", "88");
     // the whole wall held a moment longer than the lamp test, for a first look round it, before
-    // the lens closes in on the newest photograph (the owner: "stay on the zoomed out version
+    // the lens closes in on the photograph picked to start (the owner: "stay on the zoomed out version
     // for slightly longer so people will take a glance"); a touch, a drag or a zoom takes over
     hold = performance.now() + 1800;
     setTimeout(function () {
