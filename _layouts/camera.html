@@ -18,14 +18,7 @@
   <link rel="preload" href="{{ base }}/assets/img/teardown/rangefinder-apart.json" as="fetch" type="application/json" crossorigin>
   <link rel="stylesheet" href="{{ base }}/assets/css/camera.css?v={{ v }}">
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-PSWJT5W8PE');
-  </script>
+{% include analytics.html %}
 </head>
 <body class="cm">
   <a class="cm-skip" href="#parts">Skip to every part</a>

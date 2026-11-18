@@ -26,14 +26,7 @@
   {%- comment -%} For the focus challenge in the close-up (focus-game.js), loaded only when it is opened {%- endcomment %}
   <script type="importmap">{"imports": {"three": "{{ base }}/assets/three/three.module.min.js", "three/addons/": "{{ base }}/assets/three/addons/"}}</script>
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PSWJT5W8PE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-PSWJT5W8PE');
-  </script>
+{% include analytics.html %}
 </head>
 <body class="cv">
   <header class="cv-mark">
