@@ -15,7 +15,7 @@
     })(document.documentElement);
   </script>
 
-  <title>Photography · {{ me.name }}</title>
+  <title>{{ page.title | default: "Photography" }} · {{ me.name }}</title>
   {%- if page.noindex %}
   <meta name="robots" content="noindex">
   {%- endif %}
