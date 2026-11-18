@@ -4,6 +4,22 @@
 # Optional `figure` (src, w, h, alt, caption) on any entry shows a numbered figure under it.
 
 - group: current
+  id: physics-agent
+  name: "Physics agentic: a physics-guided agent for thermal hyperspectral scenes"
+  dates: Nov 2026 – present
+  description: >-
+    An AI agent that reads a 256-band long-wave infrared (LWIR) hyperspectral
+    image of an outdoor scene, writes and runs its own analysis code in a live
+    Python workspace, and marks which pixels a ground vehicle can drive on.
+    Each pixel's spectrum is fitted with a physics model of surface emission,
+    reflected sky radiation and atmospheric absorption, built on the radiance
+    model from <a href="#work-specdepth">SpecDepth</a>. The fitted terms
+    describe the surface material and keep their ranking when the depth
+    estimate is halved or doubled. The agent (DeepSeek-V4.1) is tested on
+    labelled captures it has never seen, under protocols fixed before scoring.
+    Ongoing: studying how physics evidence can help the agent on new scenes.
+
+- group: current
   id: transformer
   name: Information Sharing Across Transformer Layers
   dates: Sep 2026 – present
