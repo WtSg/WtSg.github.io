@@ -84,11 +84,11 @@ research_threads:
     text: >-
       Adapted a frozen depth foundation model to a new infrared sensor without
       labels.
-  - lead: Physics-guided LLM agents
+  - lead: LLM agents guided by physics
     project: physics-agent
     text: >-
-      A code agent maps drivable ground from thermal hyperspectral images,
-      guided by a per-pixel radiative-transfer fit.
+      Building an LLM agent that writes its own code to find where a vehicle
+      can drive in thermal hyperspectral images.
 
 before:
   text: >-
