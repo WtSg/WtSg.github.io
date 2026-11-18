@@ -43,6 +43,10 @@ profiles:
 
 # Newest first; shown in the order listed.
 news:
+  - when: Nov 2026
+    description: >-
+      Started a new project on physics-guided LLM agents for thermal
+      hyperspectral scenes.
   - when: Oct 2026
     description: >-
       New preprint on arXiv:
@@ -80,6 +84,11 @@ research_threads:
     text: >-
       Adapted a frozen depth foundation model to a new infrared sensor without
       labels.
+  - lead: Physics-guided LLM agents
+    project: physics-agent
+    text: >-
+      A code agent maps drivable ground from thermal hyperspectral images,
+      guided by a per-pixel radiative-transfer fit.
 
 before:
   text: >-
