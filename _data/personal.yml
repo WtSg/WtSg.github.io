@@ -84,11 +84,14 @@ research_threads:
     text: >-
       Adapted a frozen depth foundation model to a new infrared sensor without
       labels.
-  - lead: LLM agents guided by physics
+  - lead: "Physics agentic:"
     project: physics-agent
     text: >-
-      Building an LLM agent that writes its own code to find where a vehicle
-      can drive in thermal hyperspectral images.
+      LLM agents that reason over sensor data with physics. An LLM agent forms
+      hypotheses about a scene, tests them with physical models and depth
+      geometry as tools, and revises them before deciding, starting with
+      mapping drivable ground from thermal hyperspectral images.
+    joined: true
 
 before:
   text: >-
